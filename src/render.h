@@ -17,6 +17,7 @@ typedef struct
     buffer_handle_t vao;
     buffer_handle_t vbo;
     buffer_handle_t ibo;
+    uint32_t index_count;
     shader_handle_t shader;
     texture_handle_t texture;
 } UiRenderUnit;
@@ -75,6 +76,7 @@ static void render_unit_ui_init(UiRenderUnit *ru, const float *vert_data, size_t
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+    ru->index_count = (uint32_t)index_data_len;
     ru->shader = shader;
 
     glGenTextures(1, &(ru->texture));

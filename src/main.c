@@ -282,14 +282,7 @@ int main(void)
         glUseProgram(ui_ru.shader);
         glBindVertexArray(ui_ru.vao);
 
-        // start from here:
-        // - need that 4 to be the length of the text
-        // - need to normalize all letters' heights somehow
-        //   - minddump: we need to have the height of a glyph as the reference height. like for example "|" glyph goes
-        //   from 0.3 to 0.5, then that means those numbers are gonna be 0 and 1 in the Y-axis in the text_vb. it
-        //   actually doens't have to be the glyph, but we need a reference height
-
-        glDrawElements(GL_TRIANGLES, 6 * 4, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, ui_ru.index_count, GL_UNSIGNED_INT, 0);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

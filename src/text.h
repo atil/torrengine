@@ -29,7 +29,10 @@ static void fill_vb_for_text(const char *text, Vec2 anchor, float scale, float *
 {
     const size_t char_count = strlen(text);
 
-    const float x_scale = 1.0f / char_count;
+    const float x_scale = 1.0f / char_count; // TODO @DOCS: Explain
+
+    // TODO @ROBUSTNESS: This number is a bit too magical
+    const float line_height = 0.25f; // In UV space
 
     size_t vertex_buffer_size = char_count * 16 * sizeof(float); // TODO @DOCS: Explain the data layout
     size_t index_buffer_size = char_count * 6 * sizeof(uint32_t);
@@ -47,6 +50,8 @@ static void fill_vb_for_text(const char *text, Vec2 anchor, float scale, float *
         stbtt_aligned_quad quad;
         stbtt_GetBakedQuad(font_char_data, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ch - ' ', &pixel_pos_x, &pixel_pos_y,
                            &quad, 1);
+
+        const float glyph_height = (quad.t1 - quad.t0) / line_height; // In UV space
 
         // Anchor: bottom-left corner's normalized position
         // Our quads have their origin at bottom left. But textures have their at top left. Therefore we invert the V
@@ -66,13 +71,13 @@ static void fill_vb_for_text(const char *text, Vec2 anchor, float scale, float *
 
         // Top right vertex
         vertex_buffer[vert_curr + 8] = (float)(i + 1) * scale * x_scale + anchor.x; // 1
-        vertex_buffer[vert_curr + 9] = 1 * scale + anchor.y;                        // 1
+        vertex_buffer[vert_curr + 9] = glyph_height * scale + anchor.y;             // 1
         vertex_buffer[vert_curr + 10] = quad.s1;                                    // U
         vertex_buffer[vert_curr + 11] = 1.0f - quad.t0;                             // V
 
         // Top left vertex
         vertex_buffer[vert_curr + 12] = (float)i * scale * x_scale + anchor.x; // 0
-        vertex_buffer[vert_curr + 13] = 1 * scale + anchor.y;                  // 1
+        vertex_buffer[vert_curr + 13] = glyph_height * scale + anchor.y;       // 1
         vertex_buffer[vert_curr + 14] = quad.s0;                               // U
         vertex_buffer[vert_curr + 15] = 1.0f - quad.t0;                        // V
 
