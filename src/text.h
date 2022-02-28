@@ -29,6 +29,8 @@ static void fill_vb_for_text(const char *text, Vec2 anchor, float scale, float *
 {
     const size_t char_count = strlen(text);
 
+    const float x_scale = 1.0f / char_count;
+
     size_t vertex_buffer_size = char_count * 16 * sizeof(float); // TODO @DOCS: Explain the data layout
     size_t index_buffer_size = char_count * 6 * sizeof(uint32_t);
 
@@ -51,36 +53,36 @@ static void fill_vb_for_text(const char *text, Vec2 anchor, float scale, float *
         // coordinate of the UVs
 
         // Bottom left vertex
-        vertex_buffer[vert_curr + 0] = (float)i * scale + anchor.x; // X:0
-        vertex_buffer[vert_curr + 1] = (float)i * scale + anchor.y; // Y:0
-        vertex_buffer[vert_curr + 2] = quad.s0;                     // U
-        vertex_buffer[vert_curr + 3] = 1.0f - quad.t1;              // V
+        vertex_buffer[vert_curr + 0] = (float)i * scale * x_scale + anchor.x; // X:0
+        vertex_buffer[vert_curr + 1] = 0 * scale + anchor.y;                  // Y:0
+        vertex_buffer[vert_curr + 2] = quad.s0;                               // U
+        vertex_buffer[vert_curr + 3] = 1.0f - quad.t1;                        // V
 
         // Bottom right vertex
-        vertex_buffer[vert_curr + 4] = (float)(i + 1) * scale + anchor.x; // 1
-        vertex_buffer[vert_curr + 5] = (float)i * scale + anchor.y;       // 0
-        vertex_buffer[vert_curr + 6] = quad.s1;                           // U
-        vertex_buffer[vert_curr + 7] = 1.0f - quad.t1;                    // V
+        vertex_buffer[vert_curr + 4] = (float)(i + 1) * scale * x_scale + anchor.x; // 1
+        vertex_buffer[vert_curr + 5] = 0 * scale + anchor.y;                        // 0
+        vertex_buffer[vert_curr + 6] = quad.s1;                                     // U
+        vertex_buffer[vert_curr + 7] = 1.0f - quad.t1;                              // V
 
         // Top right vertex
-        vertex_buffer[vert_curr + 8] = (float)(i + 1) * scale + anchor.x; // 1
-        vertex_buffer[vert_curr + 9] = (float)(i + 1) * scale + anchor.y; // 1
-        vertex_buffer[vert_curr + 10] = quad.s1;                          // U
-        vertex_buffer[vert_curr + 11] = 1.0f - quad.t0;                   // V
+        vertex_buffer[vert_curr + 8] = (float)(i + 1) * scale * x_scale + anchor.x; // 1
+        vertex_buffer[vert_curr + 9] = 1 * scale + anchor.y;                        // 1
+        vertex_buffer[vert_curr + 10] = quad.s1;                                    // U
+        vertex_buffer[vert_curr + 11] = 1.0f - quad.t0;                             // V
 
         // Top left vertex
-        vertex_buffer[vert_curr + 12] = (float)i * scale + anchor.x;       // 0
-        vertex_buffer[vert_curr + 13] = (float)(i + 1) * scale + anchor.y; // 1
-        vertex_buffer[vert_curr + 14] = quad.s0;                           // U
-        vertex_buffer[vert_curr + 15] = 1.0f - quad.t0;                    // V
+        vertex_buffer[vert_curr + 12] = (float)i * scale * x_scale + anchor.x; // 0
+        vertex_buffer[vert_curr + 13] = 1 * scale + anchor.y;                  // 1
+        vertex_buffer[vert_curr + 14] = quad.s0;                               // U
+        vertex_buffer[vert_curr + 15] = 1.0f - quad.t0;                        // V
 
-        // Two triangles
-        index_buffer[ind_curr + 0] = vert_curr + 0;
-        index_buffer[ind_curr + 1] = vert_curr + 1;
-        index_buffer[ind_curr + 2] = vert_curr + 2;
-        index_buffer[ind_curr + 3] = vert_curr + 0;
-        index_buffer[ind_curr + 4] = vert_curr + 2;
-        index_buffer[ind_curr + 5] = vert_curr + 3;
+        // Two triangles. Each char is 4 vertex
+        index_buffer[ind_curr + 0] = ((uint32_t)i * 4) + 0;
+        index_buffer[ind_curr + 1] = ((uint32_t)i * 4) + 1;
+        index_buffer[ind_curr + 2] = ((uint32_t)i * 4) + 2;
+        index_buffer[ind_curr + 3] = ((uint32_t)i * 4) + 0;
+        index_buffer[ind_curr + 4] = ((uint32_t)i * 4) + 2;
+        index_buffer[ind_curr + 5] = ((uint32_t)i * 4) + 3;
 
         vert_curr += 16;
         ind_curr += 6;

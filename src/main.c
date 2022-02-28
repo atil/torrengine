@@ -132,11 +132,9 @@ int main(void)
     float *text_vb;
     uint32_t *text_ib;
     size_t text_vb_len, text_ib_len;
-    Vec2 text_pos = vec2_new(-0.3f, 0);
-    float text_scale = 0.7f;
+    Vec2 text_pos = vec2_new(0.0f, 0);
+    float text_scale = 1.0f;
     fill_vb_for_text("tabi", text_pos, text_scale, &text_vb, &text_vb_len, &text_ib, &text_ib_len);
-    // start from here:
-    // - it only has the place for the first letter. how to print the other letters?
 
     UiRenderUnit ui_ru;
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
@@ -262,29 +260,36 @@ int main(void)
         glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUseProgram(world_shader);
-        glBindVertexArray(pad1_ru.vao);
-        shader_set_mat4(world_shader, "u_model", &pad1_go.transform);
-        shader_set_float3(world_shader, "u_rectcolor", 1, 1, 0);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        /* glUseProgram(world_shader); */
+        /* glBindVertexArray(pad1_ru.vao); */
+        /* shader_set_mat4(world_shader, "u_model", &pad1_go.transform); */
+        /* shader_set_float3(world_shader, "u_rectcolor", 1, 1, 0); */
+        /* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
 
-        glBindVertexArray(pad1_ru.vao);
-        shader_set_mat4(world_shader, "u_model", &pad2_go.transform);
-        shader_set_float3(world_shader, "u_rectcolor", 0, 1, 1);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        /* glBindVertexArray(pad1_ru.vao); */
+        /* shader_set_mat4(world_shader, "u_model", &pad2_go.transform); */
+        /* shader_set_float3(world_shader, "u_rectcolor", 0, 1, 1); */
+        /* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
 
-        glBindVertexArray(ball_ru.vao);
-        shader_set_mat4(world_shader, "u_model", &ball_go.transform);
-        shader_set_float3(world_shader, "u_rectcolor", 1, 0, 1);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        /* glBindVertexArray(ball_ru.vao); */
+        /* shader_set_mat4(world_shader, "u_model", &ball_go.transform); */
+        /* shader_set_float3(world_shader, "u_rectcolor", 1, 0, 1); */
+        /* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
 
         // UI
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, ui_ru.texture);
         glUseProgram(ui_ru.shader);
         glBindVertexArray(ui_ru.vao);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+        // start from here:
+        // - need that 4 to be the length of the text
+        // - need to normalize all letters' heights somehow
+        //   - minddump: we need to have the height of a glyph as the reference height. like for example "|" glyph goes
+        //   from 0.3 to 0.5, then that means those numbers are gonna be 0 and 1 in the Y-axis in the text_vb. it
+        //   actually doens't have to be the glyph, but we need a reference height
+
+        glDrawElements(GL_TRIANGLES, 6 * 4, GL_UNSIGNED_INT, 0);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
