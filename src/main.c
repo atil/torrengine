@@ -1,6 +1,3 @@
-// start from here: merge the "fill text vbo" functionality with the gpu upload, in render.h
-// we construct the vb, upload to gpu then we (should) free it. so they need to be in the same function
-
 #define GLEW_STATIC                    // Statically linking glew
 #define GLFW_DLL                       // Dynamically linking glfw
 #define GLFW_INCLUDE_NONE              // Disable including dev environment header
@@ -104,7 +101,8 @@ int main(void)
 
     glewInit(); // Needs to be after context creation
 
-    text_init();
+    FontData font_data;
+    text_init(&font_data);
 
     //
     // GameObject rendering
@@ -132,25 +130,14 @@ int main(void)
     // UI
     //
 
-    TextBufferData text_buffer_data;
-
-    const char *text_str = "tabi";
-    const size_t text_char_count = strlen(text_str);
-    const size_t text_vb_len = text_char_count * 16 * sizeof(float); // TODO @DOCS: Explain the data layout
-    const size_t text_ib_len = text_char_count * 6 * sizeof(uint32_t);
-
-    float *text_vb = (float *)malloc(text_vb_len);
-    uint32_t *text_ib = (uint32_t *)malloc(text_ib_len);
-    Vec2 text_pos = vec2_new(0.0f, 0);
-    float text_scale = 1.0f;
-    fill_vb_for_text(text_str, text_pos, text_scale, &text_vb, &text_ib);
-
     UiRenderUnit ui_ru;
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
-    render_unit_ui_init(&ui_ru, text_vb, text_vb_len, text_ib, text_ib_len, ui_shader, font_bitmap);
+    render_unit_ui_alloc(&ui_ru, ui_shader, &font_data);
 
-    glUseProgram(ui_ru.shader);
-    shader_set_int(ui_ru.shader, "u_texture_ui", 0);
+    TextTransform text_transform;
+    text_transform.anchor = vec2_new(-0.3f, 0);
+    text_transform.scale = 0.4f;
+    render_unit_ui_update(&ui_ru, &font_data, "tabi", text_transform);
 
     //
     // View-projection matrices
@@ -287,8 +274,7 @@ int main(void)
             char int_str_buffer[sizeof(uint32_t)]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
             sprintf_s(int_str_buffer, sizeof(char) * sizeof(uint32_t), "%d", test_counter);
 
-            fill_vb_for_text(int_str_buffer, text_pos, text_scale, &text_vb, &text_vb_len, &text_ib, &text_ib_len);
-            render_unit_ui_update(&ui_ru, text_vb, text_vb_len, text_ib, text_ib_len);
+            render_unit_ui_update(&ui_ru, &font_data, int_str_buffer, text_transform);
         }
 
         glDrawElements(GL_TRIANGLES, ui_ru.index_count, GL_UNSIGNED_INT, 0);
@@ -296,14 +282,14 @@ int main(void)
         glfwPollEvents();
     }
 
-    text_deinit();
+    text_deinit(&font_data);
 
     render_unit_deinit(&pad1_ru);
     render_unit_deinit(&pad2_ru);
     render_unit_deinit(&ball_ru);
-    /* render_unit_deinit(&ui_ru); */ // TODO @LEAK: this needs its own function
-
     glDeleteProgram(world_shader);
+
+    render_unit_ui_deinit(&ui_ru);
 
     glfwTerminate();
     return 0;

@@ -11,99 +11,33 @@ typedef struct
     size_t vb_len;
     uint32_t *ib_data;
     size_t ib_len;
-    bool is_inited;
 } TextBufferData;
 
-// TODO @CLEANUP: Can we get around this?
-// It would be better to have only functions (and data types) decleared in the header files, so that we can treat them
-// as libraries
-static uint8_t *font_bitmap;
-stbtt_bakedchar font_char_data[CHAR_COUNT];
+typedef struct
+{
+    Vec2 anchor;
+    float scale;
+} TextTransform;
 
-static void text_init(void)
+typedef struct
+{
+    uint8_t *font_bitmap;
+    stbtt_bakedchar font_char_data[CHAR_COUNT]; // TODO @LEAK: Is this leaked? Research.
+} FontData;
+
+static void text_init(FontData *font_data)
 {
     // TODO @ROBUSTNESS: Assert that it's called once
-    char *font_data = read_file("assets/Consolas.ttf");
-    font_bitmap = (uint8_t *)malloc(FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT * sizeof(uint8_t));
+    uint8_t *font_bytes = (uint8_t *)read_file("assets/Consolas.ttf");
+    font_data->font_bitmap = (uint8_t *)malloc(FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT * sizeof(uint8_t));
 
-    stbtt_BakeFontBitmap((uint8_t *)font_data, 0, 50, font_bitmap, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ' ', CHAR_COUNT,
-                         font_char_data);
+    stbtt_BakeFontBitmap((uint8_t *)font_bytes, 0, 50, font_data->font_bitmap, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ' ',
+                         CHAR_COUNT, font_data->font_char_data);
 
-    free(font_data);
+    free(font_bytes);
 }
 
-static void text_buffer_deinit(TextBufferData *text_data);
-
-static void text_buffer_fill(TextBufferData *text_data, const char *text, Vec2 anchor, float scale);
+static void text_deinit(FontData *font_data)
 {
-    const size_t char_count = strlen(text);
-
-    const float x_scale = 1.0f / char_count; // TODO @DOCS: Explain
-
-    // TODO @ROBUSTNESS: This number is a bit too magical
-    const float line_height = 0.25f; // In UV space
-
-    text_data->vb_len = char_count * 16 * sizeof(float); // TODO @DOCS: Explain the data layout
-    text_data->ib_len = char_count * 6 * sizeof(uint32_t);
-
-    // TODO @LEAK: Where to manage these?
-    text_data->vb_data = (float *)malloc(vertex_buffer_size);
-    text_data->ib_data = (uint32_t *)malloc(index_buffer_size);
-
-    uint32_t vert_curr = 0;
-    uint32_t ind_curr = 0;
-    for (size_t i = 0; i < char_count; i++)
-    {
-        char ch = text[i];
-        float pixel_pos_x, pixel_pos_y;
-        stbtt_aligned_quad quad;
-        stbtt_GetBakedQuad(font_char_data, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ch - ' ', &pixel_pos_x, &pixel_pos_y,
-                           &quad, 1);
-
-        const float glyph_height = (quad.t1 - quad.t0) / line_height; // In UV space
-
-        // Anchor: bottom-left corner's normalized position
-        // Our quads have their origin at bottom left. But textures have their at top left. Therefore we invert the V
-        // coordinate of the UVs
-
-        // Bottom left vertex
-        text_data->vb_data[vert_curr + 0] = (float)i * scale * x_scale + anchor.x; // X:0
-        text_data->vb_data[vert_curr + 1] = 0 * scale + anchor.y;                  // Y:0
-        text_data->vb_data[vert_curr + 2] = quad.s0;                               // U
-        text_data->vb_data[vert_curr + 3] = 1.0f - quad.t1;                        // V
-
-        // Bottom right vertex
-        text_data->vb_data[vert_curr + 4] = (float)(i + 1) * scale * x_scale + anchor.x; // 1
-        text_data->vb_data[vert_curr + 5] = 0 * scale + anchor.y;                        // 0
-        text_data->vb_data[vert_curr + 6] = quad.s1;                                     // U
-        text_data->vb_data[vert_curr + 7] = 1.0f - quad.t1;                              // V
-
-        // Top right vertex
-        text_data->vb_data[vert_curr + 8] = (float)(i + 1) * scale * x_scale + anchor.x; // 1
-        text_data->vb_data[vert_curr + 9] = glyph_height * scale + anchor.y;             // 1
-        text_data->vb_data[vert_curr + 10] = quad.s1;                                    // U
-        text_data->vb_data[vert_curr + 11] = 1.0f - quad.t0;                             // V
-
-        // Top left vertex
-        text_data->vb_data[vert_curr + 12] = (float)i * scale * x_scale + anchor.x; // 0
-        text_data->vb_data[vert_curr + 13] = glyph_height * scale + anchor.y;       // 1
-        text_data->vb_data[vert_curr + 14] = quad.s0;                               // U
-        text_data->vb_data[vert_curr + 15] = 1.0f - quad.t0;                        // V
-
-        // Two triangles. Each char is 4 vertex
-        text_data->ib_data[ind_curr + 0] = ((uint32_t)i * 4) + 0;
-        text_data->ib_data[ind_curr + 1] = ((uint32_t)i * 4) + 1;
-        text_data->ib_data[ind_curr + 2] = ((uint32_t)i * 4) + 2;
-        text_data->ib_data[ind_curr + 3] = ((uint32_t)i * 4) + 0;
-        text_data->ib_data[ind_curr + 4] = ((uint32_t)i * 4) + 2;
-        text_data->ib_data[ind_curr + 5] = ((uint32_t)i * 4) + 3;
-
-        vert_curr += 16;
-        ind_curr += 6;
-    }
-}
-
-static void text_deinit(void)
-{
-    free(font_bitmap);
+    free(font_data->font_bitmap);
 }
