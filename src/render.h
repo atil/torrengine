@@ -9,6 +9,7 @@ typedef struct
     buffer_handle_t vao;
     buffer_handle_t vbo;
     buffer_handle_t ibo;
+    uint32_t index_count;
     shader_handle_t shader;
 } RenderUnit;
 
@@ -49,6 +50,7 @@ static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+    ru->index_count = (uint32_t)index_data_len;
     ru->shader = shader;
 }
 
@@ -91,6 +93,19 @@ static void render_unit_ui_init(UiRenderUnit *ru, const float *vert_data, size_t
                  GL_UNSIGNED_BYTE, texture_data);
 }
 
+static void render_unit_ui_update(UiRenderUnit *ru, const float *vert_data, size_t vert_data_len,
+                                  const uint32_t *index_data, size_t index_data_len)
+{
+
+    glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
+    glBufferData(GL_ARRAY_BUFFER, vert_data_len, vert_data, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru->ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_data_len, index_data, GL_STATIC_DRAW);
+
+    ru->index_count = (uint32_t)index_data_len;
+}
+
 static void render_unit_deinit(RenderUnit *ru)
 {
     glDeleteVertexArrays(1, &(ru->vao));
@@ -101,7 +116,7 @@ static void render_unit_deinit(RenderUnit *ru)
     // NOTE @FUTURE: Probably gonna have a batch sort of thing, the guys who share the same shader
 }
 
-shader_handle_t load_shader(const char *file_path)
+static shader_handle_t load_shader(const char *file_path)
 {
     char info_log[512]; // TODO @CLEANUP: Better logging
     char *shader_string = read_file(file_path);
@@ -187,3 +202,16 @@ static void shader_set_int(shader_handle_t shader, const char *uniform_name, int
     }
     glUniform1i(loc, i);
 }
+
+// Loading an image:
+/* int width, height, nrChannels; */
+/* stbi_set_flip_vertically_on_load(true); */
+/* unsigned char *data = stbi_load("assets/Grass.jpg", &width, &height, &nrChannels, 0); */
+/* if (!data) */
+/* { */
+/*     printf("texture load fail\n"); */
+/* } */
+/* glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data); */
+/* glGenerateMipmap(GL_TEXTURE_2D); */
+/* stbi_image_free(data); */
+

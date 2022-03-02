@@ -1,3 +1,6 @@
+// start from here: merge the "fill text vbo" functionality with the gpu upload, in render.h
+// we construct the vb, upload to gpu then we (should) free it. so they need to be in the same function
+
 #define GLEW_STATIC                    // Statically linking glew
 #define GLFW_DLL                       // Dynamically linking glfw
 #define GLFW_INCLUDE_NONE              // Disable including dev environment header
@@ -129,12 +132,18 @@ int main(void)
     // UI
     //
 
-    float *text_vb;
-    uint32_t *text_ib;
-    size_t text_vb_len, text_ib_len;
+    TextBufferData text_buffer_data;
+
+    const char *text_str = "tabi";
+    const size_t text_char_count = strlen(text_str);
+    const size_t text_vb_len = text_char_count * 16 * sizeof(float); // TODO @DOCS: Explain the data layout
+    const size_t text_ib_len = text_char_count * 6 * sizeof(uint32_t);
+
+    float *text_vb = (float *)malloc(text_vb_len);
+    uint32_t *text_ib = (uint32_t *)malloc(text_ib_len);
     Vec2 text_pos = vec2_new(0.0f, 0);
     float text_scale = 1.0f;
-    fill_vb_for_text("tabi", text_pos, text_scale, &text_vb, &text_vb_len, &text_ib, &text_ib_len);
+    fill_vb_for_text(text_str, text_pos, text_scale, &text_vb, &text_ib);
 
     UiRenderUnit ui_ru;
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
@@ -142,18 +151,6 @@ int main(void)
 
     glUseProgram(ui_ru.shader);
     shader_set_int(ui_ru.shader, "u_texture_ui", 0);
-
-    // Loading an image:
-    /* int width, height, nrChannels; */
-    /* stbi_set_flip_vertically_on_load(true); */
-    /* unsigned char *data = stbi_load("assets/Grass.jpg", &width, &height, &nrChannels, 0); */
-    /* if (!data) */
-    /* { */
-    /*     printf("texture load fail\n"); */
-    /* } */
-    /* glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data); */
-    /* glGenerateMipmap(GL_TEXTURE_2D); */
-    /* stbi_image_free(data); */
 
     //
     // View-projection matrices
@@ -184,6 +181,7 @@ int main(void)
     Vec2 ball_move_dir = vec2_new(1.0f, 0.0f);
     const float ball_speed = 4.0f;
 
+    int test_counter = 0;
     float game_time = (float)glfwGetTime();
     float dt = 0.0f;
     while (!glfwWindowShouldClose(window))
@@ -264,23 +262,34 @@ int main(void)
         /* glBindVertexArray(pad1_ru.vao); */
         /* shader_set_mat4(world_shader, "u_model", &pad1_go.transform); */
         /* shader_set_float3(world_shader, "u_rectcolor", 1, 1, 0); */
-        /* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
+        /* glDrawElements(GL_TRIANGLES, pad1_ru.index_count, GL_UNSIGNED_INT, 0); */
 
         /* glBindVertexArray(pad1_ru.vao); */
         /* shader_set_mat4(world_shader, "u_model", &pad2_go.transform); */
         /* shader_set_float3(world_shader, "u_rectcolor", 0, 1, 1); */
-        /* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
+        /* glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0); */
 
         /* glBindVertexArray(ball_ru.vao); */
         /* shader_set_mat4(world_shader, "u_model", &ball_go.transform); */
         /* shader_set_float3(world_shader, "u_rectcolor", 1, 0, 1); */
-        /* glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); */
+        // TODO @DOCS: How can that last parameter be zero
+        /* glDrawElements(GL_TRIANGLES, ball_ru.index_count, GL_UNSIGNED_INT, 0); */
 
         // UI
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, ui_ru.texture);
         glUseProgram(ui_ru.shader);
         glBindVertexArray(ui_ru.vao);
+
+        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+        {
+            test_counter++;
+            char int_str_buffer[sizeof(uint32_t)]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
+            sprintf_s(int_str_buffer, sizeof(char) * sizeof(uint32_t), "%d", test_counter);
+
+            fill_vb_for_text(int_str_buffer, text_pos, text_scale, &text_vb, &text_vb_len, &text_ib, &text_ib_len);
+            render_unit_ui_update(&ui_ru, text_vb, text_vb_len, text_ib, text_ib_len);
+        }
 
         glDrawElements(GL_TRIANGLES, ui_ru.index_count, GL_UNSIGNED_INT, 0);
         glfwSwapBuffers(window);

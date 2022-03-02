@@ -5,6 +5,15 @@
 #define FONT_ATLAS_WIDTH 512
 #define FONT_ATLAS_HEIGHT 256
 
+typedef struct
+{
+    float *vb_data;
+    size_t vb_len;
+    uint32_t *ib_data;
+    size_t ib_len;
+    bool is_inited;
+} TextBufferData;
+
 // TODO @CLEANUP: Can we get around this?
 // It would be better to have only functions (and data types) decleared in the header files, so that we can treat them
 // as libraries
@@ -23,9 +32,9 @@ static void text_init(void)
     free(font_data);
 }
 
-// Allocate this vertex buffer outside, I think?
-static void fill_vb_for_text(const char *text, Vec2 anchor, float scale, float **out_vertex_buffer,
-                             size_t *out_vertex_buffer_size, uint32_t **out_index_buffer, size_t *out_index_buffer_size)
+static void text_buffer_deinit(TextBufferData *text_data);
+
+static void text_buffer_fill(TextBufferData *text_data, const char *text, Vec2 anchor, float scale);
 {
     const size_t char_count = strlen(text);
 
@@ -34,12 +43,12 @@ static void fill_vb_for_text(const char *text, Vec2 anchor, float scale, float *
     // TODO @ROBUSTNESS: This number is a bit too magical
     const float line_height = 0.25f; // In UV space
 
-    size_t vertex_buffer_size = char_count * 16 * sizeof(float); // TODO @DOCS: Explain the data layout
-    size_t index_buffer_size = char_count * 6 * sizeof(uint32_t);
+    text_data->vb_len = char_count * 16 * sizeof(float); // TODO @DOCS: Explain the data layout
+    text_data->ib_len = char_count * 6 * sizeof(uint32_t);
 
     // TODO @LEAK: Where to manage these?
-    float *vertex_buffer = (float *)malloc(vertex_buffer_size);
-    uint32_t *index_buffer = (uint32_t *)malloc(index_buffer_size);
+    text_data->vb_data = (float *)malloc(vertex_buffer_size);
+    text_data->ib_data = (uint32_t *)malloc(index_buffer_size);
 
     uint32_t vert_curr = 0;
     uint32_t ind_curr = 0;
@@ -58,45 +67,40 @@ static void fill_vb_for_text(const char *text, Vec2 anchor, float scale, float *
         // coordinate of the UVs
 
         // Bottom left vertex
-        vertex_buffer[vert_curr + 0] = (float)i * scale * x_scale + anchor.x; // X:0
-        vertex_buffer[vert_curr + 1] = 0 * scale + anchor.y;                  // Y:0
-        vertex_buffer[vert_curr + 2] = quad.s0;                               // U
-        vertex_buffer[vert_curr + 3] = 1.0f - quad.t1;                        // V
+        text_data->vb_data[vert_curr + 0] = (float)i * scale * x_scale + anchor.x; // X:0
+        text_data->vb_data[vert_curr + 1] = 0 * scale + anchor.y;                  // Y:0
+        text_data->vb_data[vert_curr + 2] = quad.s0;                               // U
+        text_data->vb_data[vert_curr + 3] = 1.0f - quad.t1;                        // V
 
         // Bottom right vertex
-        vertex_buffer[vert_curr + 4] = (float)(i + 1) * scale * x_scale + anchor.x; // 1
-        vertex_buffer[vert_curr + 5] = 0 * scale + anchor.y;                        // 0
-        vertex_buffer[vert_curr + 6] = quad.s1;                                     // U
-        vertex_buffer[vert_curr + 7] = 1.0f - quad.t1;                              // V
+        text_data->vb_data[vert_curr + 4] = (float)(i + 1) * scale * x_scale + anchor.x; // 1
+        text_data->vb_data[vert_curr + 5] = 0 * scale + anchor.y;                        // 0
+        text_data->vb_data[vert_curr + 6] = quad.s1;                                     // U
+        text_data->vb_data[vert_curr + 7] = 1.0f - quad.t1;                              // V
 
         // Top right vertex
-        vertex_buffer[vert_curr + 8] = (float)(i + 1) * scale * x_scale + anchor.x; // 1
-        vertex_buffer[vert_curr + 9] = glyph_height * scale + anchor.y;             // 1
-        vertex_buffer[vert_curr + 10] = quad.s1;                                    // U
-        vertex_buffer[vert_curr + 11] = 1.0f - quad.t0;                             // V
+        text_data->vb_data[vert_curr + 8] = (float)(i + 1) * scale * x_scale + anchor.x; // 1
+        text_data->vb_data[vert_curr + 9] = glyph_height * scale + anchor.y;             // 1
+        text_data->vb_data[vert_curr + 10] = quad.s1;                                    // U
+        text_data->vb_data[vert_curr + 11] = 1.0f - quad.t0;                             // V
 
         // Top left vertex
-        vertex_buffer[vert_curr + 12] = (float)i * scale * x_scale + anchor.x; // 0
-        vertex_buffer[vert_curr + 13] = glyph_height * scale + anchor.y;       // 1
-        vertex_buffer[vert_curr + 14] = quad.s0;                               // U
-        vertex_buffer[vert_curr + 15] = 1.0f - quad.t0;                        // V
+        text_data->vb_data[vert_curr + 12] = (float)i * scale * x_scale + anchor.x; // 0
+        text_data->vb_data[vert_curr + 13] = glyph_height * scale + anchor.y;       // 1
+        text_data->vb_data[vert_curr + 14] = quad.s0;                               // U
+        text_data->vb_data[vert_curr + 15] = 1.0f - quad.t0;                        // V
 
         // Two triangles. Each char is 4 vertex
-        index_buffer[ind_curr + 0] = ((uint32_t)i * 4) + 0;
-        index_buffer[ind_curr + 1] = ((uint32_t)i * 4) + 1;
-        index_buffer[ind_curr + 2] = ((uint32_t)i * 4) + 2;
-        index_buffer[ind_curr + 3] = ((uint32_t)i * 4) + 0;
-        index_buffer[ind_curr + 4] = ((uint32_t)i * 4) + 2;
-        index_buffer[ind_curr + 5] = ((uint32_t)i * 4) + 3;
+        text_data->ib_data[ind_curr + 0] = ((uint32_t)i * 4) + 0;
+        text_data->ib_data[ind_curr + 1] = ((uint32_t)i * 4) + 1;
+        text_data->ib_data[ind_curr + 2] = ((uint32_t)i * 4) + 2;
+        text_data->ib_data[ind_curr + 3] = ((uint32_t)i * 4) + 0;
+        text_data->ib_data[ind_curr + 4] = ((uint32_t)i * 4) + 2;
+        text_data->ib_data[ind_curr + 5] = ((uint32_t)i * 4) + 3;
 
         vert_curr += 16;
         ind_curr += 6;
     }
-
-    *out_vertex_buffer = vertex_buffer;
-    *out_vertex_buffer_size = vertex_buffer_size;
-    *out_index_buffer = index_buffer;
-    *out_index_buffer_size = index_buffer_size;
 }
 
 static void text_deinit(void)
