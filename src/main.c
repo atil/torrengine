@@ -131,6 +131,7 @@ int main(void)
             glfwSetWindowShouldClose(window, true);
         }
 
+        // TODO @CLEANUP: This looks bad
         PongGameUpdateResult result;
         result.is_game_over = false;
         result.did_score = false;
@@ -183,6 +184,12 @@ int main(void)
         {
             glBindVertexArray(ui_ru_intermission.vao);
             glDrawElements(GL_TRIANGLES, ui_ru_intermission.index_count, GL_UNSIGNED_INT, 0);
+
+            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
+            {
+                game_init(&game, &config);
+                is_game_running = true;
+            }
         }
 
         glfwSwapBuffers(window);
