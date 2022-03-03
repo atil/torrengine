@@ -28,67 +28,11 @@
 #include "tomath.h"
 #include "text.h"
 #include "render.h"
+#include "game.h"
 #pragma warning(pop)
 
 #define WIDTH 640
 #define HEIGHT 480
-
-//
-// Game objects
-//
-
-typedef struct
-{
-    Vec2 min;
-    Vec2 max;
-} Rect;
-
-static Rect rect_new(Vec2 center, Vec2 size)
-{
-    float x_min = center.x - size.x / 2.0f;
-    float x_max = center.x + size.x / 2.0f;
-    float y_min = center.y - size.y / 2.0f;
-    float y_max = center.y + size.y / 2.0f;
-
-    Rect r;
-    r.min = vec2_new(x_min, y_min);
-    r.max = vec2_new(x_max, y_max);
-    return r;
-}
-
-typedef struct
-{
-    Rect rect;
-    Mat4 transform;
-} GameObject;
-
-static GameObject gameobject_new(Vec2 pos, Vec2 size)
-{
-    GameObject go;
-    go.rect = rect_new(vec2_zero(), size);
-    Mat4 transform = mat4_identity();
-    mat4_translate_xy(&transform, pos);
-    mat4_set_scale_xy(&transform, size);
-    go.transform = transform;
-
-    return go;
-}
-
-static Rect gameobject_get_world_rect(const GameObject *go)
-{
-    Vec2 go_pos = mat4_get_pos_xy(&(go->transform));
-    Rect rect_world = go->rect;
-    rect_world.min = vec2_add(rect_world.min, go_pos);
-    rect_world.max = vec2_add(rect_world.max, go_pos);
-
-    return rect_world;
-}
-
-static bool gameobject_is_point_in(const GameObject *go, Vec2 p)
-{
-    Rect rect_world = gameobject_get_world_rect(go);
-    return p.x > rect_world.min.x && p.x < rect_world.max.x && p.y > rect_world.min.y && p.y < rect_world.max.y;
-}
 
 int main(void)
 {
@@ -135,9 +79,12 @@ int main(void)
     render_unit_ui_alloc(&ui_ru, ui_shader, &font_data);
 
     TextTransform text_transform;
-    text_transform.anchor = vec2_new(-0.3f, 0);
-    text_transform.scale = 0.4f;
-    render_unit_ui_update(&ui_ru, &font_data, "tabi", text_transform);
+    text_transform.anchor = vec2_new(-0.9f, -0.9f);
+    text_transform.scale = 0.2f;
+    // start from here:
+    // - we need this scale to be a Vec2. Currently it's scaling in both
+    // - implement scoring
+    render_unit_ui_update(&ui_ru, &font_data, "0", text_transform);
 
     //
     // View-projection matrices
@@ -157,16 +104,15 @@ int main(void)
     // Game objects
     //
 
-    const float area_half_height = cam_size;
+    PongGameConfig config;
+    config.area_half_height = cam_size;
+    config.pad_size = vec2_new(0.3f, 2.0f);
+    config.ball_speed = 4.0f;
+    config.distance_from_center = 4.0f;
+    config.pad_move_speed = 10.0f;
 
-    const float distance_from_center = 4.0f;
-    Vec2 pad_size = vec2_new(0.3f, 2.0f);
-    GameObject pad1_go = gameobject_new(vec2_new(distance_from_center, 0.0f), pad_size);
-    GameObject pad2_go = gameobject_new(vec2_new(-distance_from_center, 0.0f), pad_size);
-    GameObject ball_go = gameobject_new(vec2_zero(), vec2_scale(vec2_one(), 0.2f));
-
-    Vec2 ball_move_dir = vec2_new(1.0f, 0.0f);
-    const float ball_speed = 4.0f;
+    PongGame game;
+    game_init(&game, &config);
 
     int test_counter = 0;
     float game_time = (float)glfwGetTime();
@@ -176,67 +122,12 @@ int main(void)
         dt = (float)glfwGetTime() - game_time;
         game_time = (float)glfwGetTime();
 
-        //
-        // Input
-        //
-
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         {
             glfwSetWindowShouldClose(window, true);
         }
 
-        const float pad_move_speed = 10.0f;
-        Rect pad1_world_rect = gameobject_get_world_rect(&pad1_go);
-        Rect pad2_world_rect = gameobject_get_world_rect(&pad2_go);
-
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pad2_world_rect.max.y < area_half_height)
-        {
-            mat4_translate_xy(&pad2_go.transform, vec2_new(0.0f, pad_move_speed * dt));
-        }
-        else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && pad2_world_rect.min.y > -area_half_height)
-        {
-            mat4_translate_xy(&pad2_go.transform, vec2_new(0.0f, -pad_move_speed * dt));
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && pad1_world_rect.max.y < area_half_height)
-        {
-            mat4_translate_xy(&pad1_go.transform, vec2_new(0.0f, pad_move_speed * dt));
-        }
-        else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS && pad1_world_rect.min.y > -area_half_height)
-        {
-            mat4_translate_xy(&pad1_go.transform, vec2_new(0.0f, -pad_move_speed * dt));
-        }
-
-        //
-        // Ball move
-        //
-
-        Vec2 ball_pos = mat4_get_pos_xy(&ball_go.transform);
-        Vec2 ball_displacement = vec2_scale(ball_move_dir, (ball_speed * dt));
-        Vec2 ball_next_pos = vec2_add(ball_pos, ball_displacement);
-
-        if (gameobject_is_point_in(&pad1_go, ball_next_pos) || gameobject_is_point_in(&pad2_go, ball_next_pos))
-        {
-            // Hit paddles
-            ball_move_dir.x *= -1;
-            const float ball_pad_hit_randomness_coeff = 0.2f;
-            ball_move_dir.y += rand_range(1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
-            vec2_normalize(&ball_move_dir);
-
-            ball_displacement = vec2_scale(ball_move_dir, (ball_speed * dt));
-            ball_next_pos = vec2_add(ball_pos, ball_displacement);
-        }
-
-        if (ball_next_pos.y > area_half_height || ball_next_pos.y < -area_half_height)
-        {
-            // Reflection from top/bottom
-            ball_move_dir.y *= -1;
-
-            ball_displacement = vec2_scale(ball_move_dir, (ball_speed * dt));
-            ball_next_pos = vec2_add(ball_pos, ball_displacement);
-        }
-
-        mat4_set_pos_xy(&ball_go.transform, ball_next_pos);
+        game_update(dt, &game, &config, window);
 
         //
         // Render
@@ -245,22 +136,22 @@ int main(void)
         glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        /* glUseProgram(world_shader); */
-        /* glBindVertexArray(pad1_ru.vao); */
-        /* shader_set_mat4(world_shader, "u_model", &pad1_go.transform); */
-        /* shader_set_float3(world_shader, "u_rectcolor", 1, 1, 0); */
-        /* glDrawElements(GL_TRIANGLES, pad1_ru.index_count, GL_UNSIGNED_INT, 0); */
+        glUseProgram(world_shader);
+        glBindVertexArray(pad1_ru.vao);
+        shader_set_mat4(world_shader, "u_model", &game.pad1_go.transform);
+        shader_set_float3(world_shader, "u_rectcolor", 1, 1, 0);
+        glDrawElements(GL_TRIANGLES, pad1_ru.index_count, GL_UNSIGNED_INT, 0);
 
-        /* glBindVertexArray(pad1_ru.vao); */
-        /* shader_set_mat4(world_shader, "u_model", &pad2_go.transform); */
-        /* shader_set_float3(world_shader, "u_rectcolor", 0, 1, 1); */
-        /* glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0); */
+        glBindVertexArray(pad1_ru.vao);
+        shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
+        shader_set_float3(world_shader, "u_rectcolor", 0, 1, 1);
+        glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
 
-        /* glBindVertexArray(ball_ru.vao); */
-        /* shader_set_mat4(world_shader, "u_model", &ball_go.transform); */
-        /* shader_set_float3(world_shader, "u_rectcolor", 1, 0, 1); */
+        glBindVertexArray(ball_ru.vao);
+        shader_set_mat4(world_shader, "u_model", &game.ball_go.transform);
+        shader_set_float3(world_shader, "u_rectcolor", 1, 0, 1);
         // TODO @DOCS: How can that last parameter be zero
-        /* glDrawElements(GL_TRIANGLES, ball_ru.index_count, GL_UNSIGNED_INT, 0); */
+        glDrawElements(GL_TRIANGLES, ball_ru.index_count, GL_UNSIGNED_INT, 0);
 
         // UI
         glActiveTexture(GL_TEXTURE0);

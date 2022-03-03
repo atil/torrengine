@@ -65,6 +65,8 @@ static Mat4 mat4_identity(void)
 {
     Mat4 identity;
     float identity_data[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+
+    // TODO @LEAK: Check if this is leaked
     memcpy(&identity.data, identity_data, sizeof(identity_data));
     return identity;
 }
@@ -105,4 +107,3 @@ static void mat4_set_scale_xy(Mat4 *mat, Vec2 vec)
     mat->data[0] *= vec.x;
     mat->data[5] *= vec.y;
 }
-
