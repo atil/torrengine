@@ -16,7 +16,7 @@ typedef struct
 typedef struct
 {
     Vec2 anchor;
-    float scale;
+    Vec2 scale;
 } TextTransform;
 
 typedef struct

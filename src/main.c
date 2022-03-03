@@ -80,9 +80,8 @@ int main(void)
 
     TextTransform text_transform;
     text_transform.anchor = vec2_new(-0.9f, -0.9f);
-    text_transform.scale = 0.2f;
+    text_transform.scale = vec2_new(0.1f, 0.5f);
     // start from here:
-    // - we need this scale to be a Vec2. Currently it's scaling in both
     // - implement scoring
     render_unit_ui_update(&ui_ru, &font_data, "0", text_transform);
 
