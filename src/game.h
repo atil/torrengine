@@ -17,6 +17,7 @@ typedef struct
     GameObject pad2_go;
     GameObject ball_go;
     Vec2 ball_move_dir;
+    uint32_t score;
 } PongGame;
 
 typedef struct
@@ -24,9 +25,15 @@ typedef struct
     Vec2 pad_size;
     float distance_from_center;
     float ball_speed;
-    float area_half_height;
+    Vec2 area_extents;
     float pad_move_speed;
 } PongGameConfig;
+
+typedef struct
+{
+    bool is_game_over;
+    bool did_score;
+} PongGameUpdateResult;
 
 static Rect rect_new(Vec2 center, Vec2 size)
 {
@@ -75,28 +82,33 @@ static void game_init(PongGame *game, PongGameConfig *config)
     game->pad2_go = gameobject_new(vec2_new(-(config->distance_from_center), 0.0f), config->pad_size);
     game->ball_go = gameobject_new(vec2_zero(), vec2_scale(vec2_one(), 0.2f));
     game->ball_move_dir = vec2_new(1.0f, 0.0f);
+    game->score = 0;
 }
 
 // TODO @CLEANUP: Remove GLFW dependency from here
-static void game_update(float dt, PongGame *game, PongGameConfig *config, GLFWwindow *window)
+static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig *config, GLFWwindow *window)
 {
+    PongGameUpdateResult result;
+    result.is_game_over = false;
+    result.did_score = false;
+
     Rect pad1_world_rect = gameobject_get_world_rect(&(game->pad1_go));
     Rect pad2_world_rect = gameobject_get_world_rect(&(game->pad2_go));
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pad2_world_rect.max.y < config->area_half_height)
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pad2_world_rect.max.y < config->area_extents.y)
     {
         mat4_translate_xy(&game->pad2_go.transform, vec2_new(0.0f, config->pad_move_speed * dt));
     }
-    else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && pad2_world_rect.min.y > -config->area_half_height)
+    else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && pad2_world_rect.min.y > -config->area_extents.y)
     {
         mat4_translate_xy(&game->pad2_go.transform, vec2_new(0.0f, -config->pad_move_speed * dt));
     }
 
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && pad1_world_rect.max.y < config->area_half_height)
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && pad1_world_rect.max.y < config->area_extents.y)
     {
         mat4_translate_xy(&game->pad1_go.transform, vec2_new(0.0f, config->pad_move_speed * dt));
     }
-    else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS && pad1_world_rect.min.y > -config->area_half_height)
+    else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS && pad1_world_rect.min.y > -config->area_extents.y)
     {
         mat4_translate_xy(&game->pad1_go.transform, vec2_new(0.0f, -config->pad_move_speed * dt));
     }
@@ -119,9 +131,12 @@ static void game_update(float dt, PongGame *game, PongGameConfig *config, GLFWwi
 
         ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * dt));
         ball_next_pos = vec2_add(ball_pos, ball_displacement);
+
+        (game->score)++;
+        result.did_score = true;
     }
 
-    if (ball_next_pos.y > config->area_half_height || ball_next_pos.y < -config->area_half_height)
+    if (ball_next_pos.y > config->area_extents.y || ball_next_pos.y < -config->area_extents.y)
     {
         // Reflection from top/bottom
         game->ball_move_dir.y *= -1;
@@ -130,5 +145,9 @@ static void game_update(float dt, PongGame *game, PongGameConfig *config, GLFWwi
         ball_next_pos = vec2_add(ball_pos, ball_displacement);
     }
 
+    result.is_game_over = ball_next_pos.x > config->area_extents.x || ball_next_pos.x < -config->area_extents.x;
+
     mat4_set_pos_xy(&game->ball_go.transform, ball_next_pos);
+
+    return result;
 }

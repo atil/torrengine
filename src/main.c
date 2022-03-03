@@ -81,8 +81,6 @@ int main(void)
     TextTransform text_transform;
     text_transform.anchor = vec2_new(-0.9f, -0.9f);
     text_transform.scale = vec2_new(0.1f, 0.5f);
-    // start from here:
-    // - implement scoring
     render_unit_ui_update(&ui_ru, &font_data, "0", text_transform);
 
     //
@@ -104,7 +102,7 @@ int main(void)
     //
 
     PongGameConfig config;
-    config.area_half_height = cam_size;
+    config.area_extents = vec2_new(cam_size * aspect, cam_size);
     config.pad_size = vec2_new(0.3f, 2.0f);
     config.ball_speed = 4.0f;
     config.distance_from_center = 4.0f;
@@ -113,7 +111,6 @@ int main(void)
     PongGame game;
     game_init(&game, &config);
 
-    int test_counter = 0;
     float game_time = (float)glfwGetTime();
     float dt = 0.0f;
     while (!glfwWindowShouldClose(window))
@@ -126,7 +123,12 @@ int main(void)
             glfwSetWindowShouldClose(window, true);
         }
 
-        game_update(dt, &game, &config, window);
+        PongGameUpdateResult result = game_update(dt, &game, &config, window);
+
+        if (result.is_game_over)
+        {
+            glfwSetWindowShouldClose(window, true);
+        }
 
         //
         // Render
@@ -158,11 +160,10 @@ int main(void)
         glUseProgram(ui_ru.shader);
         glBindVertexArray(ui_ru.vao);
 
-        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+        if (result.did_score)
         {
-            test_counter++;
             char int_str_buffer[sizeof(uint32_t)]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
-            sprintf_s(int_str_buffer, sizeof(char) * sizeof(uint32_t), "%d", test_counter);
+            sprintf_s(int_str_buffer, sizeof(char) * sizeof(uint32_t), "%d", game.score);
 
             render_unit_ui_update(&ui_ru, &font_data, int_str_buffer, text_transform);
         }
@@ -177,7 +178,7 @@ int main(void)
     render_unit_deinit(&pad1_ru);
     render_unit_deinit(&pad2_ru);
     render_unit_deinit(&ball_ru);
-    glDeleteProgram(world_shader);
+    glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
 
     render_unit_ui_deinit(&ui_ru);
 
