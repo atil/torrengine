@@ -192,7 +192,9 @@ static void render_unit_ui_deinit(UiRenderUnit *ru)
     glDeleteVertexArrays(1, &(ru->vao));
     glDeleteBuffers(1, &(ru->vbo));
     glDeleteBuffers(1, &(ru->ibo));
-    glDeleteProgram(ru->shader);
+
+    // TODO @CLEANUP: A better way to manage these shaders
+    // glDeleteProgram(ru->shader);
     glDeleteTextures(1, &ru->texture);
 }
 

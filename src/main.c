@@ -74,14 +74,21 @@ int main(void)
     // UI
     //
 
-    UiRenderUnit ui_ru;
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
-    render_unit_ui_alloc(&ui_ru, ui_shader, &font_data);
 
-    TextTransform text_transform;
-    text_transform.anchor = vec2_new(-0.9f, -0.9f);
-    text_transform.scale = vec2_new(0.1f, 0.5f);
-    render_unit_ui_update(&ui_ru, &font_data, "0", text_transform);
+    UiRenderUnit ui_ru_score;
+    render_unit_ui_alloc(&ui_ru_score, ui_shader, &font_data);
+    TextTransform text_transform_score;
+    text_transform_score.anchor = vec2_new(-0.9f, -0.9f);
+    text_transform_score.scale = vec2_new(0.1f, 0.5f);
+    render_unit_ui_update(&ui_ru_score, &font_data, "0", text_transform_score);
+
+    UiRenderUnit ui_ru_intermission;
+    render_unit_ui_alloc(&ui_ru_intermission, ui_shader, &font_data);
+    TextTransform text_transform_intermission;
+    text_transform_intermission.anchor = vec2_new(-0.5f, 0.0f);
+    text_transform_intermission.scale = vec2_new(1.0f, 0.5f);
+    render_unit_ui_update(&ui_ru_intermission, &font_data, "Game Over", text_transform_intermission);
 
     //
     // View-projection matrices
@@ -113,6 +120,7 @@ int main(void)
 
     float game_time = (float)glfwGetTime();
     float dt = 0.0f;
+    bool is_game_running = true;
     while (!glfwWindowShouldClose(window))
     {
         dt = (float)glfwGetTime() - game_time;
@@ -123,20 +131,23 @@ int main(void)
             glfwSetWindowShouldClose(window, true);
         }
 
-        PongGameUpdateResult result = game_update(dt, &game, &config, window);
+        PongGameUpdateResult result;
+        result.is_game_over = false;
+        result.did_score = false;
 
-        if (result.is_game_over)
+        if (is_game_running)
         {
-            glfwSetWindowShouldClose(window, true);
+            result = game_update(dt, &game, &config, window);
+            if (result.is_game_over)
+            {
+                is_game_running = false;
+            }
         }
-
-        //
-        // Render
-        //
 
         glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        // Game draw
         glUseProgram(world_shader);
         glBindVertexArray(pad1_ru.vao);
         shader_set_mat4(world_shader, "u_model", &game.pad1_go.transform);
@@ -154,21 +165,26 @@ int main(void)
         // TODO @DOCS: How can that last parameter be zero
         glDrawElements(GL_TRIANGLES, ball_ru.index_count, GL_UNSIGNED_INT, 0);
 
-        // UI
+        // UI draw
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, ui_ru.texture);
-        glUseProgram(ui_ru.shader);
-        glBindVertexArray(ui_ru.vao);
-
+        glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
+        glUseProgram(ui_ru_score.shader);
+        glBindVertexArray(ui_ru_score.vao);
         if (result.did_score)
         {
             char int_str_buffer[sizeof(uint32_t)]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
             sprintf_s(int_str_buffer, sizeof(char) * sizeof(uint32_t), "%d", game.score);
 
-            render_unit_ui_update(&ui_ru, &font_data, int_str_buffer, text_transform);
+            render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
+        }
+        glDrawElements(GL_TRIANGLES, ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
+
+        if (!is_game_running)
+        {
+            glBindVertexArray(ui_ru_intermission.vao);
+            glDrawElements(GL_TRIANGLES, ui_ru_intermission.index_count, GL_UNSIGNED_INT, 0);
         }
 
-        glDrawElements(GL_TRIANGLES, ui_ru.index_count, GL_UNSIGNED_INT, 0);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -180,7 +196,7 @@ int main(void)
     render_unit_deinit(&ball_ru);
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
 
-    render_unit_ui_deinit(&ui_ru);
+    render_unit_ui_deinit(&ui_ru_score);
 
     glfwTerminate();
     return 0;
