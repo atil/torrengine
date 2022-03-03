@@ -18,6 +18,7 @@ typedef struct
     GameObject ball_go;
     Vec2 ball_move_dir;
     uint32_t score;
+    float game_speed_coeff;
 } PongGame;
 
 typedef struct
@@ -83,6 +84,7 @@ static void game_init(PongGame *game, PongGameConfig *config)
     game->ball_go = gameobject_new(vec2_zero(), vec2_scale(vec2_one(), 0.2f));
     game->ball_move_dir = vec2_new(1.0f, 0.0f);
     game->score = 0;
+    game->game_speed_coeff = 1.0f;
 }
 
 // TODO @CLEANUP: Remove GLFW dependency from here
@@ -95,22 +97,24 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig
     Rect pad1_world_rect = gameobject_get_world_rect(&(game->pad1_go));
     Rect pad2_world_rect = gameobject_get_world_rect(&(game->pad2_go));
 
+    float pad_move_speed = config->pad_move_speed * game->game_speed_coeff * dt;
+
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pad2_world_rect.max.y < config->area_extents.y)
     {
-        mat4_translate_xy(&game->pad2_go.transform, vec2_new(0.0f, config->pad_move_speed * dt));
+        mat4_translate_xy(&game->pad2_go.transform, vec2_new(0.0f, pad_move_speed));
     }
     else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && pad2_world_rect.min.y > -config->area_extents.y)
     {
-        mat4_translate_xy(&game->pad2_go.transform, vec2_new(0.0f, -config->pad_move_speed * dt));
+        mat4_translate_xy(&game->pad2_go.transform, vec2_new(0.0f, -pad_move_speed));
     }
 
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && pad1_world_rect.max.y < config->area_extents.y)
     {
-        mat4_translate_xy(&game->pad1_go.transform, vec2_new(0.0f, config->pad_move_speed * dt));
+        mat4_translate_xy(&game->pad1_go.transform, vec2_new(0.0f, pad_move_speed));
     }
     else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS && pad1_world_rect.min.y > -config->area_extents.y)
     {
-        mat4_translate_xy(&game->pad1_go.transform, vec2_new(0.0f, -config->pad_move_speed * dt));
+        mat4_translate_xy(&game->pad1_go.transform, vec2_new(0.0f, -pad_move_speed));
     }
 
     //
@@ -118,7 +122,7 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig
     //
 
     Vec2 ball_pos = mat4_get_pos_xy(&game->ball_go.transform);
-    Vec2 ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * dt));
+    Vec2 ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * game->game_speed_coeff * dt));
     Vec2 ball_next_pos = vec2_add(ball_pos, ball_displacement);
 
     if (gameobject_is_point_in(&game->pad1_go, ball_next_pos) || gameobject_is_point_in(&game->pad2_go, ball_next_pos))
@@ -134,6 +138,7 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig
 
         (game->score)++;
         result.did_score = true;
+        game->game_speed_coeff += 0.05f; // Making the game harder every hit
     }
 
     if (ball_next_pos.y > config->area_extents.y || ball_next_pos.y < -config->area_extents.y)
