@@ -28,6 +28,7 @@ typedef struct
     float ball_speed;
     Vec2 area_extents;
     float pad_move_speed;
+    float game_speed_increase_coeff;
 } PongGameConfig;
 
 typedef struct
@@ -77,6 +78,20 @@ static bool gameobject_is_point_in(const GameObject *go, Vec2 p)
     return p.x > rect_world.min.x && p.x < rect_world.max.x && p.y > rect_world.min.y && p.y < rect_world.max.y;
 }
 
+static bool pad_resolve_point(const GameObject *pad_go, Vec2 p, int resolve_dir, float *out_resolved_x)
+{
+    if (gameobject_is_point_in(pad_go, p))
+    {
+        // 1 is right pad, -1 is left
+        // TODO @ROBUSNESS: Assert here that resolve_dir is either -1 or 1
+        Rect rect_world = gameobject_get_world_rect(pad_go);
+        *out_resolved_x = resolve_dir == 1 ? rect_world.min.x : rect_world.max.x;
+        return true;
+    }
+
+    return false;
+}
+
 static void game_init(PongGame *game, PongGameConfig *config)
 {
     game->pad1_go = gameobject_new(vec2_new(config->distance_from_center, 0.0f), config->pad_size);
@@ -88,7 +103,7 @@ static void game_init(PongGame *game, PongGameConfig *config)
 }
 
 // TODO @CLEANUP: Remove GLFW dependency from here
-static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig *config, GLFWwindow *window)
+static PongGameUpdateResult game_update(float dt, PongGame *game, const PongGameConfig *config, GLFWwindow *window)
 {
     PongGameUpdateResult result;
     result.is_game_over = false;
@@ -125,12 +140,17 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig
     Vec2 ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * game->game_speed_coeff * dt));
     Vec2 ball_next_pos = vec2_add(ball_pos, ball_displacement);
 
-    if (gameobject_is_point_in(&game->pad1_go, ball_next_pos) || gameobject_is_point_in(&game->pad2_go, ball_next_pos))
+    float resolved_x;
+    if (pad_resolve_point(&game->pad1_go, ball_next_pos, 1, &resolved_x) ||
+        pad_resolve_point(&game->pad2_go, ball_next_pos, -1, &resolved_x))
     {
         // Hit paddles
+
+        ball_pos.x = resolved_x; // TODO @ROBUSTNESS: This is funky
         game->ball_move_dir.x *= -1;
+
         const float ball_pad_hit_randomness_coeff = 0.2f;
-        game->ball_move_dir.y += rand_range(1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
+        game->ball_move_dir.y += rand_range(-1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
         vec2_normalize(&game->ball_move_dir);
 
         ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * dt));
@@ -138,7 +158,7 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig
 
         (game->score)++;
         result.did_score = true;
-        game->game_speed_coeff += 0.05f; // Making the game harder every hit
+        game->game_speed_coeff += config->game_speed_increase_coeff;
     }
 
     if (ball_next_pos.y > config->area_extents.y || ball_next_pos.y < -config->area_extents.y)

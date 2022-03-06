@@ -110,10 +110,11 @@ int main(void)
 
     PongGameConfig config;
     config.area_extents = vec2_new(cam_size * aspect, cam_size);
-    config.pad_size = vec2_new(0.3f, 2.0f);
+    config.pad_size = vec2_new(0.1f, 2.0f);
     config.ball_speed = 4.0f;
     config.distance_from_center = 4.0f;
     config.pad_move_speed = 10.0f;
+    config.game_speed_increase_coeff = 0.05f;
 
     PongGame game;
     game_init(&game, &config);
