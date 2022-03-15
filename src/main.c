@@ -123,7 +123,7 @@ int main(void)
     config.game_speed_increase_coeff = 0.05f;
 
     PongGame game;
-    game_init(&game, &config);
+    game_init(&game, &config, &sfx);
 
     float game_time = (float)glfwGetTime();
     float dt = 0.0f;
@@ -148,6 +148,8 @@ int main(void)
             result = game_update(dt, &game, &config, window, &sfx);
             if (result.is_game_over)
             {
+                sfx_play(&sfx, SfxGameOver);
+
                 is_game_running = false;
             }
         }
@@ -194,7 +196,7 @@ int main(void)
 
             if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
             {
-                game_init(&game, &config);
+                game_init(&game, &config, &sfx);
                 is_game_running = true;
             }
         }
@@ -213,7 +215,7 @@ int main(void)
 
     render_unit_ui_deinit(&ui_ru_score);
     render_unit_ui_deinit(&ui_ru_intermission);
-    glDeleteProgram(ui_shader);
+    glDeleteProgram(ui_shader); // TODO @CLEANUP: Same with above
 
     glfwTerminate();
     return 0;

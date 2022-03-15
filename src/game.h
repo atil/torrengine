@@ -92,7 +92,7 @@ static bool pad_resolve_point(const GameObject *pad_go, Vec2 p, int resolve_dir,
     return false;
 }
 
-static void game_init(PongGame *game, PongGameConfig *config)
+static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx)
 {
     game->pad1_go = gameobject_new(vec2_new(config->distance_from_center, 0.0f), config->pad_size);
     game->pad2_go = gameobject_new(vec2_new(-(config->distance_from_center), 0.0f), config->pad_size);
@@ -100,6 +100,8 @@ static void game_init(PongGame *game, PongGameConfig *config)
     game->ball_move_dir = vec2_new(1.0f, 0.0f);
     game->score = 0;
     game->game_speed_coeff = 1.0f;
+
+    sfx_play(sfx, SfxStart);
 }
 
 // TODO @CLEANUP: Signature looks ugly
@@ -161,7 +163,7 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, const PongGame
         result.did_score = true;
         game->game_speed_coeff += config->game_speed_increase_coeff;
 
-        sfx_play(sfx);
+        sfx_play(sfx, SfxHitPad);
     }
 
     if (ball_next_pos.y > config->area_extents.y || ball_next_pos.y < -config->area_extents.y)
@@ -171,6 +173,8 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, const PongGame
 
         ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * dt));
         ball_next_pos = vec2_add(ball_pos, ball_displacement);
+
+        sfx_play(sfx, SfxHitWall);
     }
 
     result.is_game_over = ball_next_pos.x > config->area_extents.x || ball_next_pos.x < -config->area_extents.x;
