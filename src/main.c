@@ -1,8 +1,7 @@
-#define GLEW_STATIC                    // Statically linking glew
-#define GLFW_DLL                       // Dynamically linking glfw
-#define GLFW_INCLUDE_NONE              // Disable including dev environment header
-#define STB_TRUETYPE_IMPLEMENTATION    // stb requires these
-#define STB_IMAGE_WRITE_IMPLEMENTATION // TODO @CLEANUP: Only needed for font debug
+#define GLEW_STATIC                 // Statically linking glew
+#define GLFW_DLL                    // Dynamically linking glfw
+#define GLFW_INCLUDE_NONE           // Disable including dev environment header
+#define STB_TRUETYPE_IMPLEMENTATION // stb requires these
 #define STB_IMAGE_IMPLEMENTATION
 
 // Disable a bunch of warnings from system headers
@@ -14,7 +13,6 @@
 #include <AL/alc.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
-#include <stb_image_write.h> // TODO @CLEANUP: Only needed for font debug
 #include <stb_truetype.h>
 #include <stdbool.h>
 #include <stdio.h>

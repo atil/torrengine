@@ -124,8 +124,8 @@ static void sfx_play(Sfx *sfx, SfxId id)
         source = sfx->source_objects;
         break;
     default:
-        printf("Unrecognized sfx id: %d\n", id);
-        break;
+        printf("Unable to play sfx. Unrecognized id: %d\n", id);
+        return;
     }
     alSourcei(source, AL_BUFFER, buffer);
     alSourcePlay(source);
