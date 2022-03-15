@@ -102,8 +102,9 @@ static void game_init(PongGame *game, PongGameConfig *config)
     game->game_speed_coeff = 1.0f;
 }
 
-// TODO @CLEANUP: Remove GLFW dependency from here
-static PongGameUpdateResult game_update(float dt, PongGame *game, const PongGameConfig *config, GLFWwindow *window)
+// TODO @CLEANUP: Signature looks ugly
+static PongGameUpdateResult game_update(float dt, PongGame *game, const PongGameConfig *config, GLFWwindow *window,
+                                        Sfx *sfx)
 {
     PongGameUpdateResult result;
     result.is_game_over = false;
@@ -159,6 +160,8 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, const PongGame
         (game->score)++;
         result.did_score = true;
         game->game_speed_coeff += config->game_speed_increase_coeff;
+
+        sfx_play(sfx);
     }
 
     if (ball_next_pos.y > config->area_extents.y || ball_next_pos.y < -config->area_extents.y)

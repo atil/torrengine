@@ -30,51 +30,12 @@
 #include "tomath.h"
 #include "text.h"
 #include "render.h"
+#include "sfx.h"
 #include "game.h"
 #pragma warning(pop)
 
 #define WIDTH 640
 #define HEIGHT 480
-
-typedef struct WAV_HEADER
-{
-    /* RIFF Chunk Descriptor */
-    uint8_t RIFF[4];    // RIFF Header Magic header
-    uint32_t ChunkSize; // RIFF Chunk Size
-    uint8_t WAVE[4];    // WAVE Header
-    /* "fmt" sub-chunk */
-    uint8_t fmt[4];         // FMT header
-    uint32_t Subchunk1Size; // Size of the fmt chunk
-    uint16_t AudioFormat;   // Audio format 1=PCM,6=mulaw,7=alaw,     257=IBM Mu-Law, 258=IBM A-Law, 259=ADPCM
-    uint16_t NumOfChan;     // Number of channels 1=Mono 2=Sterio
-    uint32_t SamplesPerSec; // Sampling Frequency in Hz
-    uint32_t bytesPerSec;   // bytes per second
-    uint16_t blockAlign;    // 2=16-bit mono, 4=16-bit stereo
-    uint16_t bitsPerSample; // Number of bits per sample
-    /* "data" sub-chunk */
-    uint8_t Subchunk2ID[4]; // "data"  string
-    uint32_t Subchunk2Size; // Sampled data length
-} wav_hdr_t;
-
-int getFileSize(FILE *inFile)
-{
-    int fileSize = 0;
-    fseek(inFile, 0, SEEK_END);
-
-    fileSize = ftell(inFile);
-
-    fseek(inFile, 0, SEEK_SET);
-    return fileSize;
-}
-
-void check_al_error(char *msg)
-{
-    ALCenum error = alGetError();
-    if (error != AL_NO_ERROR)
-    {
-        printf("AL error: %s\n", msg);
-    }
-}
 
 int main(void)
 {
@@ -90,65 +51,8 @@ int main(void)
     FontData font_data;
     text_init(&font_data);
 
-    //
-    // Sound schenanigans
-    //
-    wav_hdr_t wavHeader;
-    size_t headerSize = sizeof(wav_hdr_t), filelength = 0;
-    FILE *wavFile = fopen("assets/test.wav", "r");
-    size_t header_bytes_read = fread(&wavHeader, 1, headerSize, wavFile);
-    uint16_t bytesPerSample = wavHeader.bitsPerSample / 8;
-    uint64_t numSamples = wavHeader.ChunkSize / bytesPerSample; // How many samples are in the wav file?
-
-    uint8_t *wav_buffer = (uint8_t *)malloc(wavHeader.Subchunk2Size);
-    fseek(wavFile, 44, SEEK_SET);
-    size_t bytesRead = fread(wav_buffer, wavHeader.Subchunk2Size, 1, wavFile);
-    printf("error? :%d \n", feof(wavFile));
-    // stuff
-    printf("read %zd bytes\n", bytesRead);
-
-    const char *defaultDeviceName = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
-    ALCdevice *al_device = alcOpenDevice(defaultDeviceName);
-    ALCcontext *al_context = alcCreateContext(al_device, NULL);
-    alcMakeContextCurrent(al_context);
-    ALuint al_source;
-    alGenSources((ALuint)1, &al_source);
-    alSourcef(al_source, AL_PITCH, 1);
-    alSourcef(al_source, AL_GAIN, 1);
-    alSource3f(al_source, AL_POSITION, 0, 0, 0);
-    alSource3f(al_source, AL_VELOCITY, 0, 0, 0);
-    alSourcei(al_source, AL_LOOPING, AL_FALSE);
-    check_al_error("source set");
-
-    ALuint al_buffer;
-    alGenBuffers(1, &al_buffer);
-    alBufferData(al_buffer, AL_FORMAT_MONO16, wav_buffer, wavHeader.Subchunk2Size, wavHeader.SamplesPerSec);
-    check_al_error("buffer data");
-    alSourcei(al_source, AL_BUFFER, al_buffer);
-    check_al_error("buffer bind");
-
-    alSourcePlay(al_source);
-    check_al_error("play");
-
-    ALint source_state;
-    alGetSourcei(al_source, AL_SOURCE_STATE, &source_state);
-    check_al_error("source get 1");
-    while (source_state == AL_PLAYING)
-    {
-        alGetSourcei(al_source, AL_SOURCE_STATE, &source_state);
-        check_al_error("source get 2");
-    }
-
-    free(wav_buffer);
-    filelength = getFileSize(wavFile);
-    fclose(wavFile);
-
-    alDeleteSources(1, &al_source);
-    alDeleteBuffers(1, &al_buffer);
-    al_device = alcGetContextsDevice(al_context);
-    alcMakeContextCurrent(NULL);
-    alcDestroyContext(al_context);
-    alcCloseDevice(al_device);
+    Sfx sfx;
+    sfx_init(&sfx);
 
     //
     // GameObject rendering
@@ -241,7 +145,7 @@ int main(void)
 
         if (is_game_running)
         {
-            result = game_update(dt, &game, &config, window);
+            result = game_update(dt, &game, &config, window, &sfx);
             if (result.is_game_over)
             {
                 is_game_running = false;
@@ -300,6 +204,7 @@ int main(void)
     }
 
     text_deinit(&font_data);
+    sfx_deinit(&sfx);
 
     render_unit_deinit(&pad1_ru);
     render_unit_deinit(&pad2_ru);
