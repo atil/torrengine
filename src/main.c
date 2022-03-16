@@ -35,6 +35,13 @@
 #define WIDTH 640
 #define HEIGHT 480
 
+typedef enum
+{
+    Splash,
+    Game,
+    GameOver
+} GameState;
+
 int main(void)
 {
     srand((unsigned long)time(NULL));
@@ -80,6 +87,13 @@ int main(void)
 
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
 
+    UiRenderUnit ui_ru_splash_title;
+    render_unit_ui_alloc(&ui_ru_splash_title, ui_shader, &font_data);
+    TextTransform text_transform_splash_title;
+    text_transform_splash_title.anchor = vec2_new(-0.8f, 0);
+    text_transform_splash_title.scale = vec2_new(1.6f, 0.5f);
+    render_unit_ui_update(&ui_ru_splash_title, &font_data, "TorrPong!", text_transform_splash_title);
+
     UiRenderUnit ui_ru_score;
     render_unit_ui_alloc(&ui_ru_score, ui_shader, &font_data);
     TextTransform text_transform_score;
@@ -112,6 +126,7 @@ int main(void)
     // Game objects
     //
 
+    GameState game_state = Splash;
     PongGameConfig config;
     config.area_extents = vec2_new(cam_size * aspect, cam_size);
     config.pad_size = vec2_new(0.1f, 2.0f);
@@ -121,11 +136,9 @@ int main(void)
     config.game_speed_increase_coeff = 0.05f;
 
     PongGame game;
-    game_init(&game, &config, &sfx);
 
     float game_time = (float)glfwGetTime();
     float dt = 0.0f;
-    bool is_game_running = true;
     while (!glfwWindowShouldClose(window))
     {
         dt = (float)glfwGetTime() - game_time;
@@ -141,61 +154,76 @@ int main(void)
         result.is_game_over = false;
         result.did_score = false;
 
-        if (is_game_running)
+        glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        if (game_state == Splash)
+        {
+            glBindVertexArray(ui_ru_splash_title.vao);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
+            glUseProgram(ui_ru_score.shader);
+            glDrawElements(GL_TRIANGLES, ui_ru_splash_title.index_count, GL_UNSIGNED_INT, 0);
+
+            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
+            {
+                game_init(&game, &config, &sfx);
+                game_state = Game;
+            }
+        }
+        else if (game_state == Game)
         {
             result = game_update(dt, &game, &config, window, &sfx);
             if (result.is_game_over)
             {
                 sfx_play(&sfx, SfxGameOver);
 
-                is_game_running = false;
+                game_state = GameOver;
             }
+
+            // Game draw
+            glUseProgram(world_shader);
+            glBindVertexArray(pad1_ru.vao);
+            shader_set_mat4(world_shader, "u_model", &game.pad1_go.transform);
+            shader_set_float3(world_shader, "u_rectcolor", 1, 1, 0);
+            glDrawElements(GL_TRIANGLES, pad1_ru.index_count, GL_UNSIGNED_INT, 0);
+
+            glBindVertexArray(pad1_ru.vao);
+            shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
+            shader_set_float3(world_shader, "u_rectcolor", 0, 1, 1);
+            glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
+
+            glBindVertexArray(ball_ru.vao);
+            shader_set_mat4(world_shader, "u_model", &game.ball_go.transform);
+            shader_set_float3(world_shader, "u_rectcolor", 1, 0, 1);
+            // TODO @DOCS: How can that last parameter be zero?
+            glDrawElements(GL_TRIANGLES, ball_ru.index_count, GL_UNSIGNED_INT, 0);
+
+            // UI draw
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
+            glUseProgram(ui_ru_score.shader);
+            glBindVertexArray(ui_ru_score.vao);
+            if (result.did_score) // Update score view
+            {
+                char int_str_buffer[sizeof(uint32_t)]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
+                sprintf_s(int_str_buffer, sizeof(char) * sizeof(uint32_t), "%d", game.score);
+                render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
+            }
+            glDrawElements(GL_TRIANGLES, ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
         }
-
-        glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        // Game draw
-        glUseProgram(world_shader);
-        glBindVertexArray(pad1_ru.vao);
-        shader_set_mat4(world_shader, "u_model", &game.pad1_go.transform);
-        shader_set_float3(world_shader, "u_rectcolor", 1, 1, 0);
-        glDrawElements(GL_TRIANGLES, pad1_ru.index_count, GL_UNSIGNED_INT, 0);
-
-        glBindVertexArray(pad1_ru.vao);
-        shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
-        shader_set_float3(world_shader, "u_rectcolor", 0, 1, 1);
-        glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
-
-        glBindVertexArray(ball_ru.vao);
-        shader_set_mat4(world_shader, "u_model", &game.ball_go.transform);
-        shader_set_float3(world_shader, "u_rectcolor", 1, 0, 1);
-        // TODO @DOCS: How can that last parameter be zero
-        glDrawElements(GL_TRIANGLES, ball_ru.index_count, GL_UNSIGNED_INT, 0);
-
-        // UI draw
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
-        glUseProgram(ui_ru_score.shader);
-        glBindVertexArray(ui_ru_score.vao);
-        if (result.did_score)
-        {
-            char int_str_buffer[sizeof(uint32_t)]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
-            sprintf_s(int_str_buffer, sizeof(char) * sizeof(uint32_t), "%d", game.score);
-
-            render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
-        }
-        glDrawElements(GL_TRIANGLES, ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
-
-        if (!is_game_running) // Draw game over
+        else if (game_state == GameOver)
         {
             glBindVertexArray(ui_ru_intermission.vao);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
+            glUseProgram(ui_ru_score.shader);
             glDrawElements(GL_TRIANGLES, ui_ru_intermission.index_count, GL_UNSIGNED_INT, 0);
 
             if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
             {
                 game_init(&game, &config, &sfx);
-                is_game_running = true;
+                game_state = Game;
             }
         }
 
@@ -213,6 +241,7 @@ int main(void)
 
     render_unit_ui_deinit(&ui_ru_score);
     render_unit_ui_deinit(&ui_ru_intermission);
+    render_unit_ui_deinit(&ui_ru_splash_title);
     glDeleteProgram(ui_shader); // TODO @CLEANUP: Same with above
 
     glfwTerminate();

@@ -76,7 +76,7 @@ static sfx_source_handle_t create_source(void)
     sfx_source_handle_t source_handle;
     alGenSources((ALuint)1, &source_handle);
     alSourcef(source_handle, AL_PITCH, 1);
-    alSourcef(source_handle, AL_GAIN, 1);
+    alSourcef(source_handle, AL_GAIN, 0.2f);
     alSource3f(source_handle, AL_POSITION, 0, 0, 0);
     alSource3f(source_handle, AL_VELOCITY, 0, 0, 0);
     alSourcei(source_handle, AL_LOOPING, AL_FALSE);
