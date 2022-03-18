@@ -1,5 +1,5 @@
 #ifndef _UTIL_H_
-#define _UTIL_H_
+#define _UTIL_H_ // TODO @CLEANUP: Is this included multiple times?
 
 static char *read_file(const char *file_path)
 {

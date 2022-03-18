@@ -31,8 +31,38 @@ static void text_init(FontData *font_data)
     uint8_t *font_bytes = (uint8_t *)read_file("assets/Consolas.ttf");
     font_data->font_bitmap = (uint8_t *)malloc(FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT * sizeof(uint8_t));
 
-    stbtt_BakeFontBitmap((uint8_t *)font_bytes, 0, 50, font_data->font_bitmap, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ' ',
-                         CHAR_COUNT, font_data->font_char_data);
+    const float pixel_height = 50;
+
+    stbtt_BakeFontBitmap((uint8_t *)font_bytes, 0, pixel_height, font_data->font_bitmap, FONT_ATLAS_WIDTH,
+                         FONT_ATLAS_HEIGHT, ' ', CHAR_COUNT, font_data->font_char_data);
+
+    stbtt_fontinfo font_info;
+    stbtt_InitFont(&font_info, font_bytes, 0);
+
+    int ascent, descent, line_gap;
+    stbtt_GetFontVMetrics(&font_info, &ascent, &descent, &line_gap);
+
+    float scale = stbtt_ScaleForPixelHeight(&font_info, pixel_height);
+    float ascent_f = (float)ascent * scale;
+    float descent_f = (float)descent * scale;
+    float line_gap_f = (float)line_gap * scale;
+
+    printf("ascent %f, descent %f, line gap %f scale %f\n", ascent_f, descent_f, line_gap_f, scale);
+
+    // ascent + descent == pixel_height
+    // these below are in the same coord system with stbtt_bakedchar.x0/y0
+    // they're both in bitmap pixels, local to the glyph
+    // -40 means it's 40 pixels above the baseline
+    // start from here: from ^this, we can deduct where the baseline should be, in UVs
+    // 40 above, 10 below.
+    // instead of using 0 as the textvb's bottom coord, incorporate that -(10/50)
+    // don't know how exactly thought. it's late now
+
+    int c_x1, c_y1, c_x2, c_y2;
+    stbtt_GetCodepointBitmapBox(&font_info, '_', scale, scale, &c_x1, &c_y1, &c_x2, &c_y2);
+    printf("(%d, %d) - (%d, %d)\n", c_x1, c_y1, c_x2, c_y2);
+    stbtt_GetCodepointBitmapBox(&font_info, '|', scale, scale, &c_x1, &c_y1, &c_x2, &c_y2);
+    printf("(%d, %d) - (%d, %d)\n", c_x1, c_y1, c_x2, c_y2);
 
     free(font_bytes);
 }
