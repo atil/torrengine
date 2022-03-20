@@ -204,9 +204,6 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
 
     const float x_scale = 1.0f / char_count; // TODO @DOCS: Explain
 
-    // TODO @ROBUSTNESS: This number is a bit too magical
-    const float line_height = 0.25f; // In UV space
-
     Vec2 anchor = transform.anchor;
     Vec2 scale = transform.scale;
 
@@ -220,7 +217,12 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
         stbtt_GetBakedQuad(font_data->font_char_data, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ch - ' ', &pixel_pos_x,
                            &pixel_pos_y, &quad, 1);
 
-        const float glyph_height = (quad.t1 - quad.t0) / line_height; // In UV space
+        // This calculation is difficult to wrap the head around. Draw it on paper to make it clearer in the head
+        // descent is negative: below the baseline and the origin is the bottom
+        // quadY0 is positive: it's above the baseline and the origin is top
+        // quadY1 positive: below the baseline and the origin is top
+        const float glyph_bottom = (-font_data->descent - quad.y1) / FONT_TEXT_HEIGHT; // In screen space
+        const float glyph_top = (-quad.y0 + (-font_data->descent)) / FONT_TEXT_HEIGHT; // In screen space
 
         // Anchor: bottom-left corner's normalized position
         // Our quads have their origin at bottom left. But textures have their at top left. Therefore we invert the V
@@ -228,25 +230,25 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
 
         // Bottom left vertex
         text_data->vb_data[vert_curr + 0] = (float)i * scale.x * x_scale + anchor.x; // X:0
-        text_data->vb_data[vert_curr + 1] = 0 * scale.y + anchor.y;                  // Y:0
+        text_data->vb_data[vert_curr + 1] = glyph_bottom * scale.y + anchor.y;       // Y:0
         text_data->vb_data[vert_curr + 2] = quad.s0;                                 // U
         text_data->vb_data[vert_curr + 3] = 1.0f - quad.t1;                          // V
 
         // Bottom right vertex
         text_data->vb_data[vert_curr + 4] = (float)(i + 1) * scale.x * x_scale + anchor.x; // 1
-        text_data->vb_data[vert_curr + 5] = 0 * scale.y + anchor.y;                        // 0
+        text_data->vb_data[vert_curr + 5] = glyph_bottom * scale.y + anchor.y;             // 0
         text_data->vb_data[vert_curr + 6] = quad.s1;                                       // U
         text_data->vb_data[vert_curr + 7] = 1.0f - quad.t1;                                // V
 
         // Top right vertex
         text_data->vb_data[vert_curr + 8] = (float)(i + 1) * scale.x * x_scale + anchor.x; // 1
-        text_data->vb_data[vert_curr + 9] = glyph_height * scale.y + anchor.y;             // 1
+        text_data->vb_data[vert_curr + 9] = glyph_top * scale.y + anchor.y;                // 1
         text_data->vb_data[vert_curr + 10] = quad.s1;                                      // U
         text_data->vb_data[vert_curr + 11] = 1.0f - quad.t0;                               // V
 
         // Top left vertex
         text_data->vb_data[vert_curr + 12] = (float)i * scale.x * x_scale + anchor.x; // 0
-        text_data->vb_data[vert_curr + 13] = glyph_height * scale.y + anchor.y;       // 1
+        text_data->vb_data[vert_curr + 13] = glyph_top * scale.y + anchor.y;          // 1
         text_data->vb_data[vert_curr + 14] = quad.s0;                                 // U
         text_data->vb_data[vert_curr + 15] = 1.0f - quad.t0;                          // V
 
