@@ -18,7 +18,8 @@ uniform vec3 u_rectcolor;
 
 out vec4 frag_color;
 
-void main() {
+void main() 
+{
     frag_color = vec4(u_rectcolor, 1.0);
 };
 #endif

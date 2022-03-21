@@ -85,6 +85,9 @@ int main(void)
     // UI
     //
 
+    glEnable(GL_BLEND); // Enabling transparency for texts
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
 
     UiRenderUnit ui_ru_splash_title;

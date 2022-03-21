@@ -181,8 +181,10 @@ static void render_unit_ui_alloc(UiRenderUnit *ru, shader_handle_t shader, FontD
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     // TODO @ROBUSTNESS: This depth component looks weird. Googling haven't showed up such a thing
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, 0, GL_DEPTH_COMPONENT,
-                 GL_UNSIGNED_BYTE, font_data->font_bitmap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE,
+                 font_data->font_bitmap);
+
+    // glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // TODO @ROBUSTNESS: We might need to do this if we get segfaults
 
     glUseProgram(shader);
     shader_set_int(shader, "u_texture_ui", 0);
