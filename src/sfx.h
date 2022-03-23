@@ -1,3 +1,5 @@
+#define SFX_DISABLED
+
 typedef ALuint sfx_source_handle_t;
 typedef ALuint sfx_buffer_handle_t;
 
@@ -127,8 +129,11 @@ static void sfx_play(Sfx *sfx, SfxId id)
         printf("Unable to play sfx. Unrecognized id: %d\n", id);
         return;
     }
+
+#ifndef SFX_DISABLED
     alSourcei(source, AL_BUFFER, buffer);
     alSourcePlay(source);
+#endif
 
     // Checking if the source is still playing:
     // ALint source_state;
