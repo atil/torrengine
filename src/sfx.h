@@ -1,6 +1,9 @@
 #define SFX_DISABLED // TODO @CLEANUP: Convert this to a cmdline argument
+
+#ifdef SFX_DISABLED
 #pragma warning(push)
 #pragma warning(disable : 4100) // These require extra attention for some reason
+#endif
 
 typedef ALuint sfx_source_handle_t;
 typedef ALuint sfx_buffer_handle_t;
@@ -165,4 +168,7 @@ static void sfx_deinit(Sfx *sfx)
     alcCloseDevice(sfx->device);
 #endif
 }
+
+#ifdef SFX_DISABLED
 #pragma warning(pop)
+#endif

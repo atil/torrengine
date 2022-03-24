@@ -107,8 +107,8 @@ int main(void)
     UiRenderUnit ui_ru_intermission;
     render_unit_ui_alloc(&ui_ru_intermission, ui_shader, &font_data);
     TextTransform text_transform_intermission;
-    text_transform_intermission.anchor = vec2_new(-0.5f, 0.0f);
-    text_transform_intermission.scale = vec2_new(1.0f, 0.5f);
+    text_transform_intermission.anchor = vec2_new(-0.75f, 0.0f);
+    text_transform_intermission.scale = vec2_new(1.5f, 0.5f);
     render_unit_ui_update(&ui_ru_intermission, &font_data, "Game Over", text_transform_intermission);
 
     //
@@ -185,35 +185,37 @@ int main(void)
             }
 
             // Game draw
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, pad1_ru.texture);
             glUseProgram(world_shader);
             glBindVertexArray(pad1_ru.vao);
             shader_set_mat4(world_shader, "u_model", &game.pad1_go.transform);
-            shader_set_float3(world_shader, "u_rectcolor", 1, 1, 0);
+            // shader_set_float3(world_shader, "u_rectcolor", 1, 1, 0);
             glDrawElements(GL_TRIANGLES, pad1_ru.index_count, GL_UNSIGNED_INT, 0);
 
-            glBindVertexArray(pad1_ru.vao);
-            shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
-            shader_set_float3(world_shader, "u_rectcolor", 0, 1, 1);
-            glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
+            // glBindVertexArray(pad1_ru.vao);
+            // shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
+            // shader_set_float3(world_shader, "u_rectcolor", 0, 1, 1);
+            // glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
 
-            glBindVertexArray(ball_ru.vao);
-            shader_set_mat4(world_shader, "u_model", &game.ball_go.transform);
-            shader_set_float3(world_shader, "u_rectcolor", 1, 0, 1);
-            // TODO @DOCS: How can that last parameter be zero?
-            glDrawElements(GL_TRIANGLES, ball_ru.index_count, GL_UNSIGNED_INT, 0);
+            // glBindVertexArray(ball_ru.vao);
+            // shader_set_mat4(world_shader, "u_model", &game.ball_go.transform);
+            // shader_set_float3(world_shader, "u_rectcolor", 1, 0, 1);
+            // // TODO @DOCS: How can that last parameter be zero?
+            // glDrawElements(GL_TRIANGLES, ball_ru.index_count, GL_UNSIGNED_INT, 0);
 
             // UI draw
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
-            glUseProgram(ui_ru_score.shader);
-            glBindVertexArray(ui_ru_score.vao);
-            if (result.did_score) // Update score view
-            {
-                char int_str_buffer[sizeof(uint32_t)]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
-                sprintf_s(int_str_buffer, sizeof(char) * sizeof(uint32_t), "%d", game.score);
-                render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
-            }
-            glDrawElements(GL_TRIANGLES, ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
+            // glActiveTexture(GL_TEXTURE0);
+            // glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
+            // glUseProgram(ui_ru_score.shader);
+            // glBindVertexArray(ui_ru_score.vao);
+            // if (result.did_score) // Update score view
+            // {
+            //     char int_str_buffer[sizeof(uint32_t)]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
+            //     sprintf_s(int_str_buffer, sizeof(char) * sizeof(uint32_t), "%d", game.score);
+            //     render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
+            // }
+            // glDrawElements(GL_TRIANGLES, ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
         }
         else if (game_state == GameOver)
         {

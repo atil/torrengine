@@ -11,6 +11,7 @@ typedef struct
     buffer_handle_t ibo;
     uint32_t index_count;
     shader_handle_t shader;
+    texture_handle_t texture;
 } RenderUnit;
 
 typedef struct
@@ -137,6 +138,21 @@ static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+    const char *file_name = "assets/Grass.jpg";
+    glGenTextures(1, &(ru->texture));
+    glBindTexture(GL_TEXTURE_2D, ru->texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    int width, height, nrChannels;
+    stbi_set_flip_vertically_on_load(true);
+    uint8_t *data = stbi_load(file_name, &width, &height, &nrChannels, 0); // TODO @ROBUSTNESS: Assert here
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(data);
+
     ru->index_count = (uint32_t)index_data_len;
     ru->shader = shader;
 }
@@ -146,6 +162,8 @@ static void render_unit_deinit(RenderUnit *ru)
     glDeleteVertexArrays(1, &(ru->vao));
     glDeleteBuffers(1, &(ru->vbo));
     glDeleteBuffers(1, &(ru->ibo));
+    glDeleteTextures(1, &ru->texture);
+
     /* glDeleteProgram(ru->shader); */
     // Not deleting the shader here, since we only have one instance for the world.
     // NOTE @FUTURE: Probably gonna have a batch sort of thing, the guys who share the same shader
@@ -289,15 +307,3 @@ static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const c
     free(text_data.vb_data);
     free(text_data.ib_data);
 }
-
-// Loading an image:
-/* int width, height, nrChannels; */
-/* stbi_set_flip_vertically_on_load(true); */
-/* unsigned char *data = stbi_load("assets/Grass.jpg", &width, &height, &nrChannels, 0); */
-/* if (!data) */
-/* { */
-/*     printf("texture load fail\n"); */
-/* } */
-/* glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data); */
-/* glGenerateMipmap(GL_TEXTURE_2D); */
-/* stbi_image_free(data); */
