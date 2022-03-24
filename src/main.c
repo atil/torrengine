@@ -21,6 +21,9 @@
 #include <time.h>
 #pragma warning(pop)
 
+#define WIDTH 640
+#define HEIGHT 480
+
 #pragma warning(push)
 #pragma warning(disable : 4996) // TODO @ROBUSTNESS: Address these deprecated CRT functions
 #pragma warning(disable : 5045) // Spectre thing
@@ -31,9 +34,6 @@
 #include "sfx.h"
 #include "game.h"
 #pragma warning(pop)
-
-#define WIDTH 640
-#define HEIGHT 480
 
 typedef enum
 {
@@ -63,6 +63,7 @@ int main(void)
     // GameObject rendering
     //
 
+    RenderUnit field_ru;
     RenderUnit pad1_ru;
     RenderUnit pad2_ru;
     RenderUnit ball_ru;
@@ -74,12 +75,14 @@ int main(void)
                                  0.5f,  0.5f,  0.0f, 1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 0.0f, 1.0f};
     uint32_t unit_square_indices[] = {0, 1, 2, 0, 2, 3};
 
+    render_unit_init(&field_ru, unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                     sizeof(unit_square_indices), world_shader, "assets/Field.png");
     render_unit_init(&pad1_ru, unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                     sizeof(unit_square_indices), world_shader);
+                     sizeof(unit_square_indices), world_shader, "assets/PadBlue.png");
     render_unit_init(&pad2_ru, unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                     sizeof(unit_square_indices), world_shader);
+                     sizeof(unit_square_indices), world_shader, "assets/PadGreen.png");
     render_unit_init(&ball_ru, unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                     sizeof(unit_square_indices), world_shader);
+                     sizeof(unit_square_indices), world_shader, "assets/Ball.png");
 
     //
     // UI
@@ -132,7 +135,7 @@ int main(void)
     GameState game_state = Splash;
     PongGameConfig config;
     config.area_extents = vec2_new(cam_size * aspect, cam_size);
-    config.pad_size = vec2_new(0.1f, 2.0f);
+    config.pad_size = vec2_new(0.3f, 2.0f);
     config.ball_speed = 4.0f;
     config.distance_from_center = 4.0f;
     config.pad_move_speed = 10.0f;
@@ -152,7 +155,7 @@ int main(void)
             glfwSetWindowShouldClose(window, true);
         }
 
-        // TODO @CLEANUP: This looks bad
+        // TODO @CLEANUP: This looks bad. Ideally we return this from the update function
         PongGameUpdateResult result;
         result.is_game_over = false;
         result.did_score = false;
@@ -186,36 +189,41 @@ int main(void)
 
             // Game draw
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, pad1_ru.texture);
             glUseProgram(world_shader);
+
+            glBindVertexArray(field_ru.vao);
+            glBindTexture(GL_TEXTURE_2D, field_ru.texture);
+            shader_set_mat4(world_shader, "u_model", &game.field_go.transform);
+            glDrawElements(GL_TRIANGLES, field_ru.index_count, GL_UNSIGNED_INT, 0);
+
             glBindVertexArray(pad1_ru.vao);
+            glBindTexture(GL_TEXTURE_2D, pad1_ru.texture);
             shader_set_mat4(world_shader, "u_model", &game.pad1_go.transform);
-            // shader_set_float3(world_shader, "u_rectcolor", 1, 1, 0);
             glDrawElements(GL_TRIANGLES, pad1_ru.index_count, GL_UNSIGNED_INT, 0);
 
-            // glBindVertexArray(pad1_ru.vao);
-            // shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
-            // shader_set_float3(world_shader, "u_rectcolor", 0, 1, 1);
-            // glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
+            glBindVertexArray(pad2_ru.vao);
+            glBindTexture(GL_TEXTURE_2D, pad2_ru.texture);
+            shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
+            glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
 
-            // glBindVertexArray(ball_ru.vao);
-            // shader_set_mat4(world_shader, "u_model", &game.ball_go.transform);
-            // shader_set_float3(world_shader, "u_rectcolor", 1, 0, 1);
-            // // TODO @DOCS: How can that last parameter be zero?
-            // glDrawElements(GL_TRIANGLES, ball_ru.index_count, GL_UNSIGNED_INT, 0);
+            glBindVertexArray(ball_ru.vao);
+            glBindTexture(GL_TEXTURE_2D, ball_ru.texture);
+            shader_set_mat4(world_shader, "u_model", &game.ball_go.transform);
+            // TODO @DOCS: How can that last parameter be zero?
+            glDrawElements(GL_TRIANGLES, ball_ru.index_count, GL_UNSIGNED_INT, 0);
 
             // UI draw
-            // glActiveTexture(GL_TEXTURE0);
-            // glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
-            // glUseProgram(ui_ru_score.shader);
-            // glBindVertexArray(ui_ru_score.vao);
-            // if (result.did_score) // Update score view
-            // {
-            //     char int_str_buffer[sizeof(uint32_t)]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
-            //     sprintf_s(int_str_buffer, sizeof(char) * sizeof(uint32_t), "%d", game.score);
-            //     render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
-            // }
-            // glDrawElements(GL_TRIANGLES, ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
+            glUseProgram(ui_ru_score.shader);
+            glBindVertexArray(ui_ru_score.vao);
+            if (result.did_score) // Update score view
+            {
+                char int_str_buffer[sizeof(uint32_t)]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
+                sprintf_s(int_str_buffer, sizeof(char) * sizeof(uint32_t), "%d", game.score);
+                render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
+            }
+            glDrawElements(GL_TRIANGLES, ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
         }
         else if (game_state == GameOver)
         {
@@ -239,6 +247,7 @@ int main(void)
     text_deinit(&font_data);
     sfx_deinit(&sfx);
 
+    render_unit_deinit(&field_ru);
     render_unit_deinit(&pad1_ru);
     render_unit_deinit(&pad2_ru);
     render_unit_deinit(&ball_ru);

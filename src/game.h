@@ -13,6 +13,7 @@ typedef struct
 
 typedef struct
 {
+    GameObject field_go;
     GameObject pad1_go;
     GameObject pad2_go;
     GameObject ball_go;
@@ -94,6 +95,7 @@ static bool pad_resolve_point(const GameObject *pad_go, Vec2 p, int resolve_dir,
 
 static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx)
 {
+    game->field_go = gameobject_new(vec2_zero(), vec2_new(((float)WIDTH / (float)HEIGHT) * 10, 10));
     game->pad1_go = gameobject_new(vec2_new(config->distance_from_center, 0.0f), config->pad_size);
     game->pad2_go = gameobject_new(vec2_new(-(config->distance_from_center), 0.0f), config->pad_size);
     game->ball_go = gameobject_new(vec2_zero(), vec2_scale(vec2_one(), 0.2f));

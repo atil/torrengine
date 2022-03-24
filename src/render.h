@@ -118,7 +118,7 @@ static void shader_set_int(shader_handle_t shader, const char *uniform_name, int
 // UiRenderUnit etc. They might have different data layout
 
 static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert_data_len, const uint32_t *index_data,
-                             size_t index_data_len, shader_handle_t shader)
+                             size_t index_data_len, shader_handle_t shader, const char *texture_file_name)
 {
     glGenVertexArrays(1, &(ru->vao));
     glGenBuffers(1, &(ru->vbo));
@@ -138,7 +138,6 @@ static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    const char *file_name = "assets/Grass.jpg";
     glGenTextures(1, &(ru->texture));
     glBindTexture(GL_TEXTURE_2D, ru->texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -148,8 +147,9 @@ static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert
 
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true);
-    uint8_t *data = stbi_load(file_name, &width, &height, &nrChannels, 0); // TODO @ROBUSTNESS: Assert here
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    uint8_t *data = stbi_load(texture_file_name, &width, &height, &nrChannels, 0);
+    assert(data != NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(data);
 
