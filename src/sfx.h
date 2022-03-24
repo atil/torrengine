@@ -1,4 +1,6 @@
-#define SFX_DISABLED
+#define SFX_DISABLED // TODO @CLEANUP: Convert this to a cmdline argument
+#pragma warning(push)
+#pragma warning(disable : 4100) // These require extra attention for some reason
 
 typedef ALuint sfx_source_handle_t;
 typedef ALuint sfx_buffer_handle_t;
@@ -89,6 +91,7 @@ static sfx_source_handle_t create_source(void)
 
 static void sfx_init(Sfx *sfx)
 {
+#ifndef SFX_DISABLED
     const char *default_device_name = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
     sfx->device = alcOpenDevice(default_device_name);
     sfx->context = alcCreateContext(sfx->device, NULL);
@@ -101,10 +104,12 @@ static void sfx_init(Sfx *sfx)
     sfx->buffer_hitwall = create_buffer_with_file("assets/HitWall.wav");
     sfx->buffer_gameover = create_buffer_with_file("assets/GameOver.wav");
     sfx->buffer_start = create_buffer_with_file("assets/Start.wav");
+#endif
 }
 
 static void sfx_play(Sfx *sfx, SfxId id)
 {
+#ifndef SFX_DISABLED
     sfx_buffer_handle_t buffer = 0;
     sfx_source_handle_t source = 0;
     switch (id)
@@ -130,7 +135,6 @@ static void sfx_play(Sfx *sfx, SfxId id)
         return;
     }
 
-#ifndef SFX_DISABLED
     alSourcei(source, AL_BUFFER, buffer);
     alSourcePlay(source);
 #endif
@@ -147,6 +151,7 @@ static void sfx_play(Sfx *sfx, SfxId id)
 
 static void sfx_deinit(Sfx *sfx)
 {
+#ifndef SFX_DISABLED
     alDeleteSources(1, &(sfx->source_game));
     alDeleteSources(1, &(sfx->source_objects));
     alDeleteBuffers(1, &(sfx->buffer_start));
@@ -158,4 +163,6 @@ static void sfx_deinit(Sfx *sfx)
     alcMakeContextCurrent(NULL);
     alcDestroyContext(sfx->context);
     alcCloseDevice(sfx->device);
+#endif
 }
+#pragma warning(pop)
