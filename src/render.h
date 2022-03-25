@@ -24,6 +24,8 @@ typedef struct
     texture_handle_t texture;
 } UiRenderUnit;
 
+// TODO @CLEANUP: These ended up being the same. Is there a reason to stay this way?
+
 static shader_handle_t load_shader(const char *file_path)
 {
     char info_log[512]; // TODO @CLEANUP: Better logging
@@ -113,9 +115,6 @@ static void shader_set_int(shader_handle_t shader, const char *uniform_name, int
 
 // TODO @CLEANUP: This isn't like a constructor; it takes an existing instance and (re)initializes it. Should it be like
 // a constructor and return an instance instead of taking one as a parameter?
-
-// NOTE @FUTURE: We might think about different kinds of RenderUnits, like SolidColorRenderUnit, TextureRenderUnit,
-// UiRenderUnit etc. They might have different data layout
 
 static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert_data_len, const uint32_t *index_data,
                              size_t index_data_len, shader_handle_t shader, const char *texture_file_name)

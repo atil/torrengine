@@ -2,7 +2,7 @@
 
 #ifdef SFX_DISABLED
 #pragma warning(push)
-#pragma warning(disable : 4100) // These require extra attention for some reason
+#pragma warning(disable : 4100)
 #endif
 
 typedef ALuint sfx_source_handle_t;
@@ -22,11 +22,14 @@ typedef struct
     ALCcontext *context;
 
     sfx_source_handle_t source_objects;
-    sfx_source_handle_t source_game;
+    sfx_source_handle_t source_startgame;
+    sfx_source_handle_t source_gameover;
+    uint32_t _unused_padding; // TODO @CLEANUP: Research why we need this
 
+    // TODO @REFACTOR: These are gonna be an array
     sfx_buffer_handle_t buffer_hitpad;
     sfx_buffer_handle_t buffer_hitwall;
-    sfx_buffer_handle_t buffer_start;
+    sfx_buffer_handle_t buffer_startgame;
     sfx_buffer_handle_t buffer_gameover;
 } Sfx;
 
@@ -100,13 +103,14 @@ static void sfx_init(Sfx *sfx)
     sfx->context = alcCreateContext(sfx->device, NULL);
     alcMakeContextCurrent(sfx->context);
 
-    sfx->source_game = create_source();
+    sfx->source_startgame = create_source();
+    sfx->source_gameover = create_source();
     sfx->source_objects = create_source();
 
     sfx->buffer_hitpad = create_buffer_with_file("assets/HitPad.wav");
     sfx->buffer_hitwall = create_buffer_with_file("assets/HitWall.wav");
     sfx->buffer_gameover = create_buffer_with_file("assets/GameOver.wav");
-    sfx->buffer_start = create_buffer_with_file("assets/Start.wav");
+    sfx->buffer_startgame = create_buffer_with_file("assets/Start.wav");
 #endif
 }
 
@@ -118,12 +122,12 @@ static void sfx_play(Sfx *sfx, SfxId id)
     switch (id)
     {
     case SfxStart:
-        buffer = sfx->buffer_start;
-        source = sfx->source_game;
+        buffer = sfx->buffer_startgame;
+        source = sfx->source_startgame;
         break;
     case SfxGameOver:
         buffer = sfx->buffer_gameover;
-        source = sfx->source_game;
+        source = sfx->source_gameover;
         break;
     case SfxHitPad:
         buffer = sfx->buffer_hitpad;
@@ -155,9 +159,10 @@ static void sfx_play(Sfx *sfx, SfxId id)
 static void sfx_deinit(Sfx *sfx)
 {
 #ifndef SFX_DISABLED
-    alDeleteSources(1, &(sfx->source_game));
+    alDeleteSources(1, &(sfx->source_startgame));
+    alDeleteSources(1, &(sfx->source_gameover));
     alDeleteSources(1, &(sfx->source_objects));
-    alDeleteBuffers(1, &(sfx->buffer_start));
+    alDeleteBuffers(1, &(sfx->buffer_startgame));
     alDeleteBuffers(1, &(sfx->buffer_gameover));
     alDeleteBuffers(1, &(sfx->buffer_hitpad));
     alDeleteBuffers(1, &(sfx->buffer_hitwall));
