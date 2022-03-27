@@ -38,6 +38,40 @@ typedef struct
     bool did_score;
 } PongGameUpdateResult;
 
+static bool check_line_segment_intersection(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4, Vec2 *intersection)
+{
+    float x1 = p1.x;
+    float x2 = p2.x;
+    float x3 = p3.x;
+    float x4 = p4.x;
+    float y1 = p1.y;
+    float y2 = p2.y;
+    float y3 = p3.y;
+    float y4 = p4.y;
+
+    // https://en.wikipedia.org/wiki/Line-line_intersection
+    float t_nom = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);
+    float t_den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+
+    float u_nom = (x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2);
+    float u_den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+
+    if (t_nom < 0 || t_nom > t_den || u_nom < 0 || u_nom > u_den)
+    {
+        return false; // Not intersecting
+    }
+
+    if (fabs(t_den) < 0.00001f || fabs(u_den) < 0.00001f)
+    {
+        return false; // Overlapping
+    }
+
+    float t = t_nom / t_den;
+    *intersection = vec2_new(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
+
+    return true;
+}
+
 static Rect rect_new(Vec2 center, Vec2 size)
 {
     float x_min = center.x - size.x / 2.0f;
@@ -91,6 +125,11 @@ static bool pad_resolve_point(const GameObject *pad_go, Vec2 p, int resolve_dir,
     }
 
     return false;
+}
+
+static bool pad_ball_collision_check(const GameObject *pad_go, Vec2 ball_displacement, Vec2 *reflected_trajectory)
+{
+    return false; // start from here
 }
 
 static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx)
