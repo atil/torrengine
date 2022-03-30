@@ -127,12 +127,33 @@ static bool pad_resolve_point(const GameObject *pad_go, Vec2 p, int resolve_dir,
     return false;
 }
 
-static bool pad_ball_collision_check(const GameObject *pad_go, Vec2 ball_displacement, Vec2 *reflected_trajectory)
+static bool pad_ball_collision_check(const GameObject *pad_go, Vec2 ball_displacement_from, Vec2 ball_displacement_to,
+                                     Vec2 *collision_point)
 {
-    return false; // start from here
+    Rect rect_world = gameobject_get_world_rect(pad_go);
+    Vec2 edges[4] = {
+        rect_world.min,
+        vec2_new(rect_world.min.x, rect_world.max.y),
+        rect_world.max,
+        vec2_new(rect_world.max.x, rect_world.min.y),
+    };
+
+    for (int i = 0; i < 4; i++)
+    {
+        Vec2 intersection;
+        bool has_intersection = check_line_segment_intersection(ball_displacement_from, ball_displacement_to, edges[i],
+                                                                edges[(i + 1) % 4], &intersection);
+        if (has_intersection)
+        {
+            *collision_point = intersection;
+            return true;
+        }
+    }
+
+    return false;
 }
 
-static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx)
+static void game_init(PongGame *game, const PongGameConfig *config, Sfx *sfx)
 {
     game->field_go = gameobject_new(vec2_zero(), vec2_new(((float)WIDTH / (float)HEIGHT) * 10, 10));
     game->pad1_go = gameobject_new(vec2_new(config->distance_from_center, 0.0f), config->pad_size);
@@ -184,13 +205,13 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, const PongGame
     Vec2 ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * game->game_speed_coeff * dt));
     Vec2 ball_next_pos = vec2_add(ball_pos, ball_displacement);
 
-    float resolved_x;
-    if (pad_resolve_point(&game->pad1_go, ball_next_pos, 1, &resolved_x) ||
-        pad_resolve_point(&game->pad2_go, ball_next_pos, -1, &resolved_x))
+    Vec2 collision_point;
+    if (pad_ball_collision_check(&game->pad1_go, ball_pos, ball_next_pos, &collision_point) ||
+        pad_ball_collision_check(&game->pad2_go, ball_pos, ball_next_pos, &collision_point))
     {
         // Hit paddles
 
-        ball_pos.x = resolved_x; // TODO @ROBUSTNESS: This is funky
+        ball_pos = collision_point; // Snap to hit position
         game->ball_move_dir.x *= -1;
 
         const float ball_pad_hit_randomness_coeff = 0.2f;

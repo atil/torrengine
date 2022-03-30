@@ -105,6 +105,7 @@ int main(void)
     TextTransform text_transform_score;
     text_transform_score.anchor = vec2_new(-0.9f, -0.9f);
     text_transform_score.scale = vec2_new(0.1f, 0.5f);
+    // TODO @BUG: Set this with initial score
     render_unit_ui_update(&ui_ru_score, &font_data, "0", text_transform_score);
 
     UiRenderUnit ui_ru_intermission;
@@ -219,8 +220,8 @@ int main(void)
             glBindVertexArray(ui_ru_score.vao);
             if (result.did_score) // Update score view
             {
-                char int_str_buffer[sizeof(uint32_t)]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
-                sprintf_s(int_str_buffer, sizeof(char) * sizeof(uint32_t), "%d", game.score);
+                char int_str_buffer[32]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
+                sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", game.score);
                 render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
             }
             glDrawElements(GL_TRIANGLES, ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
