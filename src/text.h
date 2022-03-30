@@ -14,10 +14,18 @@ typedef struct
     size_t ib_len;
 } TextBufferData;
 
+typedef enum
+{
+    FixedWidth,
+    FreeWidth,
+} TextWidthType;
+
 typedef struct
 {
     Vec2 anchor;
-    Vec2 scale;
+    float height; // In NDC
+    TextWidthType width_type;
+    float width; // In NDC
 } TextTransform;
 
 typedef struct
@@ -27,6 +35,16 @@ typedef struct
     float descent;                              // In pixels
     stbtt_bakedchar font_char_data[CHAR_COUNT]; // TODO @LEAK: This is not leaked, but research anyway
 } FontData;
+
+static TextTransform texttransform_new(Vec2 anchor, float height, TextWidthType width_type, float width)
+{
+    TextTransform tx;
+    tx.anchor = anchor;
+    tx.height = height;
+    tx.width_type = width_type;
+    tx.width = width;
+    return tx;
+}
 
 static void text_init(FontData *font_data)
 {

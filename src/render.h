@@ -221,10 +221,9 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
 {
     const size_t char_count = strlen(text);
 
-    const float x_scale = 1.0f / char_count; // TODO @DOCS: Explain
-
     Vec2 anchor = transform.anchor;
-    Vec2 scale = transform.scale;
+    float width = transform.width_type == FixedWidth ? (transform.width / char_count) : transform.width;
+    float height = transform.height;
 
     uint32_t vert_curr = 0;
     uint32_t ind_curr = 0;
@@ -248,28 +247,28 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
         // coordinate of the UVs
 
         // Bottom left vertex
-        text_data->vb_data[vert_curr + 0] = (float)i * scale.x * x_scale + anchor.x; // X:0
-        text_data->vb_data[vert_curr + 1] = glyph_bottom * scale.y + anchor.y;       // Y:0
-        text_data->vb_data[vert_curr + 2] = quad.s0;                                 // U
-        text_data->vb_data[vert_curr + 3] = 1.0f - quad.t1;                          // V
+        text_data->vb_data[vert_curr + 0] = (float)i * width + anchor.x;      // X:0
+        text_data->vb_data[vert_curr + 1] = glyph_bottom * height + anchor.y; // Y:0
+        text_data->vb_data[vert_curr + 2] = quad.s0;                          // U
+        text_data->vb_data[vert_curr + 3] = 1.0f - quad.t1;                   // V
 
         // Bottom right vertex
-        text_data->vb_data[vert_curr + 4] = (float)(i + 1) * scale.x * x_scale + anchor.x; // 1
-        text_data->vb_data[vert_curr + 5] = glyph_bottom * scale.y + anchor.y;             // 0
-        text_data->vb_data[vert_curr + 6] = quad.s1;                                       // U
-        text_data->vb_data[vert_curr + 7] = 1.0f - quad.t1;                                // V
+        text_data->vb_data[vert_curr + 4] = (float)(i + 1) * width + anchor.x; // 1
+        text_data->vb_data[vert_curr + 5] = glyph_bottom * height + anchor.y;  // 0
+        text_data->vb_data[vert_curr + 6] = quad.s1;                           // U
+        text_data->vb_data[vert_curr + 7] = 1.0f - quad.t1;                    // V
 
         // Top right vertex
-        text_data->vb_data[vert_curr + 8] = (float)(i + 1) * scale.x * x_scale + anchor.x; // 1
-        text_data->vb_data[vert_curr + 9] = glyph_top * scale.y + anchor.y;                // 1
-        text_data->vb_data[vert_curr + 10] = quad.s1;                                      // U
-        text_data->vb_data[vert_curr + 11] = 1.0f - quad.t0;                               // V
+        text_data->vb_data[vert_curr + 8] = (float)(i + 1) * width + anchor.x; // 1
+        text_data->vb_data[vert_curr + 9] = glyph_top * height + anchor.y;     // 1
+        text_data->vb_data[vert_curr + 10] = quad.s1;                          // U
+        text_data->vb_data[vert_curr + 11] = 1.0f - quad.t0;                   // V
 
         // Top left vertex
-        text_data->vb_data[vert_curr + 12] = (float)i * scale.x * x_scale + anchor.x; // 0
-        text_data->vb_data[vert_curr + 13] = glyph_top * scale.y + anchor.y;          // 1
-        text_data->vb_data[vert_curr + 14] = quad.s0;                                 // U
-        text_data->vb_data[vert_curr + 15] = 1.0f - quad.t0;                          // V
+        text_data->vb_data[vert_curr + 12] = (float)i * width + anchor.x;   // 0
+        text_data->vb_data[vert_curr + 13] = glyph_top * height + anchor.y; // 1
+        text_data->vb_data[vert_curr + 14] = quad.s0;                       // U
+        text_data->vb_data[vert_curr + 15] = 1.0f - quad.t0;                // V
 
         // Two triangles. Each char is 4 vertex
         text_data->ib_data[ind_curr + 0] = ((uint32_t)i * 4) + 0;
