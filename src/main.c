@@ -1,3 +1,5 @@
+// NOTE @DOCS: Game origin: up-left
+
 #define GLEW_STATIC                 // Statically linking glew
 #define GLFW_DLL                    // Dynamically linking glfw
 #define GLFW_INCLUDE_NONE           // Disable including dev environment header
@@ -110,6 +112,19 @@ int main(void)
     render_unit_ui_update(&ui_ru_intermission, &font_data, "Game Over", text_transform_intermission);
 
     //
+    // Particles
+    //
+    //
+    size_t particle_vert_count = 4;
+    float particle_vert[] = {-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 0.5f,  -0.5f, 0.0f, 1.0f, 0.0f,
+                             0.5f,  0.5f,  0.0f, 1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 0.0f, 1.0f};
+    uint32_t particle_indices[] = {0, 1, 2, 0, 2, 3};
+
+    RenderUnit particle_ru;
+    render_unit_init(&particle_ru, particle_vert, sizeof(particle_vert), particle_indices,
+                     sizeof(particle_indices), world_shader, "assets/Ball.png");
+
+    //
     // View-projection matrices
     //
 
@@ -207,6 +222,29 @@ int main(void)
             // TODO @DOCS: How can that last parameter be zero?
             glDrawElements(GL_TRIANGLES, ball_ru.index_count, GL_UNSIGNED_INT, 0);
 
+            glBindVertexArray(pad2_ru.vao);
+            glBindTexture(GL_TEXTURE_2D, pad2_ru.texture);
+            shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
+            glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
+
+            Vec2 ball_pos = mat4_get_pos_xy(&game.ball_go.transform);
+            const float half_particle_size = 0.25f;
+            Vec2 particle_pos = vec2_add(ball_pos, vec2_new(0, 1));
+            particle_vert[0] = particle_pos.x - half_particle_size;
+            particle_vert[1] = particle_pos.y - half_particle_size;
+            particle_vert[5] = particle_pos.x + half_particle_size;
+            particle_vert[6] = particle_pos.y - half_particle_size;
+            particle_vert[10] = particle_pos.x + half_particle_size;
+            particle_vert[11] = particle_pos.y + half_particle_size;
+            particle_vert[15] = particle_pos.x - half_particle_size;
+            particle_vert[16] = particle_pos.y + half_particle_size;
+            glBindVertexArray(particle_ru.vao);
+            render_unit_update(&particle_ru, particle_vert);
+            glBindTexture(GL_TEXTURE_2D, particle_ru.texture);
+            Mat4 mat_identity = mat4_identity(); // TODO CLEANUP TEMP
+            shader_set_mat4(world_shader, "u_model", &mat_identity);
+            glDrawElements(GL_TRIANGLES, particle_ru.index_count, GL_UNSIGNED_INT, 0);
+
             // UI draw
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
@@ -246,6 +284,7 @@ int main(void)
     render_unit_deinit(&pad1_ru);
     render_unit_deinit(&pad2_ru);
     render_unit_deinit(&ball_ru);
+    render_unit_deinit(&particle_ru);
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
 
     render_unit_ui_deinit(&ui_ru_score);

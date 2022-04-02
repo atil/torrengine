@@ -10,6 +10,7 @@ typedef struct
     buffer_handle_t vbo;
     buffer_handle_t ibo;
     uint32_t index_count;
+    size_t vert_data_len;
     shader_handle_t shader;
     texture_handle_t texture;
 } RenderUnit;
@@ -24,7 +25,8 @@ typedef struct
     texture_handle_t texture;
 } UiRenderUnit;
 
-// TODO @CLEANUP: These ended up being the same. Is there a reason to stay this way?
+// TODO @CLEANUP: These ended up being the same. Is there a reason to stay
+// this way?
 
 static shader_handle_t load_shader(const char *file_path)
 {
@@ -113,11 +115,13 @@ static void shader_set_int(shader_handle_t shader, const char *uniform_name, int
     glUniform1i(loc, i);
 }
 
-// TODO @CLEANUP: This isn't like a constructor; it takes an existing instance and (re)initializes it. Should it be like
-// a constructor and return an instance instead of taking one as a parameter?
+// TODO @CLEANUP: This isn't like a constructor; it takes an existing
+// instance and (re)initializes it. Should it be like a constructor and
+// return an instance instead of taking one as a parameter?
 
-static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert_data_len, const uint32_t *index_data,
-                             size_t index_data_len, shader_handle_t shader, const char *texture_file_name)
+static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert_data_len,
+                             const uint32_t *index_data, size_t index_data_len, shader_handle_t shader,
+                             const char *texture_file_name)
 {
     glGenVertexArrays(1, &(ru->vao));
     glGenBuffers(1, &(ru->vbo));
@@ -144,16 +148,23 @@ static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    int width, height, nrChannels;
+    int width, height, channel_count;
     stbi_set_flip_vertically_on_load(true);
-    uint8_t *data = stbi_load(texture_file_name, &width, &height, &nrChannels, 0);
+    uint8_t *data = stbi_load(texture_file_name, &width, &height, &channel_count, 0);
     assert(data != NULL);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(data);
 
+    ru->vert_data_len = vert_data_len;
     ru->index_count = (uint32_t)index_data_len;
     ru->shader = shader;
+}
+
+static void render_unit_update(RenderUnit *ru, const float *new_vert_data)
+{
+    glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, ru->vert_data_len, new_vert_data);
 }
 
 static void render_unit_deinit(RenderUnit *ru)
@@ -164,8 +175,9 @@ static void render_unit_deinit(RenderUnit *ru)
     glDeleteTextures(1, &ru->texture);
 
     /* glDeleteProgram(ru->shader); */
-    // Not deleting the shader here, since we only have one instance for the world.
-    // NOTE @FUTURE: Probably gonna have a batch sort of thing, the guys who share the same shader
+    // Not deleting the shader here, since we only have one instance for
+    // the world. NOTE @FUTURE: Probably gonna have a batch sort of thing,
+    // the guys who share the same shader
 }
 
 static void render_unit_ui_alloc(UiRenderUnit *ru, shader_handle_t shader, FontData *font_data)
@@ -176,7 +188,8 @@ static void render_unit_ui_alloc(UiRenderUnit *ru, shader_handle_t shader, FontD
 
     glBindVertexArray(ru->vao);
 
-    // @DOCS: We provide empty buffers here, otherwise the pointers don't know what buffer they point to (or something)
+    // @DOCS: We provide empty buffers here, otherwise the pointers don't
+    // know what buffer they point to (or something)
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
     glBufferData(GL_ARRAY_BUFFER, 0, NULL, GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru->ibo);
@@ -197,11 +210,13 @@ static void render_unit_ui_alloc(UiRenderUnit *ru, shader_handle_t shader, FontD
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    // TODO @ROBUSTNESS: This depth component looks weird. Googling haven't showed up such a thing
+    // TODO @ROBUSTNESS: This depth component looks weird. Googling haven't
+    // showed up such a thing
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE,
                  font_data->font_bitmap);
 
-    // glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // TODO @ROBUSTNESS: We might need to do this if we get segfaults
+    // glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // TODO @ROBUSTNESS: We might
+    // need to do this if we get segfaults
 
     glUseProgram(shader);
     shader_set_int(shader, "u_texture_ui", 0);
@@ -217,7 +232,8 @@ static void render_unit_ui_deinit(UiRenderUnit *ru)
     glDeleteTextures(1, &ru->texture);
 }
 
-static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, const char *text, TextTransform transform)
+static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, const char *text,
+                             TextTransform transform)
 {
     const size_t char_count = strlen(text);
 
@@ -235,16 +251,18 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
         stbtt_GetBakedQuad(font_data->font_char_data, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ch - ' ', &pixel_pos_x,
                            &pixel_pos_y, &quad, 1);
 
-        // This calculation is difficult to wrap the head around. Draw it on paper to make it clearer in the head
-        // descent is negative: below the baseline and the origin is the bottom
-        // quadY0 is positive: it's above the baseline and the origin is top
-        // quadY1 positive: below the baseline and the origin is top
+        // This calculation is difficult to wrap the head around. Draw it
+        // on paper to make it clearer in the head descent is negative:
+        // below the baseline and the origin is the bottom quadY0 is
+        // positive: it's above the baseline and the origin is top quadY1
+        // positive: below the baseline and the origin is top
         const float glyph_bottom = (-font_data->descent - quad.y1) / FONT_TEXT_HEIGHT; // In screen space
         const float glyph_top = (-quad.y0 + (-font_data->descent)) / FONT_TEXT_HEIGHT; // In screen space
 
         // Anchor: bottom-left corner's normalized position
-        // Our quads have their origin at bottom left. But textures have their at top left. Therefore we invert the V
-        // coordinate of the UVs
+        // Our quads have their origin at bottom left. But textures have
+        // their at top left. Therefore we invert the V coordinate of the
+        // UVs
 
         // Bottom left vertex
         text_data->vb_data[vert_curr + 0] = (float)i * width + anchor.x;      // X:0
