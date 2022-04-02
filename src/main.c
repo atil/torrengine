@@ -37,12 +37,20 @@
 #include "game.h"
 #pragma warning(pop)
 
+#pragma warning(disable : 5045) // Spectre thing
+
 typedef enum
 {
     Splash,
     Game,
     GameOver
 } GameState;
+
+typedef struct
+{
+    uint32_t index;
+    float angle;
+} Particle;
 
 int main(void)
 {
@@ -72,9 +80,8 @@ int main(void)
 
     shader_handle_t world_shader = load_shader("src/world.glsl");
 
-    // Holds position (vec3) and UV (vec2)
-    float unit_square_verts[] = {-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 0.5f,  -0.5f, 0.0f, 1.0f, 0.0f,
-                                 0.5f,  0.5f,  0.0f, 1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 0.0f, 1.0f};
+    float unit_square_verts[] = {-0.5f, -0.5f, 0.0f, 0.0f, 0.5f,  -0.5f, 1.0f, 0.0f,
+                                 0.5f,  0.5f,  1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 1.0f};
     uint32_t unit_square_indices[] = {0, 1, 2, 0, 2, 3};
 
     render_unit_init(&field_ru, unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
@@ -114,15 +121,33 @@ int main(void)
     //
     // Particles
     //
-    //
-    size_t particle_vert_count = 4;
-    float particle_vert[] = {-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 0.5f,  -0.5f, 0.0f, 1.0f, 0.0f,
-                             0.5f,  0.5f,  0.0f, 1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 0.0f, 1.0f};
-    uint32_t particle_indices[] = {0, 1, 2, 0, 2, 3};
 
-    RenderUnit particle_ru;
-    render_unit_init(&particle_ru, particle_vert, sizeof(particle_vert), particle_indices,
-                     sizeof(particle_indices), world_shader, "assets/Ball.png");
+    // start from here: things are utterly broken. figure out why
+    uint32_t particle_count = 10;
+    float single_particle_vert[8] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
+    // TODO @CLEANUP: VLAs would simplify this allocation
+    float *particle_vert = (float *)malloc(particle_count * sizeof(single_particle_vert));
+    float particle_uvs[8] = {0, 0, 1, 0, 1, 1, 0, 1};
+    uint32_t particle_indices[6] = {0, 1, 2, 0, 2, 3};
+
+    Vec2 *particle_positions = (Vec2 *)malloc(particle_count * sizeof(Vec2));
+    Particle *particles = (Particle *)malloc(particle_count * sizeof(Particle));
+
+    for (uint32_t i = 0; i < particle_count; i++)
+    {
+        particles[i].index = i;
+        particles[i].angle = (360.0f / particle_count) * i;
+
+        particle_positions[i] = vec2_zero();
+
+        memcpy(particle_vert + i * sizeof(single_particle_vert), single_particle_vert,
+               sizeof(single_particle_vert));
+    }
+
+    ParticleRenderUnit particle_ru;
+    render_unit_particle_init(&particle_ru, particle_vert, particle_count * sizeof(single_particle_vert),
+                              particle_uvs, sizeof(particle_uvs), particle_indices, sizeof(particle_indices),
+                              world_shader, "assets/Ball.png");
 
     //
     // View-projection matrices
@@ -146,7 +171,7 @@ int main(void)
     PongGameConfig config;
     config.area_extents = vec2_new(cam_size * aspect, cam_size);
     config.pad_size = vec2_new(0.3f, 2.0f);
-    config.ball_speed = 4.0f;
+    config.ball_speed = 4.0f * 0.0000001f;
     config.distance_from_center = 4.0f;
     config.pad_move_speed = 10.0f;
     config.game_speed_increase_coeff = 0.05f;
@@ -227,19 +252,27 @@ int main(void)
             shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
             glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
 
-            Vec2 ball_pos = mat4_get_pos_xy(&game.ball_go.transform);
             const float half_particle_size = 0.25f;
-            Vec2 particle_pos = vec2_add(ball_pos, vec2_new(0, 1));
-            particle_vert[0] = particle_pos.x - half_particle_size;
-            particle_vert[1] = particle_pos.y - half_particle_size;
-            particle_vert[5] = particle_pos.x + half_particle_size;
-            particle_vert[6] = particle_pos.y - half_particle_size;
-            particle_vert[10] = particle_pos.x + half_particle_size;
-            particle_vert[11] = particle_pos.y + half_particle_size;
-            particle_vert[15] = particle_pos.x - half_particle_size;
-            particle_vert[16] = particle_pos.y + half_particle_size;
+
+            for (uint32_t i = 0; i < particle_count; i++)
+            {
+                Vec2 particle_pos = particle_positions[i];
+                Vec2 dir = vec2_new((float)cos(particles[i].angle), (float)sin(particles[i].angle));
+                const float particle_speed = 1.0f;
+                particle_positions[i] = vec2_add(particle_pos, vec2_scale(dir, particle_speed * dt));
+
+                particle_vert[(i * 8) + 0] = particle_pos.x - half_particle_size;
+                particle_vert[(i * 8) + 1] = particle_pos.y - half_particle_size;
+                particle_vert[(i * 8) + 2] = particle_pos.x + half_particle_size;
+                particle_vert[(i * 8) + 3] = particle_pos.y - half_particle_size;
+                particle_vert[(i * 8) + 4] = particle_pos.x + half_particle_size;
+                particle_vert[(i * 8) + 5] = particle_pos.y + half_particle_size;
+                particle_vert[(i * 8) + 6] = particle_pos.x - half_particle_size;
+                particle_vert[(i * 8) + 7] = particle_pos.y + half_particle_size;
+            }
+
             glBindVertexArray(particle_ru.vao);
-            render_unit_update(&particle_ru, particle_vert);
+            render_unit_particle_update(&particle_ru, particle_vert);
             glBindTexture(GL_TEXTURE_2D, particle_ru.texture);
             Mat4 mat_identity = mat4_identity(); // TODO CLEANUP TEMP
             shader_set_mat4(world_shader, "u_model", &mat_identity);
@@ -284,13 +317,18 @@ int main(void)
     render_unit_deinit(&pad1_ru);
     render_unit_deinit(&pad2_ru);
     render_unit_deinit(&ball_ru);
-    render_unit_deinit(&particle_ru);
+    render_unit_particle_deinit(&particle_ru);
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
 
     render_unit_ui_deinit(&ui_ru_score);
     render_unit_ui_deinit(&ui_ru_intermission);
     render_unit_ui_deinit(&ui_ru_splash_title);
     glDeleteProgram(ui_shader); // TODO @CLEANUP: Same with above
+
+    free(particle_positions); // TODO @CLEANUP: Better management of this. A particles
+                              // module maybe?
+    free(particles);
+    free(particle_vert);
 
     glfwTerminate();
     return 0;

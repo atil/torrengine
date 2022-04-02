@@ -25,6 +25,18 @@ typedef struct
     texture_handle_t texture;
 } UiRenderUnit;
 
+typedef struct s_ParticleRenderUnit
+{
+    buffer_handle_t vao;
+    buffer_handle_t vbo;
+    buffer_handle_t uv_bo;
+    buffer_handle_t ibo;
+    uint32_t index_count;
+    shader_handle_t shader;
+    texture_handle_t texture;
+    uint32_t vert_data_len;
+} ParticleRenderUnit;
+
 // TODO @CLEANUP: These ended up being the same. Is there a reason to stay
 // this way?
 
@@ -136,9 +148,9 @@ static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_data_len, index_data, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glGenTextures(1, &(ru->texture));
@@ -156,7 +168,8 @@ static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(data);
 
-    ru->vert_data_len = vert_data_len;
+    // TODO @CLEANUP: Actually these should be size_t but for some reason that causes padding in the struct
+    ru->vert_data_len = (uint32_t)vert_data_len;
     ru->index_count = (uint32_t)index_data_len;
     ru->shader = shader;
 }
@@ -322,4 +335,67 @@ static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const c
 
     free(text_data.vb_data);
     free(text_data.ib_data);
+}
+
+static void render_unit_particle_init(ParticleRenderUnit *ru, const float *vert_data, size_t vert_data_len,
+                                      const float *uv_data, size_t uv_data_len, const uint32_t *index_data,
+                                      size_t index_data_len, shader_handle_t shader, const char *texture_file_name)
+{
+    glGenVertexArrays(1, &(ru->vao));
+    glGenBuffers(1, &(ru->vbo));
+    glGenBuffers(1, &(ru->ibo));
+    glGenBuffers(1, &(ru->uv_bo));
+
+    glBindVertexArray(ru->vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
+    glBufferData(GL_ARRAY_BUFFER, vert_data_len, vert_data, GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, ru->uv_bo);
+    glBufferData(GL_ARRAY_BUFFER, uv_data_len, uv_data, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru->ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_data_len, index_data, GL_STATIC_DRAW);
+
+    glGenTextures(1, &(ru->texture));
+    glBindTexture(GL_TEXTURE_2D, ru->texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    int width, height, channel_count;
+    stbi_set_flip_vertically_on_load(true);
+    uint8_t *data = stbi_load(texture_file_name, &width, &height, &channel_count, 0);
+    assert(data != NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(data);
+
+    ru->vert_data_len = (uint32_t)vert_data_len;
+    ru->index_count = (uint32_t)index_data_len;
+    ru->shader = shader;
+}
+
+static void render_unit_particle_update(ParticleRenderUnit *ru, const float *new_vert_data)
+{
+    glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, ru->vert_data_len, new_vert_data);
+}
+
+static void render_unit_particle_deinit(ParticleRenderUnit *ru)
+{
+    glDeleteVertexArrays(1, &(ru->vao));
+    glDeleteBuffers(1, &(ru->vbo));
+    glDeleteBuffers(1, &(ru->uv_bo));
+    glDeleteBuffers(1, &(ru->ibo));
+
+    // TODO @CLEANUP: A better way to manage these shaders
+    // glDeleteProgram(ru->shader);
+    glDeleteTextures(1, &ru->texture);
 }

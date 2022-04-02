@@ -127,8 +127,8 @@ static bool pad_resolve_point(const GameObject *pad_go, Vec2 p, int resolve_dir,
     return false;
 }
 
-static bool pad_ball_collision_check(const GameObject *pad_go, Vec2 ball_displacement_from, Vec2 ball_displacement_to,
-                                     Vec2 *collision_point)
+static bool pad_ball_collision_check(const GameObject *pad_go, Vec2 ball_displacement_from,
+                                     Vec2 ball_displacement_to, Vec2 *collision_point)
 {
     Rect rect_world = gameobject_get_world_rect(pad_go);
     Vec2 edges[4] = {
@@ -141,8 +141,8 @@ static bool pad_ball_collision_check(const GameObject *pad_go, Vec2 ball_displac
     for (int i = 0; i < 4; i++)
     {
         Vec2 intersection;
-        bool has_intersection = check_line_segment_intersection(ball_displacement_from, ball_displacement_to, edges[i],
-                                                                edges[(i + 1) % 4], &intersection);
+        bool has_intersection = check_line_segment_intersection(ball_displacement_from, ball_displacement_to,
+                                                                edges[i], edges[(i + 1) % 4], &intersection);
         if (has_intersection)
         {
             *collision_point = intersection;
@@ -214,9 +214,9 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, const PongGame
         ball_pos = collision_point; // Snap to hit position
         game->ball_move_dir.x *= -1;
 
-        const float ball_pad_hit_randomness_coeff = 0.2f;
-        game->ball_move_dir.y += rand_range(-1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
-        vec2_normalize(&game->ball_move_dir);
+        // const float ball_pad_hit_randomness_coeff = 0.2f;
+        // game->ball_move_dir.y += rand_range(-1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
+        // vec2_normalize(&game->ball_move_dir);
 
         ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * dt));
         ball_next_pos = vec2_add(ball_pos, ball_displacement);
