@@ -1,4 +1,5 @@
 #include <math.h>
+#define DEG2RAD 0.0174533
 
 static float lerp(float a, float b, float t)
 {

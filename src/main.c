@@ -122,14 +122,20 @@ int main(void)
     // Particles
     //
 
-    // start from here: things are utterly broken. figure out why
     uint32_t particle_count = 10;
-    float single_particle_vert[8] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
-    // TODO @CLEANUP: VLAs would simplify this allocation
-    float *particle_vert = (float *)malloc(particle_count * sizeof(single_particle_vert));
-    float particle_uvs[8] = {0, 0, 1, 0, 1, 1, 0, 1};
-    uint32_t particle_indices[6] = {0, 1, 2, 0, 2, 3};
 
+    // Particle render data
+    // TODO @CLEANUP: VLAs would simplify this allocation
+    float single_particle_vert[8] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
+    float *particle_vert = (float *)malloc(particle_count * sizeof(single_particle_vert));
+
+    float single_particle_uvs[8] = {0, 0, 1, 0, 1, 1, 0, 1};
+    float *particle_uvs = (float *)malloc(particle_count * sizeof(single_particle_uvs));
+
+    uint32_t single_particle_index[6] = {0, 1, 2, 0, 2, 3};
+    uint32_t *particle_index = (uint32_t *)malloc(particle_count * sizeof(single_particle_index));
+
+    // Particles' data itself
     Vec2 *particle_positions = (Vec2 *)malloc(particle_count * sizeof(Vec2));
     Particle *particles = (Particle *)malloc(particle_count * sizeof(Particle));
 
@@ -140,14 +146,25 @@ int main(void)
 
         particle_positions[i] = vec2_zero();
 
-        memcpy(particle_vert + i * sizeof(single_particle_vert), single_particle_vert,
-               sizeof(single_particle_vert));
+        // Learning: '+' operator for pointers doesn't increment by bytes.
+        // The increment amount is of the pointer's type. So for this one above, it increments 8 floats.
+
+        memcpy(particle_vert + i * 8, single_particle_vert, sizeof(single_particle_vert));
+
+        uint32_t particle_index_at_i[6] = {
+            single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4),
+            single_particle_index[2] + (i * 4), single_particle_index[3] + (i * 4),
+            single_particle_index[4] + (i * 4), single_particle_index[5] + (i * 4),
+        };
+        memcpy(particle_index + i * 6, particle_index_at_i, sizeof(particle_index_at_i));
+
+        memcpy(particle_uvs + i * 8, single_particle_uvs, sizeof(single_particle_uvs));
     }
 
     ParticleRenderUnit particle_ru;
     render_unit_particle_init(&particle_ru, particle_vert, particle_count * sizeof(single_particle_vert),
-                              particle_uvs, sizeof(particle_uvs), particle_indices, sizeof(particle_indices),
-                              world_shader, "assets/Ball.png");
+                              particle_uvs, particle_count * sizeof(single_particle_uvs), particle_index,
+                              particle_count * sizeof(single_particle_index), world_shader, "assets/Ball.png");
 
     //
     // View-projection matrices
@@ -257,7 +274,8 @@ int main(void)
             for (uint32_t i = 0; i < particle_count; i++)
             {
                 Vec2 particle_pos = particle_positions[i];
-                Vec2 dir = vec2_new((float)cos(particles[i].angle), (float)sin(particles[i].angle));
+                Vec2 dir =
+                    vec2_new((float)cos(particles[i].angle * DEG2RAD), (float)sin(particles[i].angle * DEG2RAD));
                 const float particle_speed = 1.0f;
                 particle_positions[i] = vec2_add(particle_pos, vec2_scale(dir, particle_speed * dt));
 
@@ -310,7 +328,6 @@ int main(void)
         glfwPollEvents();
     }
 
-    text_deinit(&font_data);
     sfx_deinit(&sfx);
 
     render_unit_deinit(&field_ru);
@@ -325,10 +342,18 @@ int main(void)
     render_unit_ui_deinit(&ui_ru_splash_title);
     glDeleteProgram(ui_shader); // TODO @CLEANUP: Same with above
 
-    free(particle_positions); // TODO @CLEANUP: Better management of this. A particles
-                              // module maybe?
+    // TODO @CLEANUP: Better management of this. A particles module maybe?
+    free(particle_positions);
+    particle_positions = NULL;
     free(particles);
+    particles = NULL;
     free(particle_vert);
+    particle_vert = NULL;
+    // TODO @CLEANUP: We can free this right after init'ing particles. We don't change this
+    free(particle_index);
+    particle_index = NULL;
+    free(particle_uvs);
+    particle_uvs = NULL;
 
     glfwTerminate();
     return 0;

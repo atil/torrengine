@@ -50,6 +50,7 @@ static void text_init(FontData *font_data)
 {
     // TODO @ROBUSTNESS: Assert that it's called once
     uint8_t *font_bytes = (uint8_t *)read_file("assets/Consolas.ttf");
+    assert(font_bytes != NULL);
     font_data->font_bitmap = (uint8_t *)malloc(FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT * sizeof(uint8_t));
 
     stbtt_BakeFontBitmap((uint8_t *)font_bytes, 0, FONT_TEXT_HEIGHT, font_data->font_bitmap, FONT_ATLAS_WIDTH,

@@ -25,7 +25,7 @@ typedef struct
     texture_handle_t texture;
 } UiRenderUnit;
 
-typedef struct s_ParticleRenderUnit
+typedef struct
 {
     buffer_handle_t vao;
     buffer_handle_t vbo;
