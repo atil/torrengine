@@ -35,6 +35,7 @@ typedef struct
     shader_handle_t shader;
     texture_handle_t texture;
     uint32_t vert_data_len;
+    float *vert_data;
 } ParticleRenderUnit;
 
 // TODO @CLEANUP: These ended up being the same. Is there a reason to stay
@@ -337,10 +338,44 @@ static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const c
     free(text_data.ib_data);
 }
 
-static void render_unit_particle_init(ParticleRenderUnit *ru, const float *vert_data, size_t vert_data_len,
-                                      const float *uv_data, size_t uv_data_len, const uint32_t *index_data,
-                                      size_t index_data_len, shader_handle_t shader, const char *texture_file_name)
+static void render_unit_particle_init(ParticleRenderUnit *ru, size_t particle_count, shader_handle_t shader,
+                                      const char *texture_file_name)
 {
+
+    // TODO @CLEANUP: VLAs would simplify this allocation
+    float single_particle_vert[8] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
+    size_t vert_data_len = particle_count * sizeof(single_particle_vert);
+    ru->vert_data = (float *)malloc(vert_data_len);
+
+    float single_particle_uvs[8] = {0, 0, 1, 0, 1, 1, 0, 1};
+    size_t uv_data_len = particle_count * sizeof(single_particle_uvs);
+    float *uv_data = (float *)malloc(uv_data_len);
+
+    uint32_t single_particle_index[6] = {0, 1, 2, 0, 2, 3};
+    size_t index_data_len = particle_count * sizeof(single_particle_index);
+    uint32_t *index_data = (uint32_t *)malloc(index_data_len);
+
+    for (size_t i = 0; i < particle_count; i++)
+    {
+        // Learning: '+' operator for pointers doesn't increment by bytes.
+        // The increment amount is of the pointer's type. So for this one above, it increments 8 floats.
+
+        memcpy(ru->vert_data + i * 8, single_particle_vert, sizeof(single_particle_vert));
+
+        size_t particle_index_at_i[6] = {
+            single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4),
+            single_particle_index[2] + (i * 4), single_particle_index[3] + (i * 4),
+            single_particle_index[4] + (i * 4), single_particle_index[5] + (i * 4),
+        };
+        memcpy(index_data + i * 6, particle_index_at_i, sizeof(particle_index_at_i));
+
+        memcpy(uv_data + i * 8, single_particle_uvs, sizeof(single_particle_uvs));
+    }
+
+    ru->vert_data_len = (uint32_t)vert_data_len;
+    ru->index_count = (uint32_t)index_data_len;
+    ru->shader = shader;
+
     glGenVertexArrays(1, &(ru->vao));
     glGenBuffers(1, &(ru->vbo));
     glGenBuffers(1, &(ru->ibo));
@@ -349,7 +384,7 @@ static void render_unit_particle_init(ParticleRenderUnit *ru, const float *vert_
     glBindVertexArray(ru->vao);
 
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
-    glBufferData(GL_ARRAY_BUFFER, vert_data_len, vert_data, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vert_data_len, ru->vert_data, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
 
@@ -377,15 +412,29 @@ static void render_unit_particle_init(ParticleRenderUnit *ru, const float *vert_
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(data);
 
-    ru->vert_data_len = (uint32_t)vert_data_len;
-    ru->index_count = (uint32_t)index_data_len;
-    ru->shader = shader;
+    free(index_data);
+    free(uv_data);
 }
 
-static void render_unit_particle_update(ParticleRenderUnit *ru, const float *new_vert_data)
+static void render_unit_particle_update(ParticleRenderUnit *ru, ParticleSystem *ps)
 {
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, ru->vert_data_len, new_vert_data);
+
+    const float half_particle_size = 0.25f;
+    for (uint32_t i = 0; i < ps->particle_count; i++)
+    {
+        Vec2 particle_pos = ps->positions[i];
+        ru->vert_data[(i * 8) + 0] = particle_pos.x - half_particle_size;
+        ru->vert_data[(i * 8) + 1] = particle_pos.y - half_particle_size;
+        ru->vert_data[(i * 8) + 2] = particle_pos.x + half_particle_size;
+        ru->vert_data[(i * 8) + 3] = particle_pos.y - half_particle_size;
+        ru->vert_data[(i * 8) + 4] = particle_pos.x + half_particle_size;
+        ru->vert_data[(i * 8) + 5] = particle_pos.y + half_particle_size;
+        ru->vert_data[(i * 8) + 6] = particle_pos.x - half_particle_size;
+        ru->vert_data[(i * 8) + 7] = particle_pos.y + half_particle_size;
+    }
+
+    glBufferSubData(GL_ARRAY_BUFFER, 0, ru->vert_data_len, ru->vert_data);
 }
 
 static void render_unit_particle_deinit(ParticleRenderUnit *ru)
@@ -398,4 +447,6 @@ static void render_unit_particle_deinit(ParticleRenderUnit *ru)
     // TODO @CLEANUP: A better way to manage these shaders
     // glDeleteProgram(ru->shader);
     glDeleteTextures(1, &ru->texture);
+
+    free(ru->vert_data);
 }
