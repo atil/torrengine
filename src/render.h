@@ -355,14 +355,14 @@ static void render_unit_particle_init(ParticleRenderUnit *ru, size_t particle_co
     size_t index_data_len = particle_count * sizeof(single_particle_index);
     uint32_t *index_data = (uint32_t *)malloc(index_data_len);
 
-    for (size_t i = 0; i < particle_count; i++)
+    for (uint32_t i = 0; i < (uint32_t)particle_count; i++)
     {
         // Learning: '+' operator for pointers doesn't increment by bytes.
         // The increment amount is of the pointer's type. So for this one above, it increments 8 floats.
 
         memcpy(ru->vert_data + i * 8, single_particle_vert, sizeof(single_particle_vert));
 
-        size_t particle_index_at_i[6] = {
+        uint32_t particle_index_at_i[6] = {
             single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4),
             single_particle_index[2] + (i * 4), single_particle_index[3] + (i * 4),
             single_particle_index[4] + (i * 4), single_particle_index[5] + (i * 4),

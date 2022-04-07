@@ -14,13 +14,20 @@ typedef struct
     Vec2 *positions;
     Particle *particles;
     size_t particle_count;
+    float life;
+    float lifetime;
+    bool isAlive;
+    uint8_t _padding[7];
 } ParticleSystem;
 
-static void particle_init(ParticleSystem *ps, Vec2 pos, size_t particle_count)
+static void particle_init(ParticleSystem *ps, Vec2 pos, size_t particle_count, float lifetime)
 {
     ps->particle_count = particle_count;
     ps->positions = (Vec2 *)malloc(particle_count * sizeof(Vec2));
     ps->particles = (Particle *)malloc(particle_count * sizeof(Particle));
+    ps->lifetime = lifetime;
+    ps->life = 0;
+    ps->isAlive = true;
 
     for (uint32_t i = 0; i < particle_count; i++)
     {
@@ -40,6 +47,9 @@ static void particle_update(ParticleSystem *ps, float dt)
         const float particle_speed = 1.0f;
         ps->positions[i] = vec2_add(ps->positions[i], vec2_scale(dir, particle_speed * dt));
     }
+
+    ps->life += dt;
+    ps->isAlive = ps->life < ps->lifetime;
 }
 
 static void particle_deinit(ParticleSystem *ps)

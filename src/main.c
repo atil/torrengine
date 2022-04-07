@@ -118,7 +118,7 @@ int main(void)
     //
 
     ParticleSystem particle_system;
-    particle_init(&particle_system, vec2_zero(), 10);
+    particle_init(&particle_system, vec2_zero(), 10, 2);
 
     ParticleRenderUnit particle_ru;
     render_unit_particle_init(&particle_ru, particle_system.particle_count, world_shader, "assets/Ball.png");
@@ -154,7 +154,6 @@ int main(void)
 
     float game_time = (float)glfwGetTime();
     float dt = 0.0f;
-    // float particle_start_time = game_time;
     while (!glfwWindowShouldClose(window))
     {
         dt = (float)glfwGetTime() - game_time;
@@ -226,14 +225,18 @@ int main(void)
             glBindTexture(GL_TEXTURE_2D, pad2_ru.texture);
             shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
             glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
-            particle_update(&particle_system, dt);
 
-            glBindVertexArray(particle_ru.vao);
-            render_unit_particle_update(&particle_ru, &particle_system);
-            glBindTexture(GL_TEXTURE_2D, particle_ru.texture);
-            Mat4 mat_identity = mat4_identity(); // TODO CLEANUP TEMP
-            shader_set_mat4(world_shader, "u_model", &mat_identity);
-            glDrawElements(GL_TRIANGLES, particle_ru.index_count, GL_UNSIGNED_INT, 0);
+            if (particle_system.isAlive)
+            {
+                particle_update(&particle_system, dt);
+
+                glBindVertexArray(particle_ru.vao);
+                render_unit_particle_update(&particle_ru, &particle_system);
+                glBindTexture(GL_TEXTURE_2D, particle_ru.texture);
+                Mat4 mat_identity = mat4_identity(); // TODO CLEANUP TEMP
+                shader_set_mat4(world_shader, "u_model", &mat_identity);
+                glDrawElements(GL_TRIANGLES, particle_ru.index_count, GL_UNSIGNED_INT, 0);
+            }
 
             // UI draw
             glActiveTexture(GL_TEXTURE0);
