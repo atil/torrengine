@@ -47,12 +47,19 @@ typedef enum
     GameOver
 } GameState;
 
-static void create_particle_instance(ParticleProps *props, ParticleSystem **out_system,
-                                     ParticleRenderUnit **out_ru)
+typedef struct
 {
+    ParticleEmitter *emitter;
+    ParticleRenderUnit *render_unit;
+} ParticleSystem;
+
+ParticleSystem create_particle_system(ParticleProps *props)
+{
+    ParticleSystem ps;
     shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
-    *out_system = particle_system_init(*props);
-    *out_ru = render_unit_particle_init(props->count, particle_shader, "assets/Ball.png");
+    ps.emitter = particle_emitter_init(*props);
+    ps.render_unit = render_unit_particle_init(props->count, particle_shader, "assets/Ball.png");
+    return ps;
 }
 
 int main(void)
@@ -134,21 +141,12 @@ int main(void)
     particle_props.angle_offset = 0;
     particle_props.speed_offset = 0;
 
-    const size_t particle_instance_capacity = 10;
+    const size_t particle_system_capacity = 10;
 
-    ParticleSystem **particle_systems =
-        (ParticleSystem **)calloc(particle_instance_capacity, sizeof(ParticleSystem **));
-    ParticleRenderUnit **particle_renderers =
-        (ParticleRenderUnit **)calloc(particle_instance_capacity, sizeof(ParticleRenderUnit **));
+    ParticleSystem *particle_systems = (ParticleSystem *)calloc(particle_system_capacity, sizeof(ParticleSystem));
+    // particle_systems[0] = create_particle_system(&particle_props);
 
-    // TODO @CLEANUP: We should get rid of these locals here
-    ParticleSystem *particle_system;
-    ParticleRenderUnit *particle_ru;
-    create_particle_instance(&particle_props, &particle_system, &particle_ru);
-    particle_systems[0] = particle_system;
-    particle_renderers[0] = particle_ru;
-
-    size_t created_particle_count = 1;
+    size_t created_particle_count = 0;
 
     //
     // View-projection matrices
@@ -166,7 +164,7 @@ int main(void)
 
     for (size_t i = 0; i < created_particle_count; i++)
     {
-        shader_handle_t curr_particle_shader = particle_renderers[i]->shader;
+        shader_handle_t curr_particle_shader = particle_systems[i].render_unit->shader;
         glUseProgram(curr_particle_shader);
         Mat4 mat_identity = mat4_identity();
         shader_set_mat4(curr_particle_shader, "u_model", &mat_identity);
@@ -263,23 +261,39 @@ int main(void)
             shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
             glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
 
+            // TODO @INCOMPLETE @LEAK: Make this keydown. Lots of leaks like this
+            if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+            {
+                ParticleSystem ps = create_particle_system(&particle_props);
+                particle_systems[0] = ps;
+
+                shader_handle_t curr_particle_shader = ps.render_unit->shader;
+                glUseProgram(curr_particle_shader);
+                Mat4 mat_identity = mat4_identity();
+                shader_set_mat4(curr_particle_shader, "u_model", &mat_identity);
+                shader_set_mat4(curr_particle_shader, "u_view", &view);
+                shader_set_mat4(curr_particle_shader, "u_proj", &proj);
+
+                ps.emitter->isAlive = true;
+                created_particle_count = 1;
+            }
+
             for (size_t i = 0; i < created_particle_count; i++)
             {
-                ParticleSystem *ps = particle_systems[i];
-                ParticleRenderUnit *pr = particle_renderers[i];
-                if (!ps->isAlive)
+                if (!particle_systems[i].emitter->isAlive)
                 {
                     continue;
                 }
 
-                particle_system_update(ps, dt);
+                particle_emitter_update(particle_systems[i].emitter, dt);
 
-                glUseProgram(pr->shader);
-                glBindVertexArray(pr->vao);
-                render_unit_particle_update(pr, ps);
-                glBindTexture(GL_TEXTURE_2D, pr->texture);
-                shader_set_float(pr->shader, "u_alpha", ps->transparency);
-                glDrawElements(GL_TRIANGLES, pr->index_count, GL_UNSIGNED_INT, 0);
+                glUseProgram(particle_systems[i].render_unit->shader);
+                glBindVertexArray(particle_systems[i].render_unit->vao);
+                render_unit_particle_update(particle_systems[i].render_unit, particle_systems[i].emitter);
+                glBindTexture(GL_TEXTURE_2D, particle_systems[i].render_unit->texture);
+                shader_set_float(particle_systems[i].render_unit->shader, "u_alpha",
+                                 particle_systems[i].emitter->transparency);
+                glDrawElements(GL_TRIANGLES, particle_systems[i].render_unit->index_count, GL_UNSIGNED_INT, 0);
             }
 
             // UI draw
@@ -329,12 +343,11 @@ int main(void)
 
     for (size_t i = 0; i < created_particle_count; i++)
     {
-        particle_system_deinit(particle_systems[i]);
-        render_unit_particle_deinit(particle_renderers[i]);
+        particle_emitter_deinit(particle_systems[i].emitter);
+        render_unit_particle_deinit(particle_systems[i].render_unit);
     }
 
     free(particle_systems);
-    free(particle_renderers);
 
     glfwTerminate();
     return 0;

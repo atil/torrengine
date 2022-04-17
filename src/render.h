@@ -430,7 +430,7 @@ static ParticleRenderUnit *render_unit_particle_init(size_t particle_count, shad
     return ru;
 }
 
-static void render_unit_particle_update(ParticleRenderUnit *ru, ParticleSystem *ps)
+static void render_unit_particle_update(ParticleRenderUnit *ru, ParticleEmitter *ps)
 {
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
 

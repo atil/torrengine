@@ -28,11 +28,11 @@ typedef struct
     float transparency;
     bool isAlive;
     uint8_t _padding[7];
-} ParticleSystem;
+} ParticleEmitter;
 
-static ParticleSystem *particle_system_init(ParticleProps props)
+static ParticleEmitter *particle_emitter_init(ParticleProps props)
 {
-    ParticleSystem *ps = (ParticleSystem *)malloc(sizeof(ParticleSystem));
+    ParticleEmitter *ps = (ParticleEmitter *)malloc(sizeof(ParticleEmitter));
     ps->positions = (Vec2 *)malloc(props.count * sizeof(Vec2));
     ps->particles = (Particle *)malloc(props.count * sizeof(Particle));
     ps->life = 0;
@@ -55,7 +55,7 @@ static ParticleSystem *particle_system_init(ParticleProps props)
     return ps;
 }
 
-static void particle_system_update(ParticleSystem *ps, float dt)
+static void particle_emitter_update(ParticleEmitter *ps, float dt)
 {
     for (uint32_t i = 0; i < ps->props.count; i++)
     {
@@ -71,7 +71,7 @@ static void particle_system_update(ParticleSystem *ps, float dt)
     ps->isAlive = ps->life < ps->props.lifetime;
 }
 
-static void particle_system_deinit(ParticleSystem *ps)
+static void particle_emitter_deinit(ParticleEmitter *ps)
 {
     free(ps->positions);
     free(ps->particles);
