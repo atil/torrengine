@@ -119,9 +119,12 @@ int main(void)
 
     ParticleProps particle_props; // Example particle
     particle_props.emit_point = vec2_new(1, 2);
-    particle_props.angle_limits = vec2_new(0, 180);
+    particle_props.angle_limits = vec2_new(90, 270);
     particle_props.count = 5;
     particle_props.lifetime = 2;
+    particle_props.speed = 1;
+    particle_props.angle_offset = 0;
+    particle_props.speed_offset = 0;
 
     ParticleSystem particle_system;
     particle_init(&particle_system, particle_props);
