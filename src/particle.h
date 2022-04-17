@@ -1,7 +1,6 @@
 // start from here:
-// - add duration/lifetime to these
-// - add spawn position
 // - add limit angles
+// - add transparency
 
 typedef struct
 {
@@ -11,36 +10,42 @@ typedef struct
 
 typedef struct
 {
+    Vec2 emit_point;
+    Vec2 angle_limits;
+    size_t count;
+    float lifetime;
+    uint8_t _padding[4];
+} ParticleProps;
+
+typedef struct
+{
     Vec2 *positions;
     Particle *particles;
-    size_t particle_count;
+    ParticleProps props;
     float life;
-    float lifetime;
     bool isAlive;
-    uint8_t _padding[7];
+    uint8_t _padding[3];
 } ParticleSystem;
 
-static void particle_init(ParticleSystem *ps, Vec2 pos, size_t particle_count, float lifetime)
+static void particle_init(ParticleSystem *ps, ParticleProps props)
 {
-    ps->particle_count = particle_count;
-    ps->positions = (Vec2 *)malloc(particle_count * sizeof(Vec2));
-    ps->particles = (Particle *)malloc(particle_count * sizeof(Particle));
-    ps->lifetime = lifetime;
+    ps->positions = (Vec2 *)malloc(props.count * sizeof(Vec2));
+    ps->particles = (Particle *)malloc(props.count * sizeof(Particle));
     ps->life = 0;
     ps->isAlive = true;
 
-    for (uint32_t i = 0; i < particle_count; i++)
+    for (uint32_t i = 0; i < props.count; i++)
     {
         ps->particles[i].index = i;
-        ps->particles[i].angle = (360.0f / particle_count) * i;
+        ps->particles[i].angle = (360.0f / props.count) * i;
 
-        ps->positions[i] = pos;
+        ps->positions[i] = props.emit_point;
     }
 }
 
 static void particle_update(ParticleSystem *ps, float dt)
 {
-    for (uint32_t i = 0; i < ps->particle_count; i++)
+    for (uint32_t i = 0; i < ps->props.count; i++)
     {
         Vec2 dir =
             vec2_new((float)cos(ps->particles[i].angle * DEG2RAD), (float)sin(ps->particles[i].angle * DEG2RAD));
@@ -49,7 +54,7 @@ static void particle_update(ParticleSystem *ps, float dt)
     }
 
     ps->life += dt;
-    ps->isAlive = ps->life < ps->lifetime;
+    ps->isAlive = ps->life < ps->props.lifetime;
 }
 
 static void particle_deinit(ParticleSystem *ps)

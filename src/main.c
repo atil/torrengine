@@ -117,11 +117,17 @@ int main(void)
     // Particles
     //
 
+    ParticleProps particle_props;
+    particle_props.emit_point = vec2_new(1, 2);
+    particle_props.angle_limits = vec2_new(0, 180);
+    particle_props.count = 10;
+    particle_props.lifetime = 2;
+
     ParticleSystem particle_system;
-    particle_init(&particle_system, vec2_zero(), 10, 2);
+    particle_init(&particle_system, particle_props);
 
     ParticleRenderUnit particle_ru;
-    render_unit_particle_init(&particle_ru, particle_system.particle_count, world_shader, "assets/Ball.png");
+    render_unit_particle_init(&particle_ru, particle_system.props.count, world_shader, "assets/Ball.png");
 
     //
     // View-projection matrices

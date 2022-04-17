@@ -421,7 +421,7 @@ static void render_unit_particle_update(ParticleRenderUnit *ru, ParticleSystem *
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
 
     const float half_particle_size = 0.25f;
-    for (uint32_t i = 0; i < ps->particle_count; i++)
+    for (uint32_t i = 0; i < ps->props.count; i++)
     {
         Vec2 particle_pos = ps->positions[i];
         ru->vert_data[(i * 8) + 0] = particle_pos.x - half_particle_size;
