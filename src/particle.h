@@ -1,5 +1,4 @@
 // start from here:
-// - add limit angles
 // - add transparency
 
 typedef struct
@@ -33,13 +32,13 @@ static void particle_init(ParticleSystem *ps, ParticleProps props)
     ps->particles = (Particle *)malloc(props.count * sizeof(Particle));
     ps->life = 0;
     ps->isAlive = true;
+    ps->props = props;
 
-    for (uint32_t i = 0; i < props.count; i++)
+    for (uint32_t i = 0; i < ps->props.count; i++)
     {
         ps->particles[i].index = i;
-        ps->particles[i].angle = (360.0f / props.count) * i;
-
-        ps->positions[i] = props.emit_point;
+        ps->particles[i].angle = lerp(ps->props.angle_limits.x, ps->props.angle_limits.y, (float)i / ps->props.count);
+        ps->positions[i] = ps->props.emit_point;
     }
 }
 
@@ -47,8 +46,7 @@ static void particle_update(ParticleSystem *ps, float dt)
 {
     for (uint32_t i = 0; i < ps->props.count; i++)
     {
-        Vec2 dir =
-            vec2_new((float)cos(ps->particles[i].angle * DEG2RAD), (float)sin(ps->particles[i].angle * DEG2RAD));
+        Vec2 dir = vec2_new((float)cos(ps->particles[i].angle * DEG2RAD), (float)sin(ps->particles[i].angle * DEG2RAD));
         const float particle_speed = 1.0f;
         ps->positions[i] = vec2_add(ps->positions[i], vec2_scale(dir, particle_speed * dt));
     }
@@ -62,4 +60,3 @@ static void particle_deinit(ParticleSystem *ps)
     free(ps->positions);
     free(ps->particles);
 }
-
