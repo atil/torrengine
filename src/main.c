@@ -117,17 +117,18 @@ int main(void)
     // Particles
     //
 
-    ParticleProps particle_props;
+    ParticleProps particle_props; // Example particle
     particle_props.emit_point = vec2_new(1, 2);
     particle_props.angle_limits = vec2_new(0, 180);
-    particle_props.count = 10;
+    particle_props.count = 5;
     particle_props.lifetime = 2;
 
     ParticleSystem particle_system;
     particle_init(&particle_system, particle_props);
 
     ParticleRenderUnit particle_ru;
-    render_unit_particle_init(&particle_ru, particle_system.props.count, world_shader, "assets/Ball.png");
+    shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
+    render_unit_particle_init(&particle_ru, particle_system.props.count, particle_shader, "assets/Ball.png");
 
     //
     // View-projection matrices
@@ -140,6 +141,12 @@ int main(void)
     Mat4 proj = mat4_ortho(-aspect * cam_size, aspect * cam_size, -cam_size, cam_size, -0.001f, 100.0f);
 
     glUseProgram(world_shader);
+    shader_set_mat4(world_shader, "u_view", &view);
+    shader_set_mat4(world_shader, "u_proj", &proj);
+
+    glUseProgram(particle_shader);
+    Mat4 mat_identity = mat4_identity();
+    shader_set_mat4(particle_shader, "u_model", &mat_identity);
     shader_set_mat4(world_shader, "u_view", &view);
     shader_set_mat4(world_shader, "u_proj", &proj);
 
@@ -236,11 +243,11 @@ int main(void)
             {
                 particle_update(&particle_system, dt);
 
+                glUseProgram(particle_shader);
                 glBindVertexArray(particle_ru.vao);
                 render_unit_particle_update(&particle_ru, &particle_system);
                 glBindTexture(GL_TEXTURE_2D, particle_ru.texture);
-                Mat4 mat_identity = mat4_identity(); // TODO CLEANUP TEMP
-                shader_set_mat4(world_shader, "u_model", &mat_identity);
+                shader_set_float(particle_shader, "u_alpha", particle_system.transparency);
                 glDrawElements(GL_TRIANGLES, particle_ru.index_count, GL_UNSIGNED_INT, 0);
             }
 
@@ -284,6 +291,7 @@ int main(void)
     render_unit_deinit(&ball_ru);
     render_unit_particle_deinit(&particle_ru);
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
+    glDeleteProgram(particle_shader);
 
     render_unit_ui_deinit(&ui_ru_score);
     render_unit_ui_deinit(&ui_ru_intermission);

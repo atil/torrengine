@@ -1,5 +1,5 @@
 // start from here:
-// - add transparency
+// - randomness per particle
 
 typedef struct
 {
@@ -38,7 +38,8 @@ static void particle_init(ParticleSystem *ps, ParticleProps props)
     for (uint32_t i = 0; i < ps->props.count; i++)
     {
         ps->particles[i].index = i;
-        ps->particles[i].angle = lerp(ps->props.angle_limits.x, ps->props.angle_limits.y, (float)i / ps->props.count);
+        ps->particles[i].angle = // Notice the "-1", we want the end angle to be inclusive
+            lerp(ps->props.angle_limits.x, ps->props.angle_limits.y, (float)i / (ps->props.count - 1));
         ps->positions[i] = ps->props.emit_point;
     }
 }

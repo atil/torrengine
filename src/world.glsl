@@ -19,13 +19,15 @@ void main()
 #ifdef FRAGMENT
 
 in vec2 v2f_texcoord;
-layout(binding=0) uniform sampler2D u_texture;
+layout(binding = 0) uniform sampler2D u_texture;
+uniform float u_alpha = 1.0;
 
 out vec4 frag_color;
 
 void main() 
 {
     vec4 color = texture(u_texture, vec2(v2f_texcoord.x, v2f_texcoord.y));
+    color.a = u_alpha;
     frag_color = color;
 };
 #endif

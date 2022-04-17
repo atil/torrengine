@@ -128,13 +128,23 @@ static void shader_set_int(shader_handle_t shader, const char *uniform_name, int
     glUniform1i(loc, i);
 }
 
+static void shader_set_float(shader_handle_t shader, const char *uniform_name, float f)
+{
+    int32_t loc = glGetUniformLocation(shader, uniform_name);
+    if (loc == -1)
+    {
+        printf("error setting uniform int: %s\n", uniform_name);
+        return;
+    }
+    glUniform1f(loc, f);
+}
+
 // TODO @CLEANUP: This isn't like a constructor; it takes an existing
 // instance and (re)initializes it. Should it be like a constructor and
 // return an instance instead of taking one as a parameter?
 
-static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert_data_len,
-                             const uint32_t *index_data, size_t index_data_len, shader_handle_t shader,
-                             const char *texture_file_name)
+static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert_data_len, const uint32_t *index_data,
+                             size_t index_data_len, shader_handle_t shader, const char *texture_file_name)
 {
     glGenVertexArrays(1, &(ru->vao));
     glGenBuffers(1, &(ru->vbo));
@@ -246,8 +256,7 @@ static void render_unit_ui_deinit(UiRenderUnit *ru)
     glDeleteTextures(1, &ru->texture);
 }
 
-static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, const char *text,
-                             TextTransform transform)
+static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, const char *text, TextTransform transform)
 {
     const size_t char_count = strlen(text);
 
@@ -363,9 +372,8 @@ static void render_unit_particle_init(ParticleRenderUnit *ru, size_t particle_co
         memcpy(ru->vert_data + i * 8, single_particle_vert, sizeof(single_particle_vert));
 
         uint32_t particle_index_at_i[6] = {
-            single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4),
-            single_particle_index[2] + (i * 4), single_particle_index[3] + (i * 4),
-            single_particle_index[4] + (i * 4), single_particle_index[5] + (i * 4),
+            single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4), single_particle_index[2] + (i * 4),
+            single_particle_index[3] + (i * 4), single_particle_index[4] + (i * 4), single_particle_index[5] + (i * 4),
         };
         memcpy(index_data + i * 6, particle_index_at_i, sizeof(particle_index_at_i));
 
