@@ -143,8 +143,9 @@ static void shader_set_float(shader_handle_t shader, const char *uniform_name, f
 // instance and (re)initializes it. Should it be like a constructor and
 // return an instance instead of taking one as a parameter?
 
-static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert_data_len, const uint32_t *index_data,
-                             size_t index_data_len, shader_handle_t shader, const char *texture_file_name)
+static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert_data_len,
+                             const uint32_t *index_data, size_t index_data_len, shader_handle_t shader,
+                             const char *texture_file_name)
 {
     glGenVertexArrays(1, &(ru->vao));
     glGenBuffers(1, &(ru->vbo));
@@ -256,7 +257,8 @@ static void render_unit_ui_deinit(UiRenderUnit *ru)
     glDeleteTextures(1, &ru->texture);
 }
 
-static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, const char *text, TextTransform transform)
+static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, const char *text,
+                             TextTransform transform)
 {
     const size_t char_count = strlen(text);
 
@@ -347,9 +349,10 @@ static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const c
     free(text_data.ib_data);
 }
 
-static void render_unit_particle_init(ParticleRenderUnit *ru, size_t particle_count, shader_handle_t shader,
-                                      const char *texture_file_name)
+static ParticleRenderUnit *render_unit_particle_init(size_t particle_count, shader_handle_t shader,
+                                                     const char *texture_file_name)
 {
+    ParticleRenderUnit *ru = (ParticleRenderUnit *)malloc(sizeof(ParticleRenderUnit));
 
     // TODO @CLEANUP: VLAs would simplify this allocation
     float single_particle_vert[8] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
@@ -372,8 +375,9 @@ static void render_unit_particle_init(ParticleRenderUnit *ru, size_t particle_co
         memcpy(ru->vert_data + i * 8, single_particle_vert, sizeof(single_particle_vert));
 
         uint32_t particle_index_at_i[6] = {
-            single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4), single_particle_index[2] + (i * 4),
-            single_particle_index[3] + (i * 4), single_particle_index[4] + (i * 4), single_particle_index[5] + (i * 4),
+            single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4),
+            single_particle_index[2] + (i * 4), single_particle_index[3] + (i * 4),
+            single_particle_index[4] + (i * 4), single_particle_index[5] + (i * 4),
         };
         memcpy(index_data + i * 6, particle_index_at_i, sizeof(particle_index_at_i));
 
@@ -422,6 +426,8 @@ static void render_unit_particle_init(ParticleRenderUnit *ru, size_t particle_co
 
     free(index_data);
     free(uv_data);
+
+    return ru;
 }
 
 static void render_unit_particle_update(ParticleRenderUnit *ru, ParticleSystem *ps)
@@ -452,9 +458,9 @@ static void render_unit_particle_deinit(ParticleRenderUnit *ru)
     glDeleteBuffers(1, &(ru->uv_bo));
     glDeleteBuffers(1, &(ru->ibo));
 
-    // TODO @CLEANUP: A better way to manage these shaders
-    // glDeleteProgram(ru->shader);
+    glDeleteProgram(ru->shader);
     glDeleteTextures(1, &ru->texture);
 
     free(ru->vert_data);
+    free(ru);
 }

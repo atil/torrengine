@@ -47,6 +47,14 @@ typedef enum
     GameOver
 } GameState;
 
+static void create_particle_instance(ParticleProps *props, ParticleSystem **out_system,
+                                     ParticleRenderUnit **out_ru)
+{
+    shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
+    *out_system = particle_system_init(*props);
+    *out_ru = render_unit_particle_init(props->count, particle_shader, "assets/Ball.png");
+}
+
 int main(void)
 {
     srand((unsigned long)time(NULL));
@@ -126,12 +134,21 @@ int main(void)
     particle_props.angle_offset = 0;
     particle_props.speed_offset = 0;
 
-    ParticleSystem particle_system;
-    particle_init(&particle_system, particle_props);
+    const size_t particle_instance_capacity = 10;
 
-    ParticleRenderUnit particle_ru;
-    shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
-    render_unit_particle_init(&particle_ru, particle_system.props.count, particle_shader, "assets/Ball.png");
+    ParticleSystem **particle_systems =
+        (ParticleSystem **)calloc(particle_instance_capacity, sizeof(ParticleSystem **));
+    ParticleRenderUnit **particle_renderers =
+        (ParticleRenderUnit **)calloc(particle_instance_capacity, sizeof(ParticleRenderUnit **));
+
+    // TODO @CLEANUP: We should get rid of these locals here
+    ParticleSystem *particle_system;
+    ParticleRenderUnit *particle_ru;
+    create_particle_instance(&particle_props, &particle_system, &particle_ru);
+    particle_systems[0] = particle_system;
+    particle_renderers[0] = particle_ru;
+
+    size_t created_particle_count = 1;
 
     //
     // View-projection matrices
@@ -147,11 +164,15 @@ int main(void)
     shader_set_mat4(world_shader, "u_view", &view);
     shader_set_mat4(world_shader, "u_proj", &proj);
 
-    glUseProgram(particle_shader);
-    Mat4 mat_identity = mat4_identity();
-    shader_set_mat4(particle_shader, "u_model", &mat_identity);
-    shader_set_mat4(world_shader, "u_view", &view);
-    shader_set_mat4(world_shader, "u_proj", &proj);
+    for (size_t i = 0; i < created_particle_count; i++)
+    {
+        shader_handle_t curr_particle_shader = particle_renderers[i]->shader;
+        glUseProgram(curr_particle_shader);
+        Mat4 mat_identity = mat4_identity();
+        shader_set_mat4(curr_particle_shader, "u_model", &mat_identity);
+        shader_set_mat4(curr_particle_shader, "u_view", &view);
+        shader_set_mat4(curr_particle_shader, "u_proj", &proj);
+    }
 
     //
     // Game objects
@@ -242,16 +263,23 @@ int main(void)
             shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
             glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
 
-            if (particle_system.isAlive)
+            for (size_t i = 0; i < created_particle_count; i++)
             {
-                particle_update(&particle_system, dt);
+                ParticleSystem *ps = particle_systems[i];
+                ParticleRenderUnit *pr = particle_renderers[i];
+                if (!ps->isAlive)
+                {
+                    continue;
+                }
 
-                glUseProgram(particle_shader);
-                glBindVertexArray(particle_ru.vao);
-                render_unit_particle_update(&particle_ru, &particle_system);
-                glBindTexture(GL_TEXTURE_2D, particle_ru.texture);
-                shader_set_float(particle_shader, "u_alpha", particle_system.transparency);
-                glDrawElements(GL_TRIANGLES, particle_ru.index_count, GL_UNSIGNED_INT, 0);
+                particle_system_update(ps, dt);
+
+                glUseProgram(pr->shader);
+                glBindVertexArray(pr->vao);
+                render_unit_particle_update(pr, ps);
+                glBindTexture(GL_TEXTURE_2D, pr->texture);
+                shader_set_float(pr->shader, "u_alpha", ps->transparency);
+                glDrawElements(GL_TRIANGLES, pr->index_count, GL_UNSIGNED_INT, 0);
             }
 
             // UI draw
@@ -292,16 +320,21 @@ int main(void)
     render_unit_deinit(&pad1_ru);
     render_unit_deinit(&pad2_ru);
     render_unit_deinit(&ball_ru);
-    render_unit_particle_deinit(&particle_ru);
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
-    glDeleteProgram(particle_shader);
 
     render_unit_ui_deinit(&ui_ru_score);
     render_unit_ui_deinit(&ui_ru_intermission);
     render_unit_ui_deinit(&ui_ru_splash_title);
     glDeleteProgram(ui_shader); // TODO @CLEANUP: Same with above
 
-    particle_deinit(&particle_system);
+    for (size_t i = 0; i < created_particle_count; i++)
+    {
+        particle_system_deinit(particle_systems[i]);
+        render_unit_particle_deinit(particle_renderers[i]);
+    }
+
+    free(particle_systems);
+    free(particle_renderers);
 
     glfwTerminate();
     return 0;

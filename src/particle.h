@@ -30,12 +30,13 @@ typedef struct
     uint8_t _padding[7];
 } ParticleSystem;
 
-static void particle_init(ParticleSystem *ps, ParticleProps props)
+static ParticleSystem *particle_system_init(ParticleProps props)
 {
+    ParticleSystem *ps = (ParticleSystem *)malloc(sizeof(ParticleSystem));
     ps->positions = (Vec2 *)malloc(props.count * sizeof(Vec2));
     ps->particles = (Particle *)malloc(props.count * sizeof(Particle));
     ps->life = 0;
-    ps->isAlive = true;
+    ps->isAlive = false;
     ps->props = props;
 
     for (uint32_t i = 0; i < ps->props.count; i++)
@@ -50,9 +51,11 @@ static void particle_init(ParticleSystem *ps, ParticleProps props)
 
         ps->positions[i] = ps->props.emit_point;
     }
+
+    return ps;
 }
 
-static void particle_update(ParticleSystem *ps, float dt)
+static void particle_system_update(ParticleSystem *ps, float dt)
 {
     for (uint32_t i = 0; i < ps->props.count; i++)
     {
@@ -68,8 +71,9 @@ static void particle_update(ParticleSystem *ps, float dt)
     ps->isAlive = ps->life < ps->props.lifetime;
 }
 
-static void particle_deinit(ParticleSystem *ps)
+static void particle_system_deinit(ParticleSystem *ps)
 {
     free(ps->positions);
     free(ps->particles);
+    free(ps);
 }
