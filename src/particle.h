@@ -22,8 +22,9 @@ typedef struct
     Particle *particles;
     ParticleProps props;
     float life;
+    float transparency;
     bool isAlive;
-    uint8_t _padding[3];
+    uint8_t _padding[7];
 } ParticleSystem;
 
 static void particle_init(ParticleSystem *ps, ParticleProps props)
@@ -52,6 +53,7 @@ static void particle_update(ParticleSystem *ps, float dt)
     }
 
     ps->life += dt;
+    ps->transparency = (ps->props.lifetime - ps->life) / ps->props.lifetime;
     ps->isAlive = ps->life < ps->props.lifetime;
 }
 
