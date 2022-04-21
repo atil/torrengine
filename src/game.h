@@ -107,13 +107,13 @@ static Rect gameobject_get_world_rect(const GameObject *go)
     return rect_world;
 }
 
-static bool gameobject_is_point_in(const GameObject *go, Vec2 p)
+static bool gameobject_is_point_in(GameObject *go, Vec2 p)
 {
     Rect rect_world = gameobject_get_world_rect(go);
     return p.x > rect_world.min.x && p.x < rect_world.max.x && p.y > rect_world.min.y && p.y < rect_world.max.y;
 }
 
-static bool pad_resolve_point(const GameObject *pad_go, Vec2 p, int resolve_dir, float *out_resolved_x)
+static bool pad_resolve_point(GameObject *pad_go, Vec2 p, int resolve_dir, float *out_resolved_x)
 {
     if (gameobject_is_point_in(pad_go, p))
     {
@@ -127,8 +127,8 @@ static bool pad_resolve_point(const GameObject *pad_go, Vec2 p, int resolve_dir,
     return false;
 }
 
-static bool pad_ball_collision_check(const GameObject *pad_go, Vec2 ball_displacement_from,
-                                     Vec2 ball_displacement_to, Vec2 *collision_point)
+static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_from, Vec2 ball_displacement_to,
+                                     Vec2 *collision_point)
 {
     Rect rect_world = gameobject_get_world_rect(pad_go);
     Vec2 edges[4] = {
@@ -153,7 +153,7 @@ static bool pad_ball_collision_check(const GameObject *pad_go, Vec2 ball_displac
     return false;
 }
 
-static void game_init(PongGame *game, const PongGameConfig *config, Sfx *sfx)
+static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx)
 {
     game->field_go = gameobject_new(vec2_zero(), vec2_new(((float)WIDTH / (float)HEIGHT) * 10, 10));
     game->pad1_go = gameobject_new(vec2_new(config->distance_from_center, 0.0f), config->pad_size);
@@ -167,8 +167,9 @@ static void game_init(PongGame *game, const PongGameConfig *config, Sfx *sfx)
 }
 
 // TODO @CLEANUP: Signature looks ugly
-static PongGameUpdateResult game_update(float dt, PongGame *game, const PongGameConfig *config, GLFWwindow *window,
-                                        Sfx *sfx)
+static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig *config, GLFWwindow *window,
+                                        Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
+                                        ParticleSystemRegistry *particle_system_reg, Renderer *renderer)
 {
     PongGameUpdateResult result;
     result.is_game_over = false;
@@ -214,9 +215,10 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, const PongGame
         ball_pos = collision_point; // Snap to hit position
         game->ball_move_dir.x *= -1;
 
-        // const float ball_pad_hit_randomness_coeff = 0.2f;
-        // game->ball_move_dir.y += rand_range(-1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
-        // vec2_normalize(&game->ball_move_dir);
+        // randomness
+        const float ball_pad_hit_randomness_coeff = 0.2f;
+        game->ball_move_dir.y += rand_range(-1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
+        vec2_normalize(&game->ball_move_dir);
 
         ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * dt));
         ball_next_pos = vec2_add(ball_pos, ball_displacement);
@@ -226,6 +228,12 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, const PongGame
         game->game_speed_coeff += config->game_speed_increase_coeff;
 
         sfx_play(sfx, SfxHitPad);
+
+        ParticleProps *hit_particle_prop =
+            collision_point.x > 0 ? &particle_prop_reg->pad_hit_right : &particle_prop_reg->pad_hit_left;
+
+        ParticleSystem ps = particle_system_create(hit_particle_prop, renderer, collision_point);
+        particle_system_registry_add(particle_system_reg, ps);
     }
 
     if (ball_next_pos.y > config->area_extents.y || ball_next_pos.y < -config->area_extents.y)

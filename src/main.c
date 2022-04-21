@@ -26,14 +26,19 @@
 #define WIDTH 640
 #define HEIGHT 480
 
+typedef uint32_t buffer_handle_t;
+typedef uint32_t texture_handle_t;
+typedef uint32_t shader_handle_t;
+
 #pragma warning(push)
 #pragma warning(disable : 4996) // TODO @ROBUSTNESS: Address these deprecated CRT functions
 #pragma warning(disable : 5045) // Spectre thing
 #include "util.h"
 #include "tomath.h"
-#include "particle.h"
 #include "text.h"
+#include "shader.h"
 #include "render.h"
+#include "particle.h"
 #include "sfx.h"
 #include "game.h"
 #pragma warning(pop)
@@ -46,21 +51,6 @@ typedef enum
     Game,
     GameOver
 } GameState;
-
-typedef struct
-{
-    ParticleEmitter *emitter;
-    ParticleRenderUnit *render_unit;
-} ParticleSystem;
-
-ParticleSystem create_particle_system(ParticleProps *props)
-{
-    ParticleSystem ps;
-    shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
-    ps.emitter = particle_emitter_init(*props);
-    ps.render_unit = render_unit_particle_init(props->count, particle_shader, "assets/Ball.png");
-    return ps;
-}
 
 int main(void)
 {
@@ -78,6 +68,8 @@ int main(void)
 
     Sfx sfx;
     sfx_init(&sfx);
+
+    const float cam_size = 5.0f;
 
     //
     // GameObject rendering
@@ -130,46 +122,30 @@ int main(void)
 
     //
     // Particles
-    //
 
-    ParticleProps particle_props; // Example particle
-    particle_props.emit_point = vec2_new(1, 2);
-    particle_props.angle_limits = vec2_new(90, 270);
-    particle_props.count = 5;
-    particle_props.lifetime = 2;
-    particle_props.speed = 1;
-    particle_props.angle_offset = 0;
-    particle_props.speed_offset = 0;
-
-    const size_t particle_system_capacity = 10;
-
-    ParticleSystem *particle_systems = (ParticleSystem *)calloc(particle_system_capacity, sizeof(ParticleSystem));
-    // particle_systems[0] = create_particle_system(&particle_props);
+    ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
+    ParticleSystemRegistry particle_system_reg = particle_system_registry_create();
 
     size_t created_particle_count = 0;
 
     //
-    // View-projection matrices
+    // Renderer
     //
 
-    // We translate this matrix by the cam position
-    Mat4 view = mat4_identity();
-    const float cam_size = 5.0f;
-    const float aspect = (float)WIDTH / (float)HEIGHT;
-    Mat4 proj = mat4_ortho(-aspect * cam_size, aspect * cam_size, -cam_size, cam_size, -0.001f, 100.0f);
+    Renderer renderer = render_init(WIDTH, HEIGHT, cam_size);
 
     glUseProgram(world_shader);
-    shader_set_mat4(world_shader, "u_view", &view);
-    shader_set_mat4(world_shader, "u_proj", &proj);
+    shader_set_mat4(world_shader, "u_view", &renderer.view);
+    shader_set_mat4(world_shader, "u_proj", &renderer.proj);
 
     for (size_t i = 0; i < created_particle_count; i++)
     {
-        shader_handle_t curr_particle_shader = particle_systems[i].render_unit->shader;
+        shader_handle_t curr_particle_shader = particle_system_reg.array_ptr[i].render_unit->shader;
         glUseProgram(curr_particle_shader);
         Mat4 mat_identity = mat4_identity();
         shader_set_mat4(curr_particle_shader, "u_model", &mat_identity);
-        shader_set_mat4(curr_particle_shader, "u_view", &view);
-        shader_set_mat4(curr_particle_shader, "u_proj", &proj);
+        shader_set_mat4(curr_particle_shader, "u_view", &renderer.view);
+        shader_set_mat4(curr_particle_shader, "u_proj", &renderer.proj);
     }
 
     //
@@ -178,9 +154,9 @@ int main(void)
 
     GameState game_state = Splash;
     PongGameConfig config;
-    config.area_extents = vec2_new(cam_size * aspect, cam_size);
+    config.area_extents = vec2_new(cam_size * renderer.aspect, cam_size);
     config.pad_size = vec2_new(0.3f, 2.0f);
-    config.ball_speed = 4.0f * 0.0000001f;
+    config.ball_speed = 4.0f; //* 0.0000001f;
     config.distance_from_center = 4.0f;
     config.pad_move_speed = 10.0f;
     config.game_speed_increase_coeff = 0.05f;
@@ -223,7 +199,8 @@ int main(void)
         }
         else if (game_state == Game)
         {
-            result = game_update(dt, &game, &config, window, &sfx);
+            result =
+                game_update(dt, &game, &config, window, &sfx, &particle_prop_reg, &particle_system_reg, &renderer);
             if (result.is_game_over)
             {
                 sfx_play(&sfx, SfxGameOver);
@@ -261,39 +238,23 @@ int main(void)
             shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
             glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
 
-            // TODO @INCOMPLETE @LEAK: Make this keydown. Lots of leaks like this
-            if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+            for (size_t i = 0; i < particle_system_reg.system_count; i++)
             {
-                ParticleSystem ps = create_particle_system(&particle_props);
-                particle_systems[0] = ps;
-
-                shader_handle_t curr_particle_shader = ps.render_unit->shader;
-                glUseProgram(curr_particle_shader);
-                Mat4 mat_identity = mat4_identity();
-                shader_set_mat4(curr_particle_shader, "u_model", &mat_identity);
-                shader_set_mat4(curr_particle_shader, "u_view", &view);
-                shader_set_mat4(curr_particle_shader, "u_proj", &proj);
-
-                ps.emitter->isAlive = true;
-                created_particle_count = 1;
-            }
-
-            for (size_t i = 0; i < created_particle_count; i++)
-            {
-                if (!particle_systems[i].emitter->isAlive)
+                ParticleSystem ps = particle_system_reg.array_ptr[i];
+                if (!ps.emitter->isAlive)
                 {
+                    particle_system_registry_remove(&particle_system_reg, ps);
                     continue;
                 }
 
-                particle_emitter_update(particle_systems[i].emitter, dt);
+                particle_emitter_update(ps.emitter, dt);
 
-                glUseProgram(particle_systems[i].render_unit->shader);
-                glBindVertexArray(particle_systems[i].render_unit->vao);
-                render_unit_particle_update(particle_systems[i].render_unit, particle_systems[i].emitter);
-                glBindTexture(GL_TEXTURE_2D, particle_systems[i].render_unit->texture);
-                shader_set_float(particle_systems[i].render_unit->shader, "u_alpha",
-                                 particle_systems[i].emitter->transparency);
-                glDrawElements(GL_TRIANGLES, particle_systems[i].render_unit->index_count, GL_UNSIGNED_INT, 0);
+                glUseProgram(ps.render_unit->shader);
+                glBindVertexArray(ps.render_unit->vao);
+                render_unit_particle_update(ps.render_unit, ps.emitter);
+                glBindTexture(GL_TEXTURE_2D, ps.render_unit->texture);
+                shader_set_float(ps.render_unit->shader, "u_alpha", ps.emitter->transparency);
+                glDrawElements(GL_TRIANGLES, ps.render_unit->index_count, GL_UNSIGNED_INT, 0);
             }
 
             // UI draw
@@ -319,6 +280,14 @@ int main(void)
 
             if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
             {
+                // Reset score
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
+                glUseProgram(ui_ru_score.shader);
+                glBindVertexArray(ui_ru_score.vao);
+                render_unit_ui_update(&ui_ru_score, &font_data, "0", text_transform_score);
+                glDrawElements(GL_TRIANGLES, ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
+
                 game_init(&game, &config, &sfx);
                 game_state = Game;
             }
@@ -341,13 +310,7 @@ int main(void)
     render_unit_ui_deinit(&ui_ru_splash_title);
     glDeleteProgram(ui_shader); // TODO @CLEANUP: Same with above
 
-    for (size_t i = 0; i < created_particle_count; i++)
-    {
-        particle_emitter_deinit(particle_systems[i].emitter);
-        render_unit_particle_deinit(particle_systems[i].render_unit);
-    }
-
-    free(particle_systems);
+    particle_system_registry_deinit(&particle_system_reg);
 
     glfwTerminate();
     return 0;

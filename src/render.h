@@ -1,9 +1,5 @@
 #include "util.h"
 
-typedef uint32_t shader_handle_t;
-typedef uint32_t buffer_handle_t;
-typedef uint32_t texture_handle_t;
-
 typedef struct
 {
     buffer_handle_t vao;
@@ -25,124 +21,27 @@ typedef struct
     texture_handle_t texture;
 } UiRenderUnit;
 
+// TODO @CLEANUP: These above ended up being the same. Is there a reason to stay this way?
+
 typedef struct
 {
-    buffer_handle_t vao;
-    buffer_handle_t vbo;
-    buffer_handle_t uv_bo;
-    buffer_handle_t ibo;
-    uint32_t index_count;
-    shader_handle_t shader;
-    texture_handle_t texture;
-    uint32_t vert_data_len;
-    float *vert_data;
-} ParticleRenderUnit;
+    Mat4 view;
+    Mat4 proj;
+    float aspect;
+} Renderer;
 
-// TODO @CLEANUP: These ended up being the same. Is there a reason to stay
-// this way?
-
-static shader_handle_t load_shader(const char *file_path)
+static Renderer render_init(uint32_t screen_width, uint32_t screen_height, float cam_size)
 {
-    char info_log[512]; // TODO @CLEANUP: Better logging
-    char *shader_string = read_file(file_path);
+    Renderer r;
 
-    const char *vert_shader_header = "#version 420\n#define VERTEX\n";
-    char *vert_string = (char *)calloc((strlen(vert_shader_header) + strlen(shader_string)), sizeof(char));
-    strcat(vert_string, vert_shader_header);
-    strcat(vert_string, shader_string);
-
-    const char *frag_shader_header = "#version 420\n#define FRAGMENT\n";
-    char *frag_string = (char *)calloc((strlen(frag_shader_header) + strlen(shader_string)), sizeof(char));
-    strcat(frag_string, frag_shader_header);
-    strcat(frag_string, shader_string);
-
-    // TODO @LEAK: Do we need to delete these strings?
-
-    uint32_t vertex_shader_handle = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader_handle, 1, (const char *const *)&vert_string, NULL);
-    glCompileShader(vertex_shader_handle);
-    int32_t success;
-    glGetShaderiv(vertex_shader_handle, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(vertex_shader_handle, 512, NULL, info_log);
-        printf("vertex shader fail %s\n", info_log);
-    }
-
-    uint32_t frag_shader_handle = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(frag_shader_handle, 1, (const char *const *)&frag_string, NULL);
-    glCompileShader(frag_shader_handle);
-    glGetShaderiv(frag_shader_handle, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(frag_shader_handle, 512, NULL, info_log);
-        printf("frag shader fail %s\n", info_log);
-    }
-
-    shader_handle_t shader_program = glCreateProgram();
-    glAttachShader(shader_program, vertex_shader_handle);
-    glAttachShader(shader_program, frag_shader_handle);
-    glLinkProgram(shader_program);
-    glGetProgramiv(shader_program, GL_LINK_STATUS, &success);
-    if (!success)
-    {
-        glGetProgramInfoLog(shader_program, 512, NULL, info_log);
-        printf("shader link fail %s\n", info_log);
-    }
-    glDeleteShader(vertex_shader_handle);
-    glDeleteShader(frag_shader_handle);
-
-    return shader_program;
+    // We translate this matrix by the cam position
+    r.view = mat4_identity();
+    r.aspect = (float)screen_width / (float)screen_height;
+    r.proj = mat4_ortho(-r.aspect * cam_size, r.aspect * cam_size, -cam_size, cam_size, -0.001f, 100.0f);
+    return r;
 }
 
-static void shader_set_mat4(shader_handle_t shader, const char *uniform_name, const Mat4 *mat)
-{
-    int32_t loc = glGetUniformLocation(shader, uniform_name);
-    if (loc == -1)
-    {
-        printf("error setting uniform matrix: %s\n", uniform_name);
-        return;
-    }
-    glUniformMatrix4fv(loc, 1, GL_FALSE, mat->data);
-}
-
-static void shader_set_float3(shader_handle_t shader, const char *uniform_name, float f0, float f1, float f2)
-{
-    int32_t loc = glGetUniformLocation(shader, uniform_name);
-    if (loc == -1)
-    {
-        printf("error setting uniform float3: %s\n", uniform_name);
-        return;
-    }
-    glUniform3f(loc, f0, f1, f2);
-}
-
-static void shader_set_int(shader_handle_t shader, const char *uniform_name, int i)
-{
-    int32_t loc = glGetUniformLocation(shader, uniform_name);
-    if (loc == -1)
-    {
-        printf("error setting uniform int: %s\n", uniform_name);
-        return;
-    }
-    glUniform1i(loc, i);
-}
-
-static void shader_set_float(shader_handle_t shader, const char *uniform_name, float f)
-{
-    int32_t loc = glGetUniformLocation(shader, uniform_name);
-    if (loc == -1)
-    {
-        printf("error setting uniform int: %s\n", uniform_name);
-        return;
-    }
-    glUniform1f(loc, f);
-}
-
-// TODO @CLEANUP: This isn't like a constructor; it takes an existing
-// instance and (re)initializes it. Should it be like a constructor and
-// return an instance instead of taking one as a parameter?
-
+// TODO @CLEANUP: Make these return a RenderUnit
 static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert_data_len,
                              const uint32_t *index_data, size_t index_data_len, shader_handle_t shader,
                              const char *texture_file_name)
@@ -349,118 +248,3 @@ static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const c
     free(text_data.ib_data);
 }
 
-static ParticleRenderUnit *render_unit_particle_init(size_t particle_count, shader_handle_t shader,
-                                                     const char *texture_file_name)
-{
-    ParticleRenderUnit *ru = (ParticleRenderUnit *)malloc(sizeof(ParticleRenderUnit));
-
-    // TODO @CLEANUP: VLAs would simplify this allocation
-    float single_particle_vert[8] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
-    size_t vert_data_len = particle_count * sizeof(single_particle_vert);
-    ru->vert_data = (float *)malloc(vert_data_len);
-
-    float single_particle_uvs[8] = {0, 0, 1, 0, 1, 1, 0, 1};
-    size_t uv_data_len = particle_count * sizeof(single_particle_uvs);
-    float *uv_data = (float *)malloc(uv_data_len);
-
-    uint32_t single_particle_index[6] = {0, 1, 2, 0, 2, 3};
-    size_t index_data_len = particle_count * sizeof(single_particle_index);
-    uint32_t *index_data = (uint32_t *)malloc(index_data_len);
-
-    for (uint32_t i = 0; i < (uint32_t)particle_count; i++)
-    {
-        // Learning: '+' operator for pointers doesn't increment by bytes.
-        // The increment amount is of the pointer's type. So for this one above, it increments 8 floats.
-
-        memcpy(ru->vert_data + i * 8, single_particle_vert, sizeof(single_particle_vert));
-
-        uint32_t particle_index_at_i[6] = {
-            single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4),
-            single_particle_index[2] + (i * 4), single_particle_index[3] + (i * 4),
-            single_particle_index[4] + (i * 4), single_particle_index[5] + (i * 4),
-        };
-        memcpy(index_data + i * 6, particle_index_at_i, sizeof(particle_index_at_i));
-
-        memcpy(uv_data + i * 8, single_particle_uvs, sizeof(single_particle_uvs));
-    }
-
-    ru->vert_data_len = (uint32_t)vert_data_len;
-    ru->index_count = (uint32_t)index_data_len;
-    ru->shader = shader;
-
-    glGenVertexArrays(1, &(ru->vao));
-    glGenBuffers(1, &(ru->vbo));
-    glGenBuffers(1, &(ru->ibo));
-    glGenBuffers(1, &(ru->uv_bo));
-
-    glBindVertexArray(ru->vao);
-
-    glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
-    glBufferData(GL_ARRAY_BUFFER, vert_data_len, ru->vert_data, GL_DYNAMIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, ru->uv_bo);
-    glBufferData(GL_ARRAY_BUFFER, uv_data_len, uv_data, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru->ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_data_len, index_data, GL_STATIC_DRAW);
-
-    glGenTextures(1, &(ru->texture));
-    glBindTexture(GL_TEXTURE_2D, ru->texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    int width, height, channel_count;
-    stbi_set_flip_vertically_on_load(true);
-    uint8_t *data = stbi_load(texture_file_name, &width, &height, &channel_count, 0);
-    assert(data != NULL);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    stbi_image_free(data);
-
-    free(index_data);
-    free(uv_data);
-
-    return ru;
-}
-
-static void render_unit_particle_update(ParticleRenderUnit *ru, ParticleEmitter *ps)
-{
-    glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
-
-    const float half_particle_size = 0.25f;
-    for (uint32_t i = 0; i < ps->props.count; i++)
-    {
-        Vec2 particle_pos = ps->positions[i];
-        ru->vert_data[(i * 8) + 0] = particle_pos.x - half_particle_size;
-        ru->vert_data[(i * 8) + 1] = particle_pos.y - half_particle_size;
-        ru->vert_data[(i * 8) + 2] = particle_pos.x + half_particle_size;
-        ru->vert_data[(i * 8) + 3] = particle_pos.y - half_particle_size;
-        ru->vert_data[(i * 8) + 4] = particle_pos.x + half_particle_size;
-        ru->vert_data[(i * 8) + 5] = particle_pos.y + half_particle_size;
-        ru->vert_data[(i * 8) + 6] = particle_pos.x - half_particle_size;
-        ru->vert_data[(i * 8) + 7] = particle_pos.y + half_particle_size;
-    }
-
-    glBufferSubData(GL_ARRAY_BUFFER, 0, ru->vert_data_len, ru->vert_data);
-}
-
-static void render_unit_particle_deinit(ParticleRenderUnit *ru)
-{
-    glDeleteVertexArrays(1, &(ru->vao));
-    glDeleteBuffers(1, &(ru->vbo));
-    glDeleteBuffers(1, &(ru->uv_bo));
-    glDeleteBuffers(1, &(ru->ibo));
-
-    glDeleteProgram(ru->shader);
-    glDeleteTextures(1, &ru->texture);
-
-    free(ru->vert_data);
-    free(ru);
-}
