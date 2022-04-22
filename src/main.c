@@ -33,6 +33,7 @@ typedef uint32_t shader_handle_t;
 #pragma warning(push)
 #pragma warning(disable : 4996) // TODO @ROBUSTNESS: Address these deprecated CRT functions
 #pragma warning(disable : 5045) // Spectre thing
+#include "container.h"
 #include "util.h"
 #include "tomath.h"
 #include "text.h"
@@ -54,6 +55,16 @@ typedef enum
 
 int main(void)
 {
+    // array tests
+    // Array arr = arr_create(sizeof(float), 10);
+    // float a = 1;
+    // arr_add(&arr, &a);
+    // uint8_t *elem = arr_get(&arr, 0);
+    // float b = (float)(*elem);
+    // printf("%d\n", b);
+    // arr_deinit(&arr);
+    // return;
+
     srand((unsigned long)time(NULL));
 
     glfwInit();
@@ -126,8 +137,6 @@ int main(void)
     ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
     ParticleSystemRegistry particle_system_reg = particle_system_registry_create();
 
-    size_t created_particle_count = 0;
-
     //
     // Renderer
     //
@@ -137,16 +146,6 @@ int main(void)
     glUseProgram(world_shader);
     shader_set_mat4(world_shader, "u_view", &renderer.view);
     shader_set_mat4(world_shader, "u_proj", &renderer.proj);
-
-    for (size_t i = 0; i < created_particle_count; i++)
-    {
-        shader_handle_t curr_particle_shader = particle_system_reg.array_ptr[i].render_unit->shader;
-        glUseProgram(curr_particle_shader);
-        Mat4 mat_identity = mat4_identity();
-        shader_set_mat4(curr_particle_shader, "u_model", &mat_identity);
-        shader_set_mat4(curr_particle_shader, "u_view", &renderer.view);
-        shader_set_mat4(curr_particle_shader, "u_proj", &renderer.proj);
-    }
 
     //
     // Game objects
