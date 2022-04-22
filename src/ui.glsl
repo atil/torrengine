@@ -1,6 +1,6 @@
 #ifdef VERTEX
-layout (location = 0) in vec2 u_pos;
-layout (location = 1) in vec2 u_texcoord;
+layout(location = 0) in vec2 u_pos;
+layout(location = 1) in vec2 u_texcoord;
 
 out vec2 v2f_texcoord;
 
@@ -12,7 +12,7 @@ void main()
 #endif
 
 #ifdef FRAGMENT
-layout(binding=0) uniform sampler2D u_texture_ui;
+layout(binding = 0) uniform sampler2D u_texture_ui;
 
 in vec2 v2f_texcoord;
 

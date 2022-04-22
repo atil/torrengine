@@ -85,10 +85,19 @@ static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert
     ru->shader = shader;
 }
 
-static void render_unit_update(RenderUnit *ru, const float *new_vert_data)
+static void render_unit_update(RenderUnit *ru, float *new_vert_data)
 {
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, ru->vert_data_len, new_vert_data);
+}
+
+static void render_unit_draw(RenderUnit *ru, Mat4 *model)
+{
+    glBindVertexArray(ru->vao);
+    glBindTexture(GL_TEXTURE_2D, ru->texture);
+    shader_set_mat4(ru->shader, "u_model", model);
+    // TODO @DOCS: How can that last parameter be zero?
+    glDrawElements(GL_TRIANGLES, ru->index_count, GL_UNSIGNED_INT, 0);
 }
 
 static void render_unit_deinit(RenderUnit *ru)
@@ -170,7 +179,7 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
     for (size_t i = 0; i < char_count; i++)
     {
         char ch = text[i];
-        float pixel_pos_x, pixel_pos_y;
+        float pixel_pos_x = 0, pixel_pos_y = 0; // Don't exactly know what these are for
         stbtt_aligned_quad quad;
         stbtt_GetBakedQuad(font_data->font_char_data, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ch - ' ', &pixel_pos_x,
                            &pixel_pos_y, &quad, 1);
@@ -246,5 +255,14 @@ static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const c
 
     free(text_data.vb_data);
     free(text_data.ib_data);
+}
+
+static void render_unit_ui_draw(UiRenderUnit *ru)
+{
+    glBindVertexArray(ru->vao);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, ru->texture);
+    glUseProgram(ru->shader);
+    glDrawElements(GL_TRIANGLES, ru->index_count, GL_UNSIGNED_INT, 0);
 }
 

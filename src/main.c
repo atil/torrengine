@@ -185,11 +185,7 @@ int main(void)
 
         if (game_state == Splash)
         {
-            glBindVertexArray(ui_ru_splash_title.vao);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
-            glUseProgram(ui_ru_score.shader);
-            glDrawElements(GL_TRIANGLES, ui_ru_splash_title.index_count, GL_UNSIGNED_INT, 0);
+            render_unit_ui_draw(&ui_ru_splash_title);
 
             if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
             {
@@ -212,31 +208,10 @@ int main(void)
             glActiveTexture(GL_TEXTURE0);
             glUseProgram(world_shader);
 
-            glBindVertexArray(field_ru.vao);
-            glBindTexture(GL_TEXTURE_2D, field_ru.texture);
-            shader_set_mat4(world_shader, "u_model", &game.field_go.transform);
-            glDrawElements(GL_TRIANGLES, field_ru.index_count, GL_UNSIGNED_INT, 0);
-
-            glBindVertexArray(pad1_ru.vao);
-            glBindTexture(GL_TEXTURE_2D, pad1_ru.texture);
-            shader_set_mat4(world_shader, "u_model", &game.pad1_go.transform);
-            glDrawElements(GL_TRIANGLES, pad1_ru.index_count, GL_UNSIGNED_INT, 0);
-
-            glBindVertexArray(pad2_ru.vao);
-            glBindTexture(GL_TEXTURE_2D, pad2_ru.texture);
-            shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
-            glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
-
-            glBindVertexArray(ball_ru.vao);
-            glBindTexture(GL_TEXTURE_2D, ball_ru.texture);
-            shader_set_mat4(world_shader, "u_model", &game.ball_go.transform);
-            // TODO @DOCS: How can that last parameter be zero?
-            glDrawElements(GL_TRIANGLES, ball_ru.index_count, GL_UNSIGNED_INT, 0);
-
-            glBindVertexArray(pad2_ru.vao);
-            glBindTexture(GL_TEXTURE_2D, pad2_ru.texture);
-            shader_set_mat4(world_shader, "u_model", &game.pad2_go.transform);
-            glDrawElements(GL_TRIANGLES, pad2_ru.index_count, GL_UNSIGNED_INT, 0);
+            render_unit_draw(&field_ru, &game.field_go.transform);
+            render_unit_draw(&pad1_ru, &game.pad1_go.transform);
+            render_unit_draw(&pad2_ru, &game.pad2_go.transform);
+            render_unit_draw(&ball_ru, &game.ball_go.transform);
 
             for (size_t i = 0; i < particle_system_reg.system_count; i++)
             {
@@ -248,35 +223,23 @@ int main(void)
                 }
 
                 particle_emitter_update(ps.emitter, dt);
-
-                glUseProgram(ps.render_unit->shader);
-                glBindVertexArray(ps.render_unit->vao);
-                render_unit_particle_update(ps.render_unit, ps.emitter);
-                glBindTexture(GL_TEXTURE_2D, ps.render_unit->texture);
-                shader_set_float(ps.render_unit->shader, "u_alpha", ps.emitter->transparency);
-                glDrawElements(GL_TRIANGLES, ps.render_unit->index_count, GL_UNSIGNED_INT, 0);
+                render_unit_particle_draw(ps.render_unit, ps.emitter);
             }
 
             // UI draw
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
-            glUseProgram(ui_ru_score.shader);
-            glBindVertexArray(ui_ru_score.vao);
+            //
             if (result.did_score) // Update score view
             {
                 char int_str_buffer[32]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
                 sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", game.score);
                 render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
             }
-            glDrawElements(GL_TRIANGLES, ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
+
+            render_unit_ui_draw(&ui_ru_score);
         }
         else if (game_state == GameOver)
         {
-            glBindVertexArray(ui_ru_intermission.vao);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
-            glUseProgram(ui_ru_score.shader);
-            glDrawElements(GL_TRIANGLES, ui_ru_intermission.index_count, GL_UNSIGNED_INT, 0);
+            render_unit_ui_draw(&ui_ru_intermission);
 
             if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
             {

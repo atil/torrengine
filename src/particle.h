@@ -213,8 +213,10 @@ static ParticleRenderUnit *render_unit_particle_init(size_t particle_count, shad
     return ru;
 }
 
-static void render_unit_particle_update(ParticleRenderUnit *ru, ParticleEmitter *pe)
+static void render_unit_particle_draw(ParticleRenderUnit *ru, ParticleEmitter *pe)
 {
+    glUseProgram(ru->shader);
+    glBindVertexArray(ru->vao);
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
 
     float half_particle_size = pe->props.size * 0.5f;
@@ -232,6 +234,10 @@ static void render_unit_particle_update(ParticleRenderUnit *ru, ParticleEmitter 
     }
 
     glBufferSubData(GL_ARRAY_BUFFER, 0, ru->vert_data_len, ru->vert_data);
+
+    glBindTexture(GL_TEXTURE_2D, ru->texture);
+    shader_set_float(ru->shader, "u_alpha", pe->transparency);
+    glDrawElements(GL_TRIANGLES, ru->index_count, GL_UNSIGNED_INT, 0);
 }
 
 static void render_unit_particle_deinit(ParticleRenderUnit *ru)
