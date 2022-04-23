@@ -27,7 +27,7 @@ typedef struct
     float transparency;
     bool isAlive;
     uint8_t _padding[7];
-} ParticleEmitter;
+} ParticleEmitter; // TODO @CLEANUP: Rename to ParticleSource?
 
 typedef struct
 {

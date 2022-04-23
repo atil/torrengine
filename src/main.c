@@ -57,11 +57,12 @@ int main(void)
 {
     // array tests
     // Array arr = arr_create(sizeof(float), 10);
-    // float a = 1;
+    // float a = 31;
     // arr_add(&arr, &a);
-    // uint8_t *elem = arr_get(&arr, 0);
-    // float b = (float)(*elem);
-    // printf("%d\n", b);
+
+    // float b = ARR_GET(float, arr, 0);
+
+    // printf("%f\n", b);
     // arr_deinit(&arr);
     // return;
 

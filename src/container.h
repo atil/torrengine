@@ -1,3 +1,9 @@
+// start from here:
+// - test remove with a test struct
+// - write FloatArray, IntArray
+
+#define ARR_GET(type, arr, index) *((type *)(arr_get(&arr, index)))
+
 typedef struct
 {
     uint8_t *data;
@@ -9,14 +15,25 @@ typedef struct
 static Array arr_create(size_t elem_size, size_t capacity)
 {
     Array arr;
-    arr.data = (uint8_t *)malloc(elem_size * capacity);
+    arr.data = (void *)malloc(elem_size * capacity);
     arr.elem_size = elem_size;
     arr.count = 0;
     arr.capacity = capacity;
     return arr;
 }
 
-static void arr_add(Array *arr, uint8_t *elem_ptr)
+static void *arr_get(Array *arr, size_t index)
+{
+    assert(index < arr->count);
+    return (void *)(arr->data + (index * arr->elem_size));
+}
+
+static void *_arr_slot_at(Array *arr, size_t index)
+{
+    return (void *)(arr->data + (index * arr->elem_size));
+}
+
+static void arr_add(Array *arr, void *elem_ptr)
 {
     if (arr->count == arr->capacity)
     {
@@ -24,31 +41,28 @@ static void arr_add(Array *arr, uint8_t *elem_ptr)
         return;
     }
 
-    memcpy(&arr->data[arr->count], elem_ptr, arr->elem_size);
+    uint8_t *arr_end_addr = _arr_slot_at(arr, arr->count);
+
+    memcpy(arr_end_addr, elem_ptr, arr->elem_size);
 
     arr->count++;
 }
 
-static void arr_remove(Array *arr, uint8_t *elem_ptr)
+static void arr_remove(Array *arr, void *elem_ptr)
 {
     for (size_t i = 0; i < arr->count; i++)
     {
-        if (memcmp(&arr->data[i], &elem_ptr, arr->elem_size) == 0)
+        if (memcmp(_arr_slot_at(arr, i), &elem_ptr, arr->elem_size) == 0)
         {
             for (size_t j = 0; j < arr->count - 1; j++) // Shift the rest of the array
             {
-                memcpy(&arr->data[j], &arr->data[j + 1], arr->elem_size);
+                memcpy(_arr_slot_at(arr, j), _arr_slot_at(arr, j + 1), arr->elem_size);
             }
 
+            arr->count--;
             return;
         }
     }
-}
-
-static uint8_t *arr_get(Array *arr, size_t index)
-{
-    assert(index < arr->count);
-    return &arr->data[index];
 }
 
 static void arr_deinit(Array *arr)
