@@ -175,11 +175,6 @@ int main(void)
             glfwSetWindowShouldClose(window, true);
         }
 
-        // TODO @CLEANUP: This looks bad. Ideally we return this from the update function
-        PongGameUpdateResult result;
-        result.is_game_over = false;
-        result.did_score = false;
-
         glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -195,12 +190,12 @@ int main(void)
         }
         else if (game_state == Game)
         {
-            result =
+            PongGameUpdateResult result =
                 game_update(dt, &game, &config, window, &sfx, &particle_prop_reg, &particle_system_reg, &renderer);
+
             if (result.is_game_over)
             {
                 sfx_play(&sfx, SfxGameOver);
-
                 game_state = GameOver;
             }
 
