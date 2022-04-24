@@ -8,10 +8,10 @@
 
 struct TextBufferData
 {
-    float *vb_data;
-    size_t vb_len;
-    uint32_t *ib_data;
-    size_t ib_len;
+    f32 *vb_data;
+    usize vb_len;
+    u32 *ib_data;
+    usize ib_len;
 };
 
 typedef enum
@@ -23,20 +23,20 @@ typedef enum
 struct TextTransform
 {
     Vec2 anchor;
-    float height; // In NDC
+    f32 height; // In NDC
     TextWidthType width_type;
-    float width; // In NDC
+    f32 width; // In NDC
 };
 
 struct FontData
 {
-    uint8_t *font_bitmap;
-    float ascent;                               // In pixels
-    float descent;                              // In pixels
+    u8 *font_bitmap;
+    f32 ascent;                                 // In pixels
+    f32 descent;                                // In pixels
     stbtt_bakedchar font_char_data[CHAR_COUNT]; // TODO @LEAK: This is not leaked, but research anyway
 };
 
-static TextTransform texttransform_new(Vec2 anchor, float height, TextWidthType width_type, float width)
+static TextTransform texttransform_new(Vec2 anchor, f32 height, TextWidthType width_type, f32 width)
 {
     TextTransform tx;
     tx.anchor = anchor;
@@ -49,11 +49,11 @@ static TextTransform texttransform_new(Vec2 anchor, float height, TextWidthType 
 static void text_init(FontData *font_data)
 {
     // TODO @ROBUSTNESS: Assert that it's called once
-    uint8_t *font_bytes = (uint8_t *)read_file("assets/Consolas.ttf");
+    u8 *font_bytes = (u8 *)read_file("assets/Consolas.ttf");
     assert(font_bytes != NULL);
-    font_data->font_bitmap = (uint8_t *)malloc(FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT * sizeof(uint8_t));
+    font_data->font_bitmap = (u8 *)malloc(FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT * sizeof(u8));
 
-    stbtt_BakeFontBitmap((uint8_t *)font_bytes, 0, FONT_TEXT_HEIGHT, font_data->font_bitmap, FONT_ATLAS_WIDTH,
+    stbtt_BakeFontBitmap((u8 *)font_bytes, 0, FONT_TEXT_HEIGHT, font_data->font_bitmap, FONT_ATLAS_WIDTH,
                          FONT_ATLAS_HEIGHT, ' ', CHAR_COUNT, font_data->font_char_data);
 
     stbtt_fontinfo font_info;
@@ -62,9 +62,9 @@ static void text_init(FontData *font_data)
     int ascent, descent, line_gap;
     stbtt_GetFontVMetrics(&font_info, &ascent, &descent, &line_gap);
 
-    float scale = stbtt_ScaleForPixelHeight(&font_info, FONT_TEXT_HEIGHT);
-    font_data->ascent = (float)ascent * scale;
-    font_data->descent = (float)descent * scale;
+    f32 scale = stbtt_ScaleForPixelHeight(&font_info, FONT_TEXT_HEIGHT);
+    font_data->ascent = (f32)ascent * scale;
+    font_data->descent = (f32)descent * scale;
 
     free(font_bytes);
 }

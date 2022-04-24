@@ -27,14 +27,11 @@
 #define WIDTH 640
 #define HEIGHT 480
 
-typedef uint32_t buffer_handle_t;
-typedef uint32_t texture_handle_t;
-typedef uint32_t shader_handle_t;
-
 #pragma warning(push)
 #pragma warning(disable : 4996) // TODO @ROBUSTNESS: Address these deprecated CRT functions
 #pragma warning(disable : 5045) // Spectre thing
 #pragma warning(disable : 4505) // Unreferenced functions
+#include "core.h"
 #include "util.h"
 #include "tomath.h"
 #include "text.h"
@@ -71,7 +68,7 @@ int main(void)
     Sfx sfx;
     sfx_init(&sfx);
 
-    const float cam_size = 5.0f;
+    const f32 cam_size = 5.0f;
 
     //
     // GameObject rendering
@@ -84,9 +81,9 @@ int main(void)
 
     shader_handle_t world_shader = load_shader("src/world.glsl");
 
-    float unit_square_verts[] = {-0.5f, -0.5f, 0.0f, 0.0f, 0.5f,  -0.5f, 1.0f, 0.0f,
-                                 0.5f,  0.5f,  1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 1.0f};
-    uint32_t unit_square_indices[] = {0, 1, 2, 0, 2, 3};
+    f32 unit_square_verts[] = {-0.5f, -0.5f, 0.0f, 0.0f, 0.5f,  -0.5f, 1.0f, 0.0f,
+                               0.5f,  0.5f,  1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 1.0f};
+    u32 unit_square_indices[] = {0, 1, 2, 0, 2, 3};
 
     render_unit_init(&field_ru, unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
                      sizeof(unit_square_indices), world_shader, "assets/Field.png");
@@ -153,12 +150,12 @@ int main(void)
 
     PongGame game;
 
-    float game_time = (float)glfwGetTime();
-    float dt = 0.0f;
+    f32 game_time = (f32)glfwGetTime();
+    f32 dt = 0.0f;
     while (!glfwWindowShouldClose(window))
     {
-        dt = (float)glfwGetTime() - game_time;
-        game_time = (float)glfwGetTime();
+        dt = (f32)glfwGetTime() - game_time;
+        game_time = (f32)glfwGetTime();
 
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         {
@@ -198,7 +195,7 @@ int main(void)
             render_unit_draw(&pad2_ru, &game.pad2_go.transform);
             render_unit_draw(&ball_ru, &game.ball_go.transform);
 
-            for (size_t i = 0; i < particle_system_reg.system_count; i++)
+            for (usize i = 0; i < particle_system_reg.system_count; i++)
             {
                 ParticleSystem ps = particle_system_reg.array_ptr[i];
                 if (!ps.emitter->isAlive)

@@ -15,10 +15,10 @@ static shader_handle_t load_shader(const char *file_path)
 
     // TODO @LEAK: Do we need to delete these strings?
 
-    uint32_t vertex_shader_handle = glCreateShader(GL_VERTEX_SHADER);
+    u32 vertex_shader_handle = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader_handle, 1, (const char *const *)&vert_string, NULL);
     glCompileShader(vertex_shader_handle);
-    int32_t success;
+    i32 success;
     glGetShaderiv(vertex_shader_handle, GL_COMPILE_STATUS, &success);
     if (!success)
     {
@@ -26,7 +26,7 @@ static shader_handle_t load_shader(const char *file_path)
         printf("vertex shader fail %s\n", info_log);
     }
 
-    uint32_t frag_shader_handle = glCreateShader(GL_FRAGMENT_SHADER);
+    u32 frag_shader_handle = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(frag_shader_handle, 1, (const char *const *)&frag_string, NULL);
     glCompileShader(frag_shader_handle);
     glGetShaderiv(frag_shader_handle, GL_COMPILE_STATUS, &success);
@@ -54,7 +54,7 @@ static shader_handle_t load_shader(const char *file_path)
 
 static void shader_set_mat4(shader_handle_t shader, const char *uniform_name, const Mat4 *mat)
 {
-    int32_t loc = glGetUniformLocation(shader, uniform_name);
+    i32 loc = glGetUniformLocation(shader, uniform_name);
     if (loc == -1)
     {
         printf("error setting uniform matrix: %s\n", uniform_name);
@@ -63,20 +63,20 @@ static void shader_set_mat4(shader_handle_t shader, const char *uniform_name, co
     glUniformMatrix4fv(loc, 1, GL_FALSE, mat->data);
 }
 
-static void shader_set_float3(shader_handle_t shader, const char *uniform_name, float f0, float f1, float f2)
+static void shader_set_float(shader_handle_t shader, const char *uniform_name, f32 f0, f32 f1, f32 f2)
 {
-    int32_t loc = glGetUniformLocation(shader, uniform_name);
+    i32 loc = glGetUniformLocation(shader, uniform_name);
     if (loc == -1)
     {
-        printf("error setting uniform float3: %s\n", uniform_name);
+        printf("error setting uniform f323: %s\n", uniform_name);
         return;
     }
     glUniform3f(loc, f0, f1, f2);
 }
 
-static void shader_set_int(shader_handle_t shader, const char *uniform_name, int i)
+static void shader_set_int(shader_handle_t shader, const char *uniform_name, i32 i)
 {
-    int32_t loc = glGetUniformLocation(shader, uniform_name);
+    i32 loc = glGetUniformLocation(shader, uniform_name);
     if (loc == -1)
     {
         printf("error setting uniform int: %s\n", uniform_name);
@@ -85,9 +85,9 @@ static void shader_set_int(shader_handle_t shader, const char *uniform_name, int
     glUniform1i(loc, i);
 }
 
-static void shader_set_float(shader_handle_t shader, const char *uniform_name, float f)
+static void shader_set_f32(shader_handle_t shader, const char *uniform_name, f32 f)
 {
-    int32_t loc = glGetUniformLocation(shader, uniform_name);
+    i32 loc = glGetUniformLocation(shader, uniform_name);
     if (loc == -1)
     {
         printf("error setting uniform int: %s\n", uniform_name);

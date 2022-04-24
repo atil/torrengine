@@ -5,8 +5,8 @@ struct RenderUnit
     buffer_handle_t vao;
     buffer_handle_t vbo;
     buffer_handle_t ibo;
-    uint32_t index_count;
-    size_t vert_data_len;
+    u32 index_count;
+    usize vert_data_len;
     shader_handle_t shader;
     texture_handle_t texture;
 };
@@ -16,7 +16,7 @@ struct UiRenderUnit
     buffer_handle_t vao;
     buffer_handle_t vbo;
     buffer_handle_t ibo;
-    uint32_t index_count;
+    u32 index_count;
     shader_handle_t shader;
     texture_handle_t texture;
 };
@@ -27,23 +27,23 @@ struct Renderer
 {
     Mat4 view;
     Mat4 proj;
-    float aspect;
+    f32 aspect;
 };
 
-static Renderer render_init(uint32_t screen_width, uint32_t screen_height, float cam_size)
+static Renderer render_init(u32 screen_width, u32 screen_height, f32 cam_size)
 {
     Renderer r;
 
     // We translate this matrix by the cam position
     r.view = mat4_identity();
-    r.aspect = (float)screen_width / (float)screen_height;
+    r.aspect = (f32)screen_width / (f32)screen_height;
     r.proj = mat4_ortho(-r.aspect * cam_size, r.aspect * cam_size, -cam_size, cam_size, -0.001f, 100.0f);
     return r;
 }
 
 // TODO @CLEANUP: Make these return a RenderUnit
-static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert_data_len, const uint32_t *index_data,
-                             size_t index_data_len, shader_handle_t shader, const char *texture_file_name)
+static void render_unit_init(RenderUnit *ru, const f32 *vert_data, usize vert_data_len, const u32 *index_data,
+                             usize index_data_len, shader_handle_t shader, const char *texture_file_name)
 {
     glGenVertexArrays(1, &(ru->vao));
     glGenBuffers(1, &(ru->vbo));
@@ -58,9 +58,9 @@ static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)index_data_len, index_data, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void *)0);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void *)(2 * sizeof(f32)));
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glGenTextures(1, &(ru->texture));
@@ -78,13 +78,13 @@ static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(data);
 
-    // TODO @CLEANUP: Actually these should be size_t but for some reason that causes padding in the struct
-    ru->vert_data_len = (uint32_t)vert_data_len;
-    ru->index_count = (uint32_t)index_data_len;
+    // TODO @CLEANUP: Actually these should be usize but for some reason that causes padding in the struct
+    ru->vert_data_len = (u32)vert_data_len;
+    ru->index_count = (u32)index_data_len;
     ru->shader = shader;
 }
 
-static void render_unit_update(RenderUnit *ru, float *new_vert_data)
+static void render_unit_update(RenderUnit *ru, f32 *new_vert_data)
 {
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)ru->vert_data_len, new_vert_data);
@@ -128,9 +128,9 @@ static void render_unit_ui_alloc(UiRenderUnit *ru, shader_handle_t shader, FontD
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 0, NULL, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void *)0);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void *)(2 * sizeof(f32)));
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     ru->shader = shader;
@@ -164,20 +164,21 @@ static void render_unit_ui_deinit(UiRenderUnit *ru)
     glDeleteTextures(1, &ru->texture);
 }
 
-static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, const char *text, TextTransform transform)
+static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, const char *text,
+                             TextTransform transform)
 {
-    const size_t char_count = strlen(text);
+    const usize char_count = strlen(text);
 
     Vec2 anchor = transform.anchor;
-    float width = transform.width_type == FixedWidth ? (transform.width / (float)char_count) : transform.width;
-    float height = transform.height;
+    f32 width = transform.width_type == FixedWidth ? (transform.width / (f32)char_count) : transform.width;
+    f32 height = transform.height;
 
-    uint32_t vert_curr = 0;
-    uint32_t ind_curr = 0;
-    for (size_t i = 0; i < char_count; i++)
+    u32 vert_curr = 0;
+    u32 ind_curr = 0;
+    for (usize i = 0; i < char_count; i++)
     {
         char ch = text[i];
-        float pixel_pos_x = 0, pixel_pos_y = 0; // Don't exactly know what these are for
+        f32 pixel_pos_x = 0, pixel_pos_y = 0; // Don't exactly know what these are for
         stbtt_aligned_quad quad;
         stbtt_GetBakedQuad(font_data->font_char_data, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ch - ' ', &pixel_pos_x,
                            &pixel_pos_y, &quad, 1);
@@ -187,8 +188,8 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
         // below the baseline and the origin is the bottom quadY0 is
         // positive: it's above the baseline and the origin is top quadY1
         // positive: below the baseline and the origin is top
-        const float glyph_bottom = (-font_data->descent - quad.y1) / FONT_TEXT_HEIGHT; // In screen space
-        const float glyph_top = (-quad.y0 + (-font_data->descent)) / FONT_TEXT_HEIGHT; // In screen space
+        const f32 glyph_bottom = (-font_data->descent - quad.y1) / FONT_TEXT_HEIGHT; // In screen space
+        const f32 glyph_top = (-quad.y0 + (-font_data->descent)) / FONT_TEXT_HEIGHT; // In screen space
 
         // Anchor: bottom-left corner's normalized position
         // Our quads have their origin at bottom left. But textures have
@@ -196,36 +197,36 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
         // UVs
 
         // Bottom left vertex
-        text_data->vb_data[vert_curr + 0] = (float)i * width + anchor.x;      // X:0
+        text_data->vb_data[vert_curr + 0] = (f32)i * width + anchor.x;        // X:0
         text_data->vb_data[vert_curr + 1] = glyph_bottom * height + anchor.y; // Y:0
         text_data->vb_data[vert_curr + 2] = quad.s0;                          // U
         text_data->vb_data[vert_curr + 3] = 1.0f - quad.t1;                   // V
 
         // Bottom right vertex
-        text_data->vb_data[vert_curr + 4] = (float)(i + 1) * width + anchor.x; // 1
-        text_data->vb_data[vert_curr + 5] = glyph_bottom * height + anchor.y;  // 0
-        text_data->vb_data[vert_curr + 6] = quad.s1;                           // U
-        text_data->vb_data[vert_curr + 7] = 1.0f - quad.t1;                    // V
+        text_data->vb_data[vert_curr + 4] = (f32)(i + 1) * width + anchor.x;  // 1
+        text_data->vb_data[vert_curr + 5] = glyph_bottom * height + anchor.y; // 0
+        text_data->vb_data[vert_curr + 6] = quad.s1;                          // U
+        text_data->vb_data[vert_curr + 7] = 1.0f - quad.t1;                   // V
 
         // Top right vertex
-        text_data->vb_data[vert_curr + 8] = (float)(i + 1) * width + anchor.x; // 1
-        text_data->vb_data[vert_curr + 9] = glyph_top * height + anchor.y;     // 1
-        text_data->vb_data[vert_curr + 10] = quad.s1;                          // U
-        text_data->vb_data[vert_curr + 11] = 1.0f - quad.t0;                   // V
+        text_data->vb_data[vert_curr + 8] = (f32)(i + 1) * width + anchor.x; // 1
+        text_data->vb_data[vert_curr + 9] = glyph_top * height + anchor.y;   // 1
+        text_data->vb_data[vert_curr + 10] = quad.s1;                        // U
+        text_data->vb_data[vert_curr + 11] = 1.0f - quad.t0;                 // V
 
         // Top left vertex
-        text_data->vb_data[vert_curr + 12] = (float)i * width + anchor.x;   // 0
+        text_data->vb_data[vert_curr + 12] = (f32)i * width + anchor.x;     // 0
         text_data->vb_data[vert_curr + 13] = glyph_top * height + anchor.y; // 1
         text_data->vb_data[vert_curr + 14] = quad.s0;                       // U
         text_data->vb_data[vert_curr + 15] = 1.0f - quad.t0;                // V
 
         // Two triangles. Each char is 4 vertex
-        text_data->ib_data[ind_curr + 0] = ((uint32_t)i * 4) + 0;
-        text_data->ib_data[ind_curr + 1] = ((uint32_t)i * 4) + 1;
-        text_data->ib_data[ind_curr + 2] = ((uint32_t)i * 4) + 2;
-        text_data->ib_data[ind_curr + 3] = ((uint32_t)i * 4) + 0;
-        text_data->ib_data[ind_curr + 4] = ((uint32_t)i * 4) + 2;
-        text_data->ib_data[ind_curr + 5] = ((uint32_t)i * 4) + 3;
+        text_data->ib_data[ind_curr + 0] = ((u32)i * 4) + 0;
+        text_data->ib_data[ind_curr + 1] = ((u32)i * 4) + 1;
+        text_data->ib_data[ind_curr + 2] = ((u32)i * 4) + 2;
+        text_data->ib_data[ind_curr + 3] = ((u32)i * 4) + 0;
+        text_data->ib_data[ind_curr + 4] = ((u32)i * 4) + 2;
+        text_data->ib_data[ind_curr + 5] = ((u32)i * 4) + 3;
 
         vert_curr += 16;
         ind_curr += 6;
@@ -234,13 +235,13 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
 
 static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const char *text, TextTransform transform)
 {
-    const size_t char_count = strlen(text);
+    const usize char_count = strlen(text);
 
     TextBufferData text_data;
-    text_data.vb_len = char_count * 16 * sizeof(float); // TODO @DOCS: Explain the data layout
-    text_data.ib_len = char_count * 6 * sizeof(uint32_t);
-    text_data.vb_data = (float *)malloc(text_data.vb_len);
-    text_data.ib_data = (uint32_t *)malloc(text_data.ib_len);
+    text_data.vb_len = char_count * 16 * sizeof(f32); // TODO @DOCS: Explain the data layout
+    text_data.ib_len = char_count * 6 * sizeof(u32);
+    text_data.vb_data = (f32 *)malloc(text_data.vb_len);
+    text_data.ib_data = (u32 *)malloc(text_data.ib_len);
 
     text_buffer_fill(&text_data, font_data, text, transform);
 
@@ -249,7 +250,7 @@ static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const c
     glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)text_data.vb_len, text_data.vb_data, GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru->ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)text_data.ib_len, text_data.ib_data, GL_STATIC_DRAW);
-    ru->index_count = (uint32_t)text_data.ib_len;
+    ru->index_count = (u32)text_data.ib_len;
 
     free(text_data.vb_data);
     free(text_data.ib_data);

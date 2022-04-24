@@ -24,7 +24,7 @@ struct Sfx
     sfx_source_handle_t source_objects;
     sfx_source_handle_t source_startgame;
     sfx_source_handle_t source_gameover;
-    uint32_t _unused_padding; // TODO @CLEANUP: Research why we need this
+    u32 _unused_padding; // TODO @CLEANUP: Research why we need this
 
     // TODO @REFACTOR: These are gonna be an array
     sfx_buffer_handle_t buffer_hitpad;
@@ -35,19 +35,19 @@ struct Sfx
 
 struct WavHeader
 {
-    uint8_t _RIFF[4];         // RIFF Header Magic header
-    uint32_t chunk_size;      // RIFF Chunk Size
-    uint8_t _WAVE[4];         // WAVE Header
-    uint8_t _FMT[4];          // FMT header
-    uint32_t subchunk1_size;  // Size of the fmt chunk
-    uint16_t audio_format;    // Audio format 1=PCM,6=mulaw,7=alaw, 257=IBM Mu-Law, 258=IBM A-Law, 259=ADPCM
-    uint16_t channel_count;   // Number of channels 1=Mono 2=Sterio
-    uint32_t sample_freq;     // Sampling Frequency in Hz
-    uint32_t bytes_freq;      // bytes per second
-    uint16_t block_align;     // 2=16-bit mono, 4=16-bit stereo
-    uint16_t bits_per_sample; // Number of bits per sample
-    uint8_t _subchunk2_id[4]; // "data"  string
-    uint32_t sample_data_len; // Sampled data length
+    u8 _RIFF[4];         // RIFF Header Magic header
+    u32 chunk_size;      // RIFF Chunk Size
+    u8 _WAVE[4];         // WAVE Header
+    u8 _FMT[4];          // FMT header
+    u32 subchunk1_size;  // Size of the fmt chunk
+    u16 audio_format;    // Audio format 1=PCM,6=mulaw,7=alaw, 257=IBM Mu-Law, 258=IBM A-Law, 259=ADPCM
+    u16 channel_count;   // Number of channels 1=Mono 2=Sterio
+    u32 sample_freq;     // Sampling Frequency in Hz
+    u32 bytes_freq;      // bytes per second
+    u16 block_align;     // 2=16-bit mono, 4=16-bit stereo
+    u16 bits_per_sample; // Number of bits per sample
+    u8 _subchunk2_id[4]; // "data"  string
+    u32 sample_data_len; // Sampled data length
 };
 
 static void check_al_error(const char *msg)
@@ -62,12 +62,12 @@ static void check_al_error(const char *msg)
 static sfx_buffer_handle_t create_buffer_with_file(const char *file_name)
 {
     WavHeader wav_header;
-    size_t wav_header_size = sizeof(WavHeader);
+    usize wav_header_size = sizeof(WavHeader);
     FILE *wav_file = fopen(file_name, "r");
     assert(wav_file);
     fread(&wav_header, 1, wav_header_size, wav_file);
 
-    uint8_t *wav_buffer = (uint8_t *)malloc(wav_header.sample_data_len);
+    u8 *wav_buffer = (u8 *)malloc(wav_header.sample_data_len);
     fseek(wav_file, 44, SEEK_SET);
     fread(wav_buffer, wav_header.sample_data_len, 1, wav_file);
 

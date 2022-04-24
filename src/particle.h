@@ -1,20 +1,20 @@
 struct Particle
 {
-    uint32_t index;
-    float angle;
-    float speed_offset; // In percentage
+    u32 index;
+    f32 angle;
+    f32 speed_offset; // In percentage
 };
 
 struct ParticleProps
 {
     Vec2 angle_limits;
-    size_t count;
-    float lifetime;
-    float speed;
-    float angle_offset;
-    float speed_offset;
-    float size;
-    uint8_t _padding[4];
+    usize count;
+    f32 lifetime;
+    f32 speed;
+    f32 angle_offset;
+    f32 speed_offset;
+    f32 size;
+    u8 _padding[4];
 };
 
 struct ParticleEmitter
@@ -22,11 +22,11 @@ struct ParticleEmitter
     Vec2 *positions;
     Particle *particles;
     ParticleProps props;
-    float life;
+    f32 life;
     Vec2 emit_point;
-    float transparency;
+    f32 transparency;
     bool isAlive;
-    uint8_t _padding[7];
+    u8 _padding[7];
 }; // TODO @CLEANUP: Rename to ParticleSource?
 
 struct ParticleRenderUnit
@@ -35,11 +35,11 @@ struct ParticleRenderUnit
     buffer_handle_t vbo;
     buffer_handle_t uv_bo;
     buffer_handle_t ibo;
-    uint32_t index_count;
+    u32 index_count;
     shader_handle_t shader;
     texture_handle_t texture;
-    uint32_t vert_data_len;
-    float *vert_data;
+    u32 vert_data_len;
+    f32 *vert_data;
 };
 
 struct ParticleSystem
@@ -51,8 +51,8 @@ struct ParticleSystem
 struct ParticleSystemRegistry
 {
     ParticleSystem *array_ptr;
-    size_t system_count;
-    size_t system_capacity;
+    usize system_count;
+    usize system_capacity;
 };
 
 struct ParticlePropRegistry
@@ -93,14 +93,15 @@ static ParticleEmitter *particle_emitter_init(ParticleProps props, Vec2 emit_poi
     pe->props = props;
     pe->emit_point = emit_point;
 
-    for (uint32_t i = 0; i < pe->props.count; i++)
+    for (u32 i = 0; i < pe->props.count; i++)
     {
         pe->particles[i].index = i;
         pe->particles[i].angle = // Notice the "-1", we want the end angle to be inclusive
-            lerp(pe->props.angle_limits.x, pe->props.angle_limits.y, (float)i / (float)(pe->props.count - 1));
+            lerp(pe->props.angle_limits.x, pe->props.angle_limits.y, (f32)i / (f32)(pe->props.count - 1));
 
         pe->particles[i].angle += rand_range(-pe->props.angle_offset, pe->props.angle_offset);
-        pe->particles[i].speed_offset = pe->props.speed * rand_range(-pe->props.speed_offset, pe->props.speed_offset);
+        pe->particles[i].speed_offset =
+            pe->props.speed * rand_range(-pe->props.speed_offset, pe->props.speed_offset);
 
         pe->positions[i] = pe->emit_point;
     }
@@ -108,13 +109,14 @@ static ParticleEmitter *particle_emitter_init(ParticleProps props, Vec2 emit_poi
     return pe;
 }
 
-static void particle_emitter_update(ParticleEmitter *ps, float dt)
+static void particle_emitter_update(ParticleEmitter *ps, f32 dt)
 {
-    for (uint32_t i = 0; i < ps->props.count; i++)
+    for (u32 i = 0; i < ps->props.count; i++)
     {
-        Vec2 dir = vec2_new((float)cos(ps->particles[i].angle * DEG2RAD), (float)sin(ps->particles[i].angle * DEG2RAD));
+        Vec2 dir =
+            vec2_new((f32)cos(ps->particles[i].angle * DEG2RAD), (f32)sin(ps->particles[i].angle * DEG2RAD));
 
-        float speed = ps->props.speed + ps->particles[i].speed_offset;
+        f32 speed = ps->props.speed + ps->particles[i].speed_offset;
         ps->positions[i] = vec2_add(ps->positions[i], vec2_scale(dir, speed * dt));
     }
 
@@ -130,42 +132,43 @@ static void particle_emitter_deinit(ParticleEmitter *ps)
     free(ps);
 }
 
-static ParticleRenderUnit *render_unit_particle_init(size_t particle_count, shader_handle_t shader,
+static ParticleRenderUnit *render_unit_particle_init(usize particle_count, shader_handle_t shader,
                                                      const char *texture_file_name)
 {
     ParticleRenderUnit *ru = (ParticleRenderUnit *)malloc(sizeof(ParticleRenderUnit));
 
     // TODO @CLEANUP: VLAs would simplify this allocation
-    float single_particle_vert[8] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
-    size_t vert_data_len = particle_count * sizeof(single_particle_vert);
-    ru->vert_data = (float *)malloc(vert_data_len);
+    f32 single_particle_vert[8] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
+    usize vert_data_len = particle_count * sizeof(single_particle_vert);
+    ru->vert_data = (f32 *)malloc(vert_data_len);
 
-    float single_particle_uvs[8] = {0, 0, 1, 0, 1, 1, 0, 1};
-    size_t uv_data_len = particle_count * sizeof(single_particle_uvs);
-    float *uv_data = (float *)malloc(uv_data_len);
+    f32 single_particle_uvs[8] = {0, 0, 1, 0, 1, 1, 0, 1};
+    usize uv_data_len = particle_count * sizeof(single_particle_uvs);
+    f32 *uv_data = (f32 *)malloc(uv_data_len);
 
-    uint32_t single_particle_index[6] = {0, 1, 2, 0, 2, 3};
-    size_t index_data_len = particle_count * sizeof(single_particle_index);
-    uint32_t *index_data = (uint32_t *)malloc(index_data_len);
+    u32 single_particle_index[6] = {0, 1, 2, 0, 2, 3};
+    usize index_data_len = particle_count * sizeof(single_particle_index);
+    u32 *index_data = (u32 *)malloc(index_data_len);
 
-    for (uint32_t i = 0; i < (uint32_t)particle_count; i++)
+    for (u32 i = 0; i < (u32)particle_count; i++)
     {
         // Learning: '+' operator for pointers doesn't increment by bytes.
-        // The increment amount is of the pointer's type. So for this one above, it increments 8 floats.
+        // The increment amount is of the pointer's type. So for this one above, it increments 8 f32s.
 
         memcpy(ru->vert_data + i * 8, single_particle_vert, sizeof(single_particle_vert));
 
-        uint32_t particle_index_at_i[6] = {
-            single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4), single_particle_index[2] + (i * 4),
-            single_particle_index[3] + (i * 4), single_particle_index[4] + (i * 4), single_particle_index[5] + (i * 4),
+        u32 particle_index_at_i[6] = {
+            single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4),
+            single_particle_index[2] + (i * 4), single_particle_index[3] + (i * 4),
+            single_particle_index[4] + (i * 4), single_particle_index[5] + (i * 4),
         };
         memcpy(index_data + i * 6, particle_index_at_i, sizeof(particle_index_at_i));
 
         memcpy(uv_data + i * 8, single_particle_uvs, sizeof(single_particle_uvs));
     }
 
-    ru->vert_data_len = (uint32_t)vert_data_len;
-    ru->index_count = (uint32_t)index_data_len;
+    ru->vert_data_len = (u32)vert_data_len;
+    ru->index_count = (u32)index_data_len;
     ru->shader = shader;
 
     glGenVertexArrays(1, &(ru->vao));
@@ -178,12 +181,12 @@ static ParticleRenderUnit *render_unit_particle_init(size_t particle_count, shad
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
     glBufferData(GL_ARRAY_BUFFER, (GLsizei)vert_data_len, ru->vert_data, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void *)0);
 
     glBindBuffer(GL_ARRAY_BUFFER, ru->uv_bo);
     glBufferData(GL_ARRAY_BUFFER, (GLsizei)uv_data_len, uv_data, GL_STATIC_DRAW);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void *)0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru->ibo);
@@ -196,9 +199,9 @@ static ParticleRenderUnit *render_unit_particle_init(size_t particle_count, shad
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    int width, height, channel_count;
+    i32 width, height, channel_count;
     stbi_set_flip_vertically_on_load(true);
-    uint8_t *data = stbi_load(texture_file_name, &width, &height, &channel_count, 0);
+    u8 *data = stbi_load(texture_file_name, &width, &height, &channel_count, 0);
     assert(data != NULL);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -216,8 +219,8 @@ static void render_unit_particle_draw(ParticleRenderUnit *ru, ParticleEmitter *p
     glBindVertexArray(ru->vao);
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
 
-    float half_particle_size = pe->props.size * 0.5f;
-    for (uint32_t i = 0; i < pe->props.count; i++)
+    f32 half_particle_size = pe->props.size * 0.5f;
+    for (u32 i = 0; i < pe->props.count; i++)
     {
         Vec2 particle_pos = pe->positions[i];
         ru->vert_data[(i * 8) + 0] = particle_pos.x - half_particle_size;
@@ -233,7 +236,7 @@ static void render_unit_particle_draw(ParticleRenderUnit *ru, ParticleEmitter *p
     glBufferSubData(GL_ARRAY_BUFFER, 0, ru->vert_data_len, ru->vert_data);
 
     glBindTexture(GL_TEXTURE_2D, ru->texture);
-    shader_set_float(ru->shader, "u_alpha", pe->transparency);
+    shader_set_f32(ru->shader, "u_alpha", pe->transparency);
     glDrawElements(GL_TRIANGLES, (GLsizeiptr)ru->index_count, GL_UNSIGNED_INT, 0);
 }
 
@@ -295,18 +298,18 @@ static bool particle_system_is_equal(ParticleSystem a, ParticleSystem b)
     return a.emitter == b.emitter && a.render_unit == b.render_unit;
 }
 
-static ParticleSystem particle_system_registry_get(ParticleSystemRegistry *reg, size_t index)
+static ParticleSystem particle_system_registry_get(ParticleSystemRegistry *reg, usize index)
 {
     return reg->array_ptr[index];
 }
 
 static void particle_system_registry_remove(ParticleSystemRegistry *reg, ParticleSystem ps)
 {
-    for (size_t i = 0; i < reg->system_count; i++)
+    for (usize i = 0; i < reg->system_count; i++)
     {
         if (particle_system_is_equal(reg->array_ptr[i], ps))
         {
-            for (size_t j = i; j < reg->system_count - 1; j++) // Shift the rest of the array
+            for (usize j = i; j < reg->system_count - 1; j++) // Shift the rest of the array
             {
                 reg->array_ptr[j] = reg->array_ptr[j + 1];
             }
@@ -319,7 +322,7 @@ static void particle_system_registry_remove(ParticleSystemRegistry *reg, Particl
 
 static void particle_system_registry_deinit(ParticleSystemRegistry *reg)
 {
-    for (size_t i = 0; i < reg->system_count; i++)
+    for (usize i = 0; i < reg->system_count; i++)
     {
         particle_emitter_deinit(reg->array_ptr[i].emitter);
         render_unit_particle_deinit(reg->array_ptr[i].render_unit);

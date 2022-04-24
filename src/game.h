@@ -18,18 +18,18 @@ struct PongGame
     GameObject pad2_go;
     GameObject ball_go;
     Vec2 ball_move_dir;
-    uint32_t score;
-    float game_speed_coeff;
+    u32 score;
+    f32 game_speed_coeff;
 };
 
 struct PongGameConfig
 {
     Vec2 pad_size;
-    float distance_from_center;
-    float ball_speed;
+    f32 distance_from_center;
+    f32 ball_speed;
     Vec2 area_extents;
-    float pad_move_speed;
-    float game_speed_increase_coeff;
+    f32 pad_move_speed;
+    f32 game_speed_increase_coeff;
 };
 
 struct PongGameUpdateResult
@@ -40,21 +40,21 @@ struct PongGameUpdateResult
 
 static bool check_line_segment_intersection(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4, Vec2 *intersection)
 {
-    float x1 = p1.x;
-    float x2 = p2.x;
-    float x3 = p3.x;
-    float x4 = p4.x;
-    float y1 = p1.y;
-    float y2 = p2.y;
-    float y3 = p3.y;
-    float y4 = p4.y;
+    f32 x1 = p1.x;
+    f32 x2 = p2.x;
+    f32 x3 = p3.x;
+    f32 x4 = p4.x;
+    f32 y1 = p1.y;
+    f32 y2 = p2.y;
+    f32 y3 = p3.y;
+    f32 y4 = p4.y;
 
     // https://en.wikipedia.org/wiki/Line-line_intersection
-    float t_nom = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);
-    float t_den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    f32 t_nom = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);
+    f32 t_den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
 
-    float u_nom = (x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2);
-    float u_den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    f32 u_nom = (x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2);
+    f32 u_den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
 
     if (t_nom < 0 || t_nom > t_den || u_nom < 0 || u_nom > u_den)
     {
@@ -66,7 +66,7 @@ static bool check_line_segment_intersection(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4, 
         return false; // Overlapping
     }
 
-    float t = t_nom / t_den;
+    f32 t = t_nom / t_den;
     *intersection = vec2_new(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
 
     return true;
@@ -74,10 +74,10 @@ static bool check_line_segment_intersection(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4, 
 
 static Rect rect_new(Vec2 center, Vec2 size)
 {
-    float x_min = center.x - size.x / 2.0f;
-    float x_max = center.x + size.x / 2.0f;
-    float y_min = center.y - size.y / 2.0f;
-    float y_max = center.y + size.y / 2.0f;
+    f32 x_min = center.x - size.x / 2.0f;
+    f32 x_max = center.x + size.x / 2.0f;
+    f32 y_min = center.y - size.y / 2.0f;
+    f32 y_max = center.y + size.y / 2.0f;
 
     Rect r;
     r.min = vec2_new(x_min, y_min);
@@ -113,7 +113,7 @@ static bool gameobject_is_point_in(GameObject *go, Vec2 p)
     return p.x > rect_world.min.x && p.x < rect_world.max.x && p.y > rect_world.min.y && p.y < rect_world.max.y;
 }
 
-static bool pad_resolve_point(GameObject *pad_go, Vec2 p, int resolve_dir, float *out_resolved_x)
+static bool pad_resolve_point(GameObject *pad_go, Vec2 p, int resolve_dir, f32 *out_resolved_x)
 {
     if (gameobject_is_point_in(pad_go, p))
     {
@@ -141,8 +141,8 @@ static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_
     for (int i = 0; i < 4; i++)
     {
         Vec2 intersection;
-        bool has_intersection = check_line_segment_intersection(ball_displacement_from, ball_displacement_to, edges[i],
-                                                                edges[(i + 1) % 4], &intersection);
+        bool has_intersection = check_line_segment_intersection(ball_displacement_from, ball_displacement_to,
+                                                                edges[i], edges[(i + 1) % 4], &intersection);
         if (has_intersection)
         {
             *collision_point = intersection;
@@ -155,7 +155,7 @@ static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_
 
 static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx)
 {
-    game->field_go = gameobject_new(vec2_zero(), vec2_new(((float)WIDTH / (float)HEIGHT) * 10, 10));
+    game->field_go = gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10));
     game->pad1_go = gameobject_new(vec2_new(config->distance_from_center, 0.0f), config->pad_size);
     game->pad2_go = gameobject_new(vec2_new(-(config->distance_from_center), 0.0f), config->pad_size);
     game->ball_go = gameobject_new(vec2_zero(), vec2_scale(vec2_one(), 0.2f));
@@ -167,8 +167,8 @@ static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx)
 }
 
 // TODO @CLEANUP: Signature looks ugly
-static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig *config, GLFWwindow *window, Sfx *sfx,
-                                        ParticlePropRegistry *particle_prop_reg,
+static PongGameUpdateResult game_update(f32 dt, PongGame *game, PongGameConfig *config, GLFWwindow *window,
+                                        Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
                                         ParticleSystemRegistry *particle_system_reg, Renderer *renderer)
 {
     PongGameUpdateResult result;
@@ -178,7 +178,7 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig
     Rect pad1_world_rect = gameobject_get_world_rect(&(game->pad1_go));
     Rect pad2_world_rect = gameobject_get_world_rect(&(game->pad2_go));
 
-    float pad_move_speed = config->pad_move_speed * game->game_speed_coeff * dt;
+    f32 pad_move_speed = config->pad_move_speed * game->game_speed_coeff * dt;
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pad2_world_rect.max.y < config->area_extents.y)
     {
@@ -216,7 +216,7 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig
         game->ball_move_dir.x *= -1;
 
         // randomness
-        const float ball_pad_hit_randomness_coeff = 0.2f;
+        const f32 ball_pad_hit_randomness_coeff = 0.2f;
         game->ball_move_dir.y += rand_range(-1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
         vec2_normalize(&game->ball_move_dir);
 
