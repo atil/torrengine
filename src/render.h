@@ -1,6 +1,6 @@
 #include "util.h"
 
-struct RenderUnit {
+struct GoRenderUnit {
     buffer_handle_t vao;
     buffer_handle_t vbo;
     buffer_handle_t ibo;
@@ -37,19 +37,19 @@ static Renderer render_init(u32 screen_width, u32 screen_height, f32 cam_size) {
     return r;
 }
 
-// TODO @CLEANUP: Make these return a RenderUnit
-static void render_unit_init(RenderUnit *ru, const f32 *vert_data, usize vert_data_len, const u32 *index_data,
-                             usize index_data_len, shader_handle_t shader, const char *texture_file_name) {
-    glGenVertexArrays(1, &(ru->vao));
-    glGenBuffers(1, &(ru->vbo));
-    glGenBuffers(1, &(ru->ibo));
+static GoRenderUnit render_unit_init(const f32 *vert_data, usize vert_data_len, const u32 *index_data,
+                                     usize index_data_len, shader_handle_t shader, const char *texture_file_name) {
+    GoRenderUnit ru;
+    glGenVertexArrays(1, &(ru.vao));
+    glGenBuffers(1, &(ru.vbo));
+    glGenBuffers(1, &(ru.ibo));
 
-    glBindVertexArray(ru->vao);
+    glBindVertexArray(ru.vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, ru.vbo);
     glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)vert_data_len, vert_data, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru->ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru.ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)index_data_len, index_data, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
@@ -58,8 +58,8 @@ static void render_unit_init(RenderUnit *ru, const f32 *vert_data, usize vert_da
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void *)(2 * sizeof(f32)));
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    glGenTextures(1, &(ru->texture));
-    glBindTexture(GL_TEXTURE_2D, ru->texture);
+    glGenTextures(1, &(ru.texture));
+    glBindTexture(GL_TEXTURE_2D, ru.texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -74,17 +74,19 @@ static void render_unit_init(RenderUnit *ru, const f32 *vert_data, usize vert_da
     stbi_image_free(data);
 
     // TODO @CLEANUP: Actually these should be usize but for some reason that causes padding in the struct
-    ru->vert_data_len = (u32)vert_data_len;
-    ru->index_count = (u32)index_data_len;
-    ru->shader = shader;
+    ru.vert_data_len = (u32)vert_data_len;
+    ru.index_count = (u32)index_data_len;
+    ru.shader = shader;
+
+    return ru;
 }
 
-static void render_unit_update(RenderUnit *ru, f32 *new_vert_data) {
+static void render_unit_update(GoRenderUnit *ru, f32 *new_vert_data) {
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)ru->vert_data_len, new_vert_data);
 }
 
-static void render_unit_draw(RenderUnit *ru, Mat4 *model) {
+static void render_unit_draw(GoRenderUnit *ru, Mat4 *model) {
     glBindVertexArray(ru->vao);
     glBindTexture(GL_TEXTURE_2D, ru->texture);
     shader_set_mat4(ru->shader, "u_model", model);
@@ -92,7 +94,7 @@ static void render_unit_draw(RenderUnit *ru, Mat4 *model) {
     glDrawElements(GL_TRIANGLES, (GLsizei)ru->index_count, GL_UNSIGNED_INT, 0);
 }
 
-static void render_unit_deinit(RenderUnit *ru) {
+static void render_unit_deinit(GoRenderUnit *ru) {
     glDeleteVertexArrays(1, &(ru->vao));
     glDeleteBuffers(1, &(ru->vbo));
     glDeleteBuffers(1, &(ru->ibo));

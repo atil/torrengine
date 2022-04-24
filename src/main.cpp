@@ -1,3 +1,6 @@
+// start from here:
+// - convert vec2_add()s to operator
+// - try implementing array struct. references are annoying at this point
 // NOTE @DOCS: Game origin: up-left
 
 #define GLEW_STATIC                 // Statically linking glew
@@ -67,22 +70,11 @@ int main(void) {
     Sfx sfx;
     sfx_init(&sfx);
 
-    //
-    // Entities
-    //
-
-    std::vector<EntityIndex> go_entities;
-
     const f32 cam_size = 5.0f;
 
     //
-    // GameObject rendering
+    // Entities
     //
-
-    RenderUnit field_ru;
-    RenderUnit pad1_ru;
-    RenderUnit pad2_ru;
-    RenderUnit ball_ru;
 
     shader_handle_t world_shader = load_shader("src/world.glsl");
 
@@ -90,14 +82,32 @@ int main(void) {
                                0.5f,  0.5f,  1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 1.0f};
     u32 unit_square_indices[] = {0, 1, 2, 0, 2, 3};
 
-    render_unit_init(&field_ru, unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                     sizeof(unit_square_indices), world_shader, "assets/Field.png");
-    render_unit_init(&pad1_ru, unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                     sizeof(unit_square_indices), world_shader, "assets/PadBlue.png");
-    render_unit_init(&pad2_ru, unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                     sizeof(unit_square_indices), world_shader, "assets/PadGreen.png");
-    render_unit_init(&ball_ru, unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                     sizeof(unit_square_indices), world_shader, "assets/Ball.png");
+    Renderer renderer = render_init(WIDTH, HEIGHT, cam_size);
+
+    PongGameConfig config;
+    config.area_extents = vec2_new(cam_size * renderer.aspect, cam_size);
+    config.pad_size = vec2_new(0.3f, 2.0f);
+    config.ball_speed = 4.0f; //* 0.0000001f;
+    config.distance_from_center = 4.0f;
+    config.pad_move_speed = 10.0f;
+    config.game_speed_increase_coeff = 0.05f;
+
+    std::vector<EntityIndex> go_entities = {0, 1, 2, 3};
+    std::vector<GameObject> go_datas;
+    go_datas.push_back(gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10)));      // field
+    go_datas.push_back(gameobject_new(vec2_new(config.distance_from_center, 0.0f), config.pad_size));    // 1
+    go_datas.push_back(gameobject_new(vec2_new(-(config.distance_from_center), 0.0f), config.pad_size)); // 2
+    go_datas.push_back(gameobject_new(vec2_zero(), vec2_scale(vec2_one(), 0.2f)));                       // ball
+
+    std::vector<GoRenderUnit> go_render;
+    go_render.push_back(render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                         sizeof(unit_square_indices), world_shader, "assets/Field.png"));
+    go_render.push_back(render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                         sizeof(unit_square_indices), world_shader, "assets/PadBlue.png"));
+    go_render.push_back(render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                         sizeof(unit_square_indices), world_shader, "assets/PadGreen.png"));
+    go_render.push_back(render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                         sizeof(unit_square_indices), world_shader, "assets/Ball.png"));
 
     //
     // UI
@@ -133,12 +143,6 @@ int main(void) {
     ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
     ParticleSystemRegistry particle_system_reg = particle_system_registry_create();
 
-    //
-    // Renderer
-    //
-
-    Renderer renderer = render_init(WIDTH, HEIGHT, cam_size);
-
     glUseProgram(world_shader);
     shader_set_mat4(world_shader, "u_view", &renderer.view);
     shader_set_mat4(world_shader, "u_proj", &renderer.proj);
@@ -148,13 +152,6 @@ int main(void) {
     //
 
     GameState game_state = GameState::Splash;
-    PongGameConfig config;
-    config.area_extents = vec2_new(cam_size * renderer.aspect, cam_size);
-    config.pad_size = vec2_new(0.3f, 2.0f);
-    config.ball_speed = 4.0f; //* 0.0000001f;
-    config.distance_from_center = 4.0f;
-    config.pad_move_speed = 10.0f;
-    config.game_speed_increase_coeff = 0.05f;
 
     PongGame game;
 
@@ -175,12 +172,12 @@ int main(void) {
             render_unit_ui_draw(&ui_ru_splash_title);
 
             if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
-                game_init(&game, &config, &sfx);
+                game_init(&game, &sfx);
                 game_state = GameState::Game;
             }
         } else if (game_state == GameState::Game) {
-            PongGameUpdateResult result =
-                game_update(dt, &game, &config, window, &sfx, &particle_prop_reg, &particle_system_reg, &renderer);
+            PongGameUpdateResult result = game_update(dt, &game, go_datas, &config, window, &sfx,
+                                                      &particle_prop_reg, &particle_system_reg, &renderer);
 
             if (result.is_game_over) {
                 sfx_play(&sfx, SfxId::SfxGameOver);
@@ -191,10 +188,9 @@ int main(void) {
             glActiveTexture(GL_TEXTURE0);
             glUseProgram(world_shader);
 
-            render_unit_draw(&field_ru, &game.field_go.transform);
-            render_unit_draw(&pad1_ru, &game.pad1_go.transform);
-            render_unit_draw(&pad2_ru, &game.pad2_go.transform);
-            render_unit_draw(&ball_ru, &game.ball_go.transform);
+            for (usize i = 0; i < go_render.size(); i++) {
+                render_unit_draw(&go_render[i], &go_datas[i].transform);
+            }
 
             for (usize i = 0; i < particle_system_reg.system_count; i++) {
                 ParticleSystem ps = particle_system_reg.array_ptr[i];
@@ -229,7 +225,7 @@ int main(void) {
                 render_unit_ui_update(&ui_ru_score, &font_data, "0", text_transform_score);
                 glDrawElements(GL_TRIANGLES, (GLsizei)ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
 
-                game_init(&game, &config, &sfx);
+                game_init(&game, &sfx);
                 game_state = GameState::Game;
             }
         }
@@ -240,10 +236,11 @@ int main(void) {
 
     sfx_deinit(&sfx);
 
-    render_unit_deinit(&field_ru);
-    render_unit_deinit(&pad1_ru);
-    render_unit_deinit(&pad2_ru);
-    render_unit_deinit(&ball_ru);
+    // TODO @INCOMPLETE: Delete entity systems
+    // render_unit_deinit(&field_ru);
+    // render_unit_deinit(&pad1_ru);
+    // render_unit_deinit(&pad2_ru);
+    // render_unit_deinit(&ball_ru);
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
 
     render_unit_ui_deinit(&ui_ru_score);

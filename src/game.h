@@ -10,10 +10,10 @@ struct GameObject {
 };
 
 struct PongGame {
-    GameObject field_go;
-    GameObject pad1_go;
-    GameObject pad2_go;
-    GameObject ball_go;
+    EntityIndex field_ref;
+    EntityIndex pad1_ref;
+    EntityIndex pad2_ref;
+    EntityIndex ball_ref;
     Vec2 ball_move_dir;
     u32 score;
     f32 game_speed_coeff;
@@ -105,11 +105,13 @@ static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_
     return false;
 }
 
-static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx) {
-    game->field_go = gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10));
-    game->pad1_go = gameobject_new(vec2_new(config->distance_from_center, 0.0f), config->pad_size);
-    game->pad2_go = gameobject_new(vec2_new(-(config->distance_from_center), 0.0f), config->pad_size);
-    game->ball_go = gameobject_new(vec2_zero(), vec2_scale(vec2_one(), 0.2f));
+static void game_init(PongGame *game, Sfx *sfx) {
+
+    // TODO @CLEANUP: Hardcoded entity indices. These should be set by the entity creation system
+    game->pad1_ref = 1;
+    game->pad2_ref = 2;
+    game->ball_ref = 3;
+
     game->ball_move_dir = vec2_new(1.0f, 0.0f);
     game->score = 0;
     game->game_speed_coeff = 1.0f;
@@ -118,42 +120,48 @@ static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx) {
 }
 
 // TODO @CLEANUP: Signature looks ugly
-static PongGameUpdateResult game_update(f32 dt, PongGame *game, PongGameConfig *config, GLFWwindow *window,
-                                        Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
+static PongGameUpdateResult game_update(f32 dt, PongGame *game, std::vector<GameObject> &gos,
+                                        PongGameConfig *config, GLFWwindow *window, Sfx *sfx,
+                                        ParticlePropRegistry *particle_prop_reg,
                                         ParticleSystemRegistry *particle_system_reg, Renderer *renderer) {
+
+    GameObject &pad1_go = gos[game->pad1_ref];
+    GameObject &pad2_go = gos[game->pad2_ref];
+    GameObject &ball_go = gos[game->ball_ref];
+
     PongGameUpdateResult result;
     result.is_game_over = false;
     result.did_score = false;
 
-    Rect pad1_world_rect = gameobject_get_world_rect(&(game->pad1_go));
-    Rect pad2_world_rect = gameobject_get_world_rect(&(game->pad2_go));
+    Rect pad1_world_rect = gameobject_get_world_rect(&pad1_go);
+    Rect pad2_world_rect = gameobject_get_world_rect(&pad2_go);
 
     f32 pad_move_speed = config->pad_move_speed * game->game_speed_coeff * dt;
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pad2_world_rect.max.y < config->area_extents.y) {
-        mat4_translate_xy(&game->pad2_go.transform, vec2_new(0.0f, pad_move_speed));
+        mat4_translate_xy(&pad2_go.transform, vec2_new(0.0f, pad_move_speed));
     } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && pad2_world_rect.min.y > -config->area_extents.y) {
-        mat4_translate_xy(&game->pad2_go.transform, vec2_new(0.0f, -pad_move_speed));
+        mat4_translate_xy(&pad2_go.transform, vec2_new(0.0f, -pad_move_speed));
     }
 
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && pad1_world_rect.max.y < config->area_extents.y) {
-        mat4_translate_xy(&game->pad1_go.transform, vec2_new(0.0f, pad_move_speed));
+        mat4_translate_xy(&pad1_go.transform, vec2_new(0.0f, pad_move_speed));
     } else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS &&
                pad1_world_rect.min.y > -config->area_extents.y) {
-        mat4_translate_xy(&game->pad1_go.transform, vec2_new(0.0f, -pad_move_speed));
+        mat4_translate_xy(&pad1_go.transform, vec2_new(0.0f, -pad_move_speed));
     }
 
     //
     // Ball move
     //
 
-    Vec2 ball_pos = mat4_get_pos_xy(&game->ball_go.transform);
+    Vec2 ball_pos = mat4_get_pos_xy(&ball_go.transform);
     Vec2 ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * game->game_speed_coeff * dt));
     Vec2 ball_next_pos = vec2_add(ball_pos, ball_displacement);
 
     Vec2 collision_point;
-    if (pad_ball_collision_check(&game->pad1_go, ball_pos, ball_next_pos, &collision_point) ||
-        pad_ball_collision_check(&game->pad2_go, ball_pos, ball_next_pos, &collision_point)) {
+    if (pad_ball_collision_check(&pad1_go, ball_pos, ball_next_pos, &collision_point) ||
+        pad_ball_collision_check(&pad2_go, ball_pos, ball_next_pos, &collision_point)) {
         // Hit paddles
 
         ball_pos = collision_point; // Snap to hit position
@@ -192,7 +200,7 @@ static PongGameUpdateResult game_update(f32 dt, PongGame *game, PongGameConfig *
 
     result.is_game_over = ball_next_pos.x > config->area_extents.x || ball_next_pos.x < -config->area_extents.x;
 
-    mat4_set_pos_xy(&game->ball_go.transform, ball_next_pos);
+    mat4_set_pos_xy(&ball_go.transform, ball_next_pos);
 
     return result;
 }

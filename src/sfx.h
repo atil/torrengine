@@ -1,4 +1,4 @@
-// #define SFX_DISABLED // TODO @CLEANUP: Convert this to a cmdline argument
+#define SFX_DISABLED // TODO @CLEANUP: Convert this to a cmdline argument
 
 #ifdef SFX_DISABLED
 #pragma warning(push)
