@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <vector>
 #pragma warning(pop)
 
 #define WIDTH 640
@@ -34,7 +35,6 @@ typedef uint32_t shader_handle_t;
 #pragma warning(disable : 4996) // TODO @ROBUSTNESS: Address these deprecated CRT functions
 #pragma warning(disable : 5045) // Spectre thing
 #pragma warning(disable : 4505) // Unreferenced functions
-#include "container.h"
 #include "util.h"
 #include "tomath.h"
 #include "text.h"
@@ -56,17 +56,6 @@ enum class GameState
 
 int main(void)
 {
-    // array tests
-    // Array arr = arr_create(sizeof(float), 10);
-    // float a = 31;
-    // arr_add(&arr, &a);
-
-    // float b = ARR_GET(float, arr, 0);
-
-    // printf("%f\n", b);
-    // arr_deinit(&arr);
-    // return;
-
     srand((unsigned long)time(NULL));
 
     glfwInit();

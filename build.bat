@@ -11,7 +11,7 @@ if not exist obj (
 
 set Paths=/Ideps /Fo.\obj\ /Fe.\bin\
 set Libs=lib/glew32s.lib lib/glfw3dll.lib lib/openal32.lib opengl32.lib 
-set OtherFlags=/nologo /Wall /Zi /Qspectre
+set OtherFlags=/nologo /Wall /Zi /Qspectre /EHsc
 
 cl %OtherFlags% %Paths% src/main.cpp %Libs%
 
