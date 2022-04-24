@@ -63,8 +63,8 @@ static void text_init(FontData *font_data)
     stbtt_GetFontVMetrics(&font_info, &ascent, &descent, &line_gap);
 
     float scale = stbtt_ScaleForPixelHeight(&font_info, FONT_TEXT_HEIGHT);
-    font_data->ascent = ascent * scale;
-    font_data->descent = descent * scale;
+    font_data->ascent = (float)ascent * scale;
+    font_data->descent = (float)descent * scale;
 
     free(font_bytes);
 }

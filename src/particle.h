@@ -97,11 +97,10 @@ static ParticleEmitter *particle_emitter_init(ParticleProps props, Vec2 emit_poi
     {
         pe->particles[i].index = i;
         pe->particles[i].angle = // Notice the "-1", we want the end angle to be inclusive
-            lerp(pe->props.angle_limits.x, pe->props.angle_limits.y, (float)i / (pe->props.count - 1));
+            lerp(pe->props.angle_limits.x, pe->props.angle_limits.y, (float)i / (float)(pe->props.count - 1));
 
         pe->particles[i].angle += rand_range(-pe->props.angle_offset, pe->props.angle_offset);
-        pe->particles[i].speed_offset =
-            pe->props.speed * rand_range(-pe->props.speed_offset, pe->props.speed_offset);
+        pe->particles[i].speed_offset = pe->props.speed * rand_range(-pe->props.speed_offset, pe->props.speed_offset);
 
         pe->positions[i] = pe->emit_point;
     }
@@ -113,8 +112,7 @@ static void particle_emitter_update(ParticleEmitter *ps, float dt)
 {
     for (uint32_t i = 0; i < ps->props.count; i++)
     {
-        Vec2 dir =
-            vec2_new((float)cos(ps->particles[i].angle * DEG2RAD), (float)sin(ps->particles[i].angle * DEG2RAD));
+        Vec2 dir = vec2_new((float)cos(ps->particles[i].angle * DEG2RAD), (float)sin(ps->particles[i].angle * DEG2RAD));
 
         float speed = ps->props.speed + ps->particles[i].speed_offset;
         ps->positions[i] = vec2_add(ps->positions[i], vec2_scale(dir, speed * dt));
@@ -158,9 +156,8 @@ static ParticleRenderUnit *render_unit_particle_init(size_t particle_count, shad
         memcpy(ru->vert_data + i * 8, single_particle_vert, sizeof(single_particle_vert));
 
         uint32_t particle_index_at_i[6] = {
-            single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4),
-            single_particle_index[2] + (i * 4), single_particle_index[3] + (i * 4),
-            single_particle_index[4] + (i * 4), single_particle_index[5] + (i * 4),
+            single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4), single_particle_index[2] + (i * 4),
+            single_particle_index[3] + (i * 4), single_particle_index[4] + (i * 4), single_particle_index[5] + (i * 4),
         };
         memcpy(index_data + i * 6, particle_index_at_i, sizeof(particle_index_at_i));
 
@@ -179,18 +176,18 @@ static ParticleRenderUnit *render_unit_particle_init(size_t particle_count, shad
     glBindVertexArray(ru->vao);
 
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
-    glBufferData(GL_ARRAY_BUFFER, vert_data_len, ru->vert_data, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, (GLsizei)vert_data_len, ru->vert_data, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
 
     glBindBuffer(GL_ARRAY_BUFFER, ru->uv_bo);
-    glBufferData(GL_ARRAY_BUFFER, uv_data_len, uv_data, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, (GLsizei)uv_data_len, uv_data, GL_STATIC_DRAW);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru->ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_data_len, index_data, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizei)index_data_len, index_data, GL_STATIC_DRAW);
 
     glGenTextures(1, &(ru->texture));
     glBindTexture(GL_TEXTURE_2D, ru->texture);
@@ -237,7 +234,7 @@ static void render_unit_particle_draw(ParticleRenderUnit *ru, ParticleEmitter *p
 
     glBindTexture(GL_TEXTURE_2D, ru->texture);
     shader_set_float(ru->shader, "u_alpha", pe->transparency);
-    glDrawElements(GL_TRIANGLES, ru->index_count, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, (GLsizeiptr)ru->index_count, GL_UNSIGNED_INT, 0);
 }
 
 static void render_unit_particle_deinit(ParticleRenderUnit *ru)

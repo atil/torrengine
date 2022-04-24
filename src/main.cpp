@@ -33,6 +33,7 @@ typedef uint32_t shader_handle_t;
 #pragma warning(push)
 #pragma warning(disable : 4996) // TODO @ROBUSTNESS: Address these deprecated CRT functions
 #pragma warning(disable : 5045) // Spectre thing
+#pragma warning(disable : 4505) // Unreferenced functions
 #include "container.h"
 #include "util.h"
 #include "tomath.h"
@@ -244,7 +245,7 @@ int main(void)
                 glUseProgram(ui_ru_score.shader);
                 glBindVertexArray(ui_ru_score.vao);
                 render_unit_ui_update(&ui_ru_score, &font_data, "0", text_transform_score);
-                glDrawElements(GL_TRIANGLES, ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
+                glDrawElements(GL_TRIANGLES, (GLsizei)ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
 
                 game_init(&game, &config, &sfx);
                 game_state = Game;

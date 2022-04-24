@@ -15,7 +15,7 @@ typedef struct
 static Array arr_create(size_t elem_size, size_t capacity)
 {
     Array arr;
-    arr.data = (void *)malloc(elem_size * capacity);
+    arr.data = (uint8_t *)malloc(elem_size * capacity);
     arr.elem_size = elem_size;
     arr.count = 0;
     arr.capacity = capacity;
@@ -41,7 +41,7 @@ static void arr_add(Array *arr, void *elem_ptr)
         return;
     }
 
-    uint8_t *arr_end_addr = _arr_slot_at(arr, arr->count);
+    void *arr_end_addr = _arr_slot_at(arr, arr->count);
 
     memcpy(arr_end_addr, elem_ptr, arr->elem_size);
 

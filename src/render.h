@@ -42,9 +42,8 @@ static Renderer render_init(uint32_t screen_width, uint32_t screen_height, float
 }
 
 // TODO @CLEANUP: Make these return a RenderUnit
-static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert_data_len,
-                             const uint32_t *index_data, size_t index_data_len, shader_handle_t shader,
-                             const char *texture_file_name)
+static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert_data_len, const uint32_t *index_data,
+                             size_t index_data_len, shader_handle_t shader, const char *texture_file_name)
 {
     glGenVertexArrays(1, &(ru->vao));
     glGenBuffers(1, &(ru->vbo));
@@ -53,10 +52,10 @@ static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert
     glBindVertexArray(ru->vao);
 
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
-    glBufferData(GL_ARRAY_BUFFER, vert_data_len, vert_data, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)vert_data_len, vert_data, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru->ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_data_len, index_data, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)index_data_len, index_data, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
@@ -88,7 +87,7 @@ static void render_unit_init(RenderUnit *ru, const float *vert_data, size_t vert
 static void render_unit_update(RenderUnit *ru, float *new_vert_data)
 {
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, ru->vert_data_len, new_vert_data);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)ru->vert_data_len, new_vert_data);
 }
 
 static void render_unit_draw(RenderUnit *ru, Mat4 *model)
@@ -97,7 +96,7 @@ static void render_unit_draw(RenderUnit *ru, Mat4 *model)
     glBindTexture(GL_TEXTURE_2D, ru->texture);
     shader_set_mat4(ru->shader, "u_model", model);
     // TODO @DOCS: How can that last parameter be zero?
-    glDrawElements(GL_TRIANGLES, ru->index_count, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, (GLsizei)ru->index_count, GL_UNSIGNED_INT, 0);
 }
 
 static void render_unit_deinit(RenderUnit *ru)
@@ -165,13 +164,12 @@ static void render_unit_ui_deinit(UiRenderUnit *ru)
     glDeleteTextures(1, &ru->texture);
 }
 
-static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, const char *text,
-                             TextTransform transform)
+static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, const char *text, TextTransform transform)
 {
     const size_t char_count = strlen(text);
 
     Vec2 anchor = transform.anchor;
-    float width = transform.width_type == FixedWidth ? (transform.width / char_count) : transform.width;
+    float width = transform.width_type == FixedWidth ? (transform.width / (float)char_count) : transform.width;
     float height = transform.height;
 
     uint32_t vert_curr = 0;
@@ -248,9 +246,9 @@ static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const c
 
     glBindVertexArray(ru->vao);
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
-    glBufferData(GL_ARRAY_BUFFER, text_data.vb_len, text_data.vb_data, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)text_data.vb_len, text_data.vb_data, GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru->ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, text_data.ib_len, text_data.ib_data, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)text_data.ib_len, text_data.ib_data, GL_STATIC_DRAW);
     ru->index_count = (uint32_t)text_data.ib_len;
 
     free(text_data.vb_data);
@@ -263,6 +261,5 @@ static void render_unit_ui_draw(UiRenderUnit *ru)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, ru->texture);
     glUseProgram(ru->shader);
-    glDrawElements(GL_TRIANGLES, ru->index_count, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, (GLsizei)ru->index_count, GL_UNSIGNED_INT, 0);
 }
-

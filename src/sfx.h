@@ -73,7 +73,8 @@ static sfx_buffer_handle_t create_buffer_with_file(const char *file_name)
 
     sfx_buffer_handle_t buffer_handle;
     alGenBuffers(1, &buffer_handle);
-    alBufferData(buffer_handle, AL_FORMAT_MONO16, wav_buffer, wav_header.sample_data_len, wav_header.sample_freq);
+    alBufferData(buffer_handle, AL_FORMAT_MONO16, wav_buffer, (ALsizei)wav_header.sample_data_len,
+                 (ALsizei)wav_header.sample_freq);
 
     free(wav_buffer);
     fclose(wav_file);
