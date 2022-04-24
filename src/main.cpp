@@ -47,12 +47,12 @@ typedef uint32_t shader_handle_t;
 
 #pragma warning(disable : 5045) // Spectre thing
 
-typedef enum
+enum class GameState
 {
     Splash,
     Game,
     GameOver
-} GameState;
+};
 
 int main(void)
 {
@@ -153,7 +153,7 @@ int main(void)
     // Game objects
     //
 
-    GameState game_state = Splash;
+    GameState game_state = GameState::Splash;
     PongGameConfig config;
     config.area_extents = vec2_new(cam_size * renderer.aspect, cam_size);
     config.pad_size = vec2_new(0.3f, 2.0f);
@@ -179,25 +179,25 @@ int main(void)
         glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        if (game_state == Splash)
+        if (game_state == GameState::Splash)
         {
             render_unit_ui_draw(&ui_ru_splash_title);
 
             if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
             {
                 game_init(&game, &config, &sfx);
-                game_state = Game;
+                game_state = GameState::Game;
             }
         }
-        else if (game_state == Game)
+        else if (game_state == GameState::Game)
         {
             PongGameUpdateResult result =
                 game_update(dt, &game, &config, window, &sfx, &particle_prop_reg, &particle_system_reg, &renderer);
 
             if (result.is_game_over)
             {
-                sfx_play(&sfx, SfxGameOver);
-                game_state = GameOver;
+                sfx_play(&sfx, SfxId::SfxGameOver);
+                game_state = GameState::GameOver;
             }
 
             // Game draw
@@ -233,7 +233,7 @@ int main(void)
 
             render_unit_ui_draw(&ui_ru_score);
         }
-        else if (game_state == GameOver)
+        else if (game_state == GameState::GameOver)
         {
             render_unit_ui_draw(&ui_ru_intermission);
 
@@ -248,7 +248,7 @@ int main(void)
                 glDrawElements(GL_TRIANGLES, (GLsizei)ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
 
                 game_init(&game, &config, &sfx);
-                game_state = Game;
+                game_state = GameState::Game;
             }
         }
 

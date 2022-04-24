@@ -1,4 +1,4 @@
-#define SFX_DISABLED // TODO @CLEANUP: Convert this to a cmdline argument
+// #define SFX_DISABLED // TODO @CLEANUP: Convert this to a cmdline argument
 
 #ifdef SFX_DISABLED
 #pragma warning(push)
@@ -8,13 +8,13 @@
 typedef ALuint sfx_source_handle_t;
 typedef ALuint sfx_buffer_handle_t;
 
-typedef enum
+enum class SfxId
 {
     SfxStart,
     SfxHitPad,
     SfxHitWall,
     SfxGameOver
-} SfxId;
+};
 
 struct Sfx
 {
@@ -122,19 +122,19 @@ static void sfx_play(Sfx *sfx, SfxId id)
     sfx_source_handle_t source = 0;
     switch (id)
     {
-    case SfxStart:
+    case SfxId::SfxStart:
         buffer = sfx->buffer_startgame;
         source = sfx->source_startgame;
         break;
-    case SfxGameOver:
+    case SfxId::SfxGameOver:
         buffer = sfx->buffer_gameover;
         source = sfx->source_gameover;
         break;
-    case SfxHitPad:
+    case SfxId::SfxHitPad:
         buffer = sfx->buffer_hitpad;
         source = sfx->source_objects;
         break;
-    case SfxHitWall:
+    case SfxId::SfxHitWall:
         buffer = sfx->buffer_hitwall;
         source = sfx->source_objects;
         break;
@@ -143,7 +143,7 @@ static void sfx_play(Sfx *sfx, SfxId id)
         return;
     }
 
-    alSourcei(source, AL_BUFFER, buffer);
+    alSourcei(source, AL_BUFFER, (ALint)buffer);
     alSourcePlay(source);
 #endif
 

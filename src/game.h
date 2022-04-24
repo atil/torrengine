@@ -163,7 +163,7 @@ static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx)
     game->score = 0;
     game->game_speed_coeff = 1.0f;
 
-    sfx_play(sfx, SfxStart);
+    sfx_play(sfx, SfxId::SfxStart);
 }
 
 // TODO @CLEANUP: Signature looks ugly
@@ -227,7 +227,7 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig
         result.did_score = true;
         game->game_speed_coeff += config->game_speed_increase_coeff;
 
-        sfx_play(sfx, SfxHitPad);
+        sfx_play(sfx, SfxId::SfxHitPad);
 
         ParticleProps *hit_particle_prop =
             collision_point.x > 0 ? &particle_prop_reg->pad_hit_right : &particle_prop_reg->pad_hit_left;
@@ -244,7 +244,7 @@ static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig
         ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * dt));
         ball_next_pos = vec2_add(ball_pos, ball_displacement);
 
-        sfx_play(sfx, SfxHitWall);
+        sfx_play(sfx, SfxId::SfxHitWall);
     }
 
     result.is_game_over = ball_next_pos.x > config->area_extents.x || ball_next_pos.x < -config->area_extents.x;
