@@ -6,13 +6,13 @@
 #define FONT_ATLAS_HEIGHT 256
 #define FONT_TEXT_HEIGHT 50 // In pixels
 
-typedef struct
+struct TextBufferData
 {
     float *vb_data;
     size_t vb_len;
     uint32_t *ib_data;
     size_t ib_len;
-} TextBufferData;
+};
 
 typedef enum
 {
@@ -20,21 +20,21 @@ typedef enum
     FreeWidth,
 } TextWidthType;
 
-typedef struct
+struct TextTransform
 {
     Vec2 anchor;
     float height; // In NDC
     TextWidthType width_type;
     float width; // In NDC
-} TextTransform;
+};
 
-typedef struct
+struct FontData
 {
     uint8_t *font_bitmap;
     float ascent;                               // In pixels
     float descent;                              // In pixels
     stbtt_bakedchar font_char_data[CHAR_COUNT]; // TODO @LEAK: This is not leaked, but research anyway
-} FontData;
+};
 
 static TextTransform texttransform_new(Vec2 anchor, float height, TextWidthType width_type, float width)
 {

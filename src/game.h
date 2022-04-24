@@ -1,17 +1,17 @@
 
-typedef struct
+struct Rect
 {
     Vec2 min;
     Vec2 max;
-} Rect;
+};
 
-typedef struct
+struct GameObject
 {
     Rect rect;
     Mat4 transform;
-} GameObject;
+};
 
-typedef struct
+struct PongGame
 {
     GameObject field_go;
     GameObject pad1_go;
@@ -20,9 +20,9 @@ typedef struct
     Vec2 ball_move_dir;
     uint32_t score;
     float game_speed_coeff;
-} PongGame;
+};
 
-typedef struct
+struct PongGameConfig
 {
     Vec2 pad_size;
     float distance_from_center;
@@ -30,13 +30,13 @@ typedef struct
     Vec2 area_extents;
     float pad_move_speed;
     float game_speed_increase_coeff;
-} PongGameConfig;
+};
 
-typedef struct
+struct PongGameUpdateResult
 {
     bool is_game_over;
     bool did_score;
-} PongGameUpdateResult;
+};
 
 static bool check_line_segment_intersection(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4, Vec2 *intersection)
 {
@@ -141,8 +141,8 @@ static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_
     for (int i = 0; i < 4; i++)
     {
         Vec2 intersection;
-        bool has_intersection = check_line_segment_intersection(ball_displacement_from, ball_displacement_to,
-                                                                edges[i], edges[(i + 1) % 4], &intersection);
+        bool has_intersection = check_line_segment_intersection(ball_displacement_from, ball_displacement_to, edges[i],
+                                                                edges[(i + 1) % 4], &intersection);
         if (has_intersection)
         {
             *collision_point = intersection;
@@ -167,8 +167,8 @@ static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx)
 }
 
 // TODO @CLEANUP: Signature looks ugly
-static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig *config, GLFWwindow *window,
-                                        Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
+static PongGameUpdateResult game_update(float dt, PongGame *game, PongGameConfig *config, GLFWwindow *window, Sfx *sfx,
+                                        ParticlePropRegistry *particle_prop_reg,
                                         ParticleSystemRegistry *particle_system_reg, Renderer *renderer)
 {
     PongGameUpdateResult result;

@@ -1,11 +1,11 @@
-typedef struct
+struct Particle
 {
     uint32_t index;
     float angle;
     float speed_offset; // In percentage
-} Particle;
+};
 
-typedef struct
+struct ParticleProps
 {
     Vec2 angle_limits;
     size_t count;
@@ -15,9 +15,9 @@ typedef struct
     float speed_offset;
     float size;
     uint8_t _padding[4];
-} ParticleProps;
+};
 
-typedef struct
+struct ParticleEmitter
 {
     Vec2 *positions;
     Particle *particles;
@@ -27,9 +27,9 @@ typedef struct
     float transparency;
     bool isAlive;
     uint8_t _padding[7];
-} ParticleEmitter; // TODO @CLEANUP: Rename to ParticleSource?
+}; // TODO @CLEANUP: Rename to ParticleSource?
 
-typedef struct
+struct ParticleRenderUnit
 {
     buffer_handle_t vao;
     buffer_handle_t vbo;
@@ -40,26 +40,26 @@ typedef struct
     texture_handle_t texture;
     uint32_t vert_data_len;
     float *vert_data;
-} ParticleRenderUnit;
+};
 
-typedef struct
+struct ParticleSystem
 {
     ParticleEmitter *emitter;
     ParticleRenderUnit *render_unit;
-} ParticleSystem;
+};
 
-typedef struct
+struct ParticleSystemRegistry
 {
     ParticleSystem *array_ptr;
     size_t system_count;
     size_t system_capacity;
-} ParticleSystemRegistry;
+};
 
-typedef struct
+struct ParticlePropRegistry
 {
     ParticleProps pad_hit_right;
     ParticleProps pad_hit_left;
-} ParticlePropRegistry;
+};
 
 static ParticlePropRegistry particle_prop_registry_create(void)
 {

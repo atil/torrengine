@@ -16,7 +16,7 @@ typedef enum
     SfxGameOver
 } SfxId;
 
-typedef struct
+struct Sfx
 {
     ALCdevice *device;
     ALCcontext *context;
@@ -31,9 +31,9 @@ typedef struct
     sfx_buffer_handle_t buffer_hitwall;
     sfx_buffer_handle_t buffer_startgame;
     sfx_buffer_handle_t buffer_gameover;
-} Sfx;
+};
 
-typedef struct
+struct WavHeader
 {
     uint8_t _RIFF[4];         // RIFF Header Magic header
     uint32_t chunk_size;      // RIFF Chunk Size
@@ -48,7 +48,7 @@ typedef struct
     uint16_t bits_per_sample; // Number of bits per sample
     uint8_t _subchunk2_id[4]; // "data"  string
     uint32_t sample_data_len; // Sampled data length
-} WavHeader;
+};
 
 static void check_al_error(const char *msg)
 {

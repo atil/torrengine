@@ -4,13 +4,13 @@
 
 #define ARR_GET(type, arr, index) *((type *)(arr_get(&arr, index)))
 
-typedef struct
+struct Array
 {
     uint8_t *data;
     size_t elem_size;
     size_t count;
     size_t capacity;
-} Array;
+};
 
 static Array arr_create(size_t elem_size, size_t capacity)
 {

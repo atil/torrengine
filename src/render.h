@@ -1,6 +1,6 @@
 #include "util.h"
 
-typedef struct
+struct RenderUnit
 {
     buffer_handle_t vao;
     buffer_handle_t vbo;
@@ -9,9 +9,9 @@ typedef struct
     size_t vert_data_len;
     shader_handle_t shader;
     texture_handle_t texture;
-} RenderUnit;
+};
 
-typedef struct
+struct UiRenderUnit
 {
     buffer_handle_t vao;
     buffer_handle_t vbo;
@@ -19,16 +19,16 @@ typedef struct
     uint32_t index_count;
     shader_handle_t shader;
     texture_handle_t texture;
-} UiRenderUnit;
+};
 
 // TODO @CLEANUP: These above ended up being the same. Is there a reason to stay this way?
 
-typedef struct
+struct Renderer
 {
     Mat4 view;
     Mat4 proj;
     float aspect;
-} Renderer;
+};
 
 static Renderer render_init(uint32_t screen_width, uint32_t screen_height, float cam_size)
 {

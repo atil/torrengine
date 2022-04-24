@@ -15,10 +15,10 @@ static float rand_range(float lo, float hi)
     return lerp(lo, hi, zero_one);
 }
 
-typedef struct
+struct Vec2
 {
     float x, y;
-} Vec2;
+};
 
 static Vec2 vec2_new(float x, float y)
 {
@@ -26,6 +26,11 @@ static Vec2 vec2_new(float x, float y)
     v.x = x;
     v.y = y;
     return v;
+}
+
+Vec2 operator+(Vec2 a, Vec2 b)
+{
+    return vec2_new(a.x + b.x, a.y + b.y);
 }
 
 static Vec2 vec2_zero(void)
