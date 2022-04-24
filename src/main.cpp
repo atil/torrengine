@@ -51,8 +51,7 @@ enum class GameState
     GameOver
 };
 
-int main(void)
-{
+int main(void) {
     srand((unsigned long)time(NULL));
 
     glfwInit();
@@ -67,6 +66,12 @@ int main(void)
 
     Sfx sfx;
     sfx_init(&sfx);
+
+    //
+    // Entities
+    //
+
+    std::vector<EntityIndex> go_entities;
 
     const f32 cam_size = 5.0f;
 
@@ -155,36 +160,29 @@ int main(void)
 
     f32 game_time = (f32)glfwGetTime();
     f32 dt = 0.0f;
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         dt = (f32)glfwGetTime() - game_time;
         game_time = (f32)glfwGetTime();
 
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        {
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
             glfwSetWindowShouldClose(window, true);
         }
 
         glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        if (game_state == GameState::Splash)
-        {
+        if (game_state == GameState::Splash) {
             render_unit_ui_draw(&ui_ru_splash_title);
 
-            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
-            {
+            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
                 game_init(&game, &config, &sfx);
                 game_state = GameState::Game;
             }
-        }
-        else if (game_state == GameState::Game)
-        {
+        } else if (game_state == GameState::Game) {
             PongGameUpdateResult result =
                 game_update(dt, &game, &config, window, &sfx, &particle_prop_reg, &particle_system_reg, &renderer);
 
-            if (result.is_game_over)
-            {
+            if (result.is_game_over) {
                 sfx_play(&sfx, SfxId::SfxGameOver);
                 game_state = GameState::GameOver;
             }
@@ -198,11 +196,9 @@ int main(void)
             render_unit_draw(&pad2_ru, &game.pad2_go.transform);
             render_unit_draw(&ball_ru, &game.ball_go.transform);
 
-            for (usize i = 0; i < particle_system_reg.system_count; i++)
-            {
+            for (usize i = 0; i < particle_system_reg.system_count; i++) {
                 ParticleSystem ps = particle_system_reg.array_ptr[i];
-                if (!ps.emitter->isAlive)
-                {
+                if (!ps.emitter->isAlive) {
                     particle_system_registry_remove(&particle_system_reg, ps);
                     continue;
                 }
@@ -221,13 +217,10 @@ int main(void)
             }
 
             render_unit_ui_draw(&ui_ru_score);
-        }
-        else if (game_state == GameState::GameOver)
-        {
+        } else if (game_state == GameState::GameOver) {
             render_unit_ui_draw(&ui_ru_intermission);
 
-            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
-            {
+            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
                 // Reset score
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);

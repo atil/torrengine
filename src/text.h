@@ -6,8 +6,7 @@
 #define FONT_ATLAS_HEIGHT 256
 #define FONT_TEXT_HEIGHT 50 // In pixels
 
-struct TextBufferData
-{
+struct TextBufferData {
     f32 *vb_data;
     usize vb_len;
     u32 *ib_data;
@@ -20,24 +19,21 @@ enum class TextWidthType
     FreeWidth,
 };
 
-struct TextTransform
-{
+struct TextTransform {
     Vec2 anchor;
     f32 height; // In NDC
     TextWidthType width_type;
     f32 width; // In NDC
 };
 
-struct FontData
-{
+struct FontData {
     u8 *font_bitmap;
     f32 ascent;                                 // In pixels
     f32 descent;                                // In pixels
     stbtt_bakedchar font_char_data[CHAR_COUNT]; // TODO @LEAK: This is not leaked, but research anyway
 };
 
-static TextTransform texttransform_new(Vec2 anchor, f32 height, TextWidthType width_type, f32 width)
-{
+static TextTransform texttransform_new(Vec2 anchor, f32 height, TextWidthType width_type, f32 width) {
     TextTransform tx;
     tx.anchor = anchor;
     tx.height = height;
@@ -46,8 +42,7 @@ static TextTransform texttransform_new(Vec2 anchor, f32 height, TextWidthType wi
     return tx;
 }
 
-static void text_init(FontData *font_data)
-{
+static void text_init(FontData *font_data) {
     // TODO @ROBUSTNESS: Assert that it's called once
     u8 *font_bytes = (u8 *)read_file("assets/Consolas.ttf");
     assert(font_bytes != NULL);
@@ -69,7 +64,6 @@ static void text_init(FontData *font_data)
     free(font_bytes);
 }
 
-static void text_deinit(FontData *font_data)
-{
+static void text_deinit(FontData *font_data) {
     free(font_data->font_bitmap);
 }

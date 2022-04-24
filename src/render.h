@@ -1,7 +1,6 @@
 #include "util.h"
 
-struct RenderUnit
-{
+struct RenderUnit {
     buffer_handle_t vao;
     buffer_handle_t vbo;
     buffer_handle_t ibo;
@@ -11,8 +10,7 @@ struct RenderUnit
     texture_handle_t texture;
 };
 
-struct UiRenderUnit
-{
+struct UiRenderUnit {
     buffer_handle_t vao;
     buffer_handle_t vbo;
     buffer_handle_t ibo;
@@ -23,15 +21,13 @@ struct UiRenderUnit
 
 // TODO @CLEANUP: These above ended up being the same. Is there a reason to stay this way?
 
-struct Renderer
-{
+struct Renderer {
     Mat4 view;
     Mat4 proj;
     f32 aspect;
 };
 
-static Renderer render_init(u32 screen_width, u32 screen_height, f32 cam_size)
-{
+static Renderer render_init(u32 screen_width, u32 screen_height, f32 cam_size) {
     Renderer r;
 
     // We translate this matrix by the cam position
@@ -43,8 +39,7 @@ static Renderer render_init(u32 screen_width, u32 screen_height, f32 cam_size)
 
 // TODO @CLEANUP: Make these return a RenderUnit
 static void render_unit_init(RenderUnit *ru, const f32 *vert_data, usize vert_data_len, const u32 *index_data,
-                             usize index_data_len, shader_handle_t shader, const char *texture_file_name)
-{
+                             usize index_data_len, shader_handle_t shader, const char *texture_file_name) {
     glGenVertexArrays(1, &(ru->vao));
     glGenBuffers(1, &(ru->vbo));
     glGenBuffers(1, &(ru->ibo));
@@ -84,14 +79,12 @@ static void render_unit_init(RenderUnit *ru, const f32 *vert_data, usize vert_da
     ru->shader = shader;
 }
 
-static void render_unit_update(RenderUnit *ru, f32 *new_vert_data)
-{
+static void render_unit_update(RenderUnit *ru, f32 *new_vert_data) {
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)ru->vert_data_len, new_vert_data);
 }
 
-static void render_unit_draw(RenderUnit *ru, Mat4 *model)
-{
+static void render_unit_draw(RenderUnit *ru, Mat4 *model) {
     glBindVertexArray(ru->vao);
     glBindTexture(GL_TEXTURE_2D, ru->texture);
     shader_set_mat4(ru->shader, "u_model", model);
@@ -99,8 +92,7 @@ static void render_unit_draw(RenderUnit *ru, Mat4 *model)
     glDrawElements(GL_TRIANGLES, (GLsizei)ru->index_count, GL_UNSIGNED_INT, 0);
 }
 
-static void render_unit_deinit(RenderUnit *ru)
-{
+static void render_unit_deinit(RenderUnit *ru) {
     glDeleteVertexArrays(1, &(ru->vao));
     glDeleteBuffers(1, &(ru->vbo));
     glDeleteBuffers(1, &(ru->ibo));
@@ -112,8 +104,7 @@ static void render_unit_deinit(RenderUnit *ru)
     // the guys who share the same shader
 }
 
-static void render_unit_ui_alloc(UiRenderUnit *ru, shader_handle_t shader, FontData *font_data)
-{
+static void render_unit_ui_alloc(UiRenderUnit *ru, shader_handle_t shader, FontData *font_data) {
     glGenVertexArrays(1, &(ru->vao));
     glGenBuffers(1, &(ru->vbo));
     glGenBuffers(1, &(ru->ibo));
@@ -153,8 +144,7 @@ static void render_unit_ui_alloc(UiRenderUnit *ru, shader_handle_t shader, FontD
     glUseProgram(shader);
     shader_set_int(shader, "u_texture_ui", 0);
 }
-static void render_unit_ui_deinit(UiRenderUnit *ru)
-{
+static void render_unit_ui_deinit(UiRenderUnit *ru) {
     glDeleteVertexArrays(1, &(ru->vao));
     glDeleteBuffers(1, &(ru->vbo));
     glDeleteBuffers(1, &(ru->ibo));
@@ -165,8 +155,7 @@ static void render_unit_ui_deinit(UiRenderUnit *ru)
 }
 
 static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, const char *text,
-                             TextTransform transform)
-{
+                             TextTransform transform) {
     const usize char_count = strlen(text);
 
     Vec2 anchor = transform.anchor;
@@ -176,8 +165,7 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
 
     u32 vert_curr = 0;
     u32 ind_curr = 0;
-    for (usize i = 0; i < char_count; i++)
-    {
+    for (usize i = 0; i < char_count; i++) {
         char ch = text[i];
         f32 pixel_pos_x = 0, pixel_pos_y = 0; // Don't exactly know what these are for
         stbtt_aligned_quad quad;
@@ -234,8 +222,8 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
     }
 }
 
-static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const char *text, TextTransform transform)
-{
+static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const char *text,
+                                  TextTransform transform) {
     const usize char_count = strlen(text);
 
     TextBufferData text_data;
@@ -257,8 +245,7 @@ static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const c
     free(text_data.ib_data);
 }
 
-static void render_unit_ui_draw(UiRenderUnit *ru)
-{
+static void render_unit_ui_draw(UiRenderUnit *ru) {
     glBindVertexArray(ru->vao);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, ru->texture);

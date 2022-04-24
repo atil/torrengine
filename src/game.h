@@ -1,18 +1,15 @@
 
-struct Rect
-{
+struct Rect {
     Vec2 min;
     Vec2 max;
 };
 
-struct GameObject
-{
+struct GameObject {
     Rect rect;
     Mat4 transform;
 };
 
-struct PongGame
-{
+struct PongGame {
     GameObject field_go;
     GameObject pad1_go;
     GameObject pad2_go;
@@ -22,8 +19,7 @@ struct PongGame
     f32 game_speed_coeff;
 };
 
-struct PongGameConfig
-{
+struct PongGameConfig {
     Vec2 pad_size;
     f32 distance_from_center;
     f32 ball_speed;
@@ -32,48 +28,12 @@ struct PongGameConfig
     f32 game_speed_increase_coeff;
 };
 
-struct PongGameUpdateResult
-{
+struct PongGameUpdateResult {
     bool is_game_over;
     bool did_score;
 };
 
-static bool check_line_segment_intersection(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4, Vec2 *intersection)
-{
-    f32 x1 = p1.x;
-    f32 x2 = p2.x;
-    f32 x3 = p3.x;
-    f32 x4 = p4.x;
-    f32 y1 = p1.y;
-    f32 y2 = p2.y;
-    f32 y3 = p3.y;
-    f32 y4 = p4.y;
-
-    // https://en.wikipedia.org/wiki/Line-line_intersection
-    f32 t_nom = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);
-    f32 t_den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-
-    f32 u_nom = (x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2);
-    f32 u_den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-
-    if (t_nom < 0 || t_nom > t_den || u_nom < 0 || u_nom > u_den)
-    {
-        return false; // Not intersecting
-    }
-
-    if (fabs(t_den) < 0.00001f || fabs(u_den) < 0.00001f)
-    {
-        return false; // Overlapping
-    }
-
-    f32 t = t_nom / t_den;
-    *intersection = vec2_new(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
-
-    return true;
-}
-
-static Rect rect_new(Vec2 center, Vec2 size)
-{
+static Rect rect_new(Vec2 center, Vec2 size) {
     f32 x_min = center.x - size.x / 2.0f;
     f32 x_max = center.x + size.x / 2.0f;
     f32 y_min = center.y - size.y / 2.0f;
@@ -85,8 +45,7 @@ static Rect rect_new(Vec2 center, Vec2 size)
     return r;
 }
 
-static GameObject gameobject_new(Vec2 pos, Vec2 size)
-{
+static GameObject gameobject_new(Vec2 pos, Vec2 size) {
     GameObject go;
     go.rect = rect_new(vec2_zero(), size);
     Mat4 transform = mat4_identity();
@@ -97,8 +56,7 @@ static GameObject gameobject_new(Vec2 pos, Vec2 size)
     return go;
 }
 
-static Rect gameobject_get_world_rect(const GameObject *go)
-{
+static Rect gameobject_get_world_rect(const GameObject *go) {
     Vec2 go_pos = mat4_get_pos_xy(&(go->transform));
     Rect rect_world = go->rect;
     rect_world.min = vec2_add(rect_world.min, go_pos);
@@ -107,16 +65,13 @@ static Rect gameobject_get_world_rect(const GameObject *go)
     return rect_world;
 }
 
-static bool gameobject_is_point_in(GameObject *go, Vec2 p)
-{
+static bool gameobject_is_point_in(GameObject *go, Vec2 p) {
     Rect rect_world = gameobject_get_world_rect(go);
     return p.x > rect_world.min.x && p.x < rect_world.max.x && p.y > rect_world.min.y && p.y < rect_world.max.y;
 }
 
-static bool pad_resolve_point(GameObject *pad_go, Vec2 p, int resolve_dir, f32 *out_resolved_x)
-{
-    if (gameobject_is_point_in(pad_go, p))
-    {
+static bool pad_resolve_point(GameObject *pad_go, Vec2 p, int resolve_dir, f32 *out_resolved_x) {
+    if (gameobject_is_point_in(pad_go, p)) {
         // 1 is right pad, -1 is left
         // TODO @ROBUSNESS: Assert here that resolve_dir is either -1 or 1
         Rect rect_world = gameobject_get_world_rect(pad_go);
@@ -128,8 +83,7 @@ static bool pad_resolve_point(GameObject *pad_go, Vec2 p, int resolve_dir, f32 *
 }
 
 static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_from, Vec2 ball_displacement_to,
-                                     Vec2 *collision_point)
-{
+                                     Vec2 *collision_point) {
     Rect rect_world = gameobject_get_world_rect(pad_go);
     Vec2 edges[4] = {
         rect_world.min,
@@ -138,13 +92,11 @@ static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_
         vec2_new(rect_world.max.x, rect_world.min.y),
     };
 
-    for (int i = 0; i < 4; i++)
-    {
+    for (int i = 0; i < 4; i++) {
         Vec2 intersection;
         bool has_intersection = check_line_segment_intersection(ball_displacement_from, ball_displacement_to,
                                                                 edges[i], edges[(i + 1) % 4], &intersection);
-        if (has_intersection)
-        {
+        if (has_intersection) {
             *collision_point = intersection;
             return true;
         }
@@ -153,8 +105,7 @@ static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_
     return false;
 }
 
-static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx)
-{
+static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx) {
     game->field_go = gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10));
     game->pad1_go = gameobject_new(vec2_new(config->distance_from_center, 0.0f), config->pad_size);
     game->pad2_go = gameobject_new(vec2_new(-(config->distance_from_center), 0.0f), config->pad_size);
@@ -169,8 +120,7 @@ static void game_init(PongGame *game, PongGameConfig *config, Sfx *sfx)
 // TODO @CLEANUP: Signature looks ugly
 static PongGameUpdateResult game_update(f32 dt, PongGame *game, PongGameConfig *config, GLFWwindow *window,
                                         Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
-                                        ParticleSystemRegistry *particle_system_reg, Renderer *renderer)
-{
+                                        ParticleSystemRegistry *particle_system_reg, Renderer *renderer) {
     PongGameUpdateResult result;
     result.is_game_over = false;
     result.did_score = false;
@@ -180,21 +130,16 @@ static PongGameUpdateResult game_update(f32 dt, PongGame *game, PongGameConfig *
 
     f32 pad_move_speed = config->pad_move_speed * game->game_speed_coeff * dt;
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pad2_world_rect.max.y < config->area_extents.y)
-    {
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pad2_world_rect.max.y < config->area_extents.y) {
         mat4_translate_xy(&game->pad2_go.transform, vec2_new(0.0f, pad_move_speed));
-    }
-    else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && pad2_world_rect.min.y > -config->area_extents.y)
-    {
+    } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && pad2_world_rect.min.y > -config->area_extents.y) {
         mat4_translate_xy(&game->pad2_go.transform, vec2_new(0.0f, -pad_move_speed));
     }
 
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && pad1_world_rect.max.y < config->area_extents.y)
-    {
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && pad1_world_rect.max.y < config->area_extents.y) {
         mat4_translate_xy(&game->pad1_go.transform, vec2_new(0.0f, pad_move_speed));
-    }
-    else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS && pad1_world_rect.min.y > -config->area_extents.y)
-    {
+    } else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS &&
+               pad1_world_rect.min.y > -config->area_extents.y) {
         mat4_translate_xy(&game->pad1_go.transform, vec2_new(0.0f, -pad_move_speed));
     }
 
@@ -208,8 +153,7 @@ static PongGameUpdateResult game_update(f32 dt, PongGame *game, PongGameConfig *
 
     Vec2 collision_point;
     if (pad_ball_collision_check(&game->pad1_go, ball_pos, ball_next_pos, &collision_point) ||
-        pad_ball_collision_check(&game->pad2_go, ball_pos, ball_next_pos, &collision_point))
-    {
+        pad_ball_collision_check(&game->pad2_go, ball_pos, ball_next_pos, &collision_point)) {
         // Hit paddles
 
         ball_pos = collision_point; // Snap to hit position
@@ -236,8 +180,7 @@ static PongGameUpdateResult game_update(f32 dt, PongGame *game, PongGameConfig *
         particle_system_registry_add(particle_system_reg, ps);
     }
 
-    if (ball_next_pos.y > config->area_extents.y || ball_next_pos.y < -config->area_extents.y)
-    {
+    if (ball_next_pos.y > config->area_extents.y || ball_next_pos.y < -config->area_extents.y) {
         // Reflection from top/bottom
         game->ball_move_dir.y *= -1;
 

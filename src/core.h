@@ -1,4 +1,4 @@
-typedef uint32_t buffer_handle_t;
+typedef uint32_t buffer_handle_t; // TODO @CLEANUP: Get rid of _t's
 typedef uint32_t texture_handle_t;
 typedef uint32_t shader_handle_t;
 
@@ -8,3 +8,5 @@ typedef uint8_t u8;
 typedef int32_t i32;
 typedef size_t usize;
 typedef float f32;
+
+typedef usize EntityIndex;

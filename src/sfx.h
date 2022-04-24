@@ -16,8 +16,7 @@ enum class SfxId
     SfxGameOver
 };
 
-struct Sfx
-{
+struct Sfx {
     ALCdevice *device;
     ALCcontext *context;
 
@@ -33,8 +32,7 @@ struct Sfx
     sfx_buffer_handle_t buffer_gameover;
 };
 
-struct WavHeader
-{
+struct WavHeader {
     u8 _RIFF[4];         // RIFF Header Magic header
     u32 chunk_size;      // RIFF Chunk Size
     u8 _WAVE[4];         // WAVE Header
@@ -50,17 +48,14 @@ struct WavHeader
     u32 sample_data_len; // Sampled data length
 };
 
-static void check_al_error(const char *msg)
-{
+static void check_al_error(const char *msg) {
     ALCenum error = alGetError();
-    if (error != AL_NO_ERROR)
-    {
+    if (error != AL_NO_ERROR) {
         printf("AL error: %s\n", msg);
     }
 }
 
-static sfx_buffer_handle_t create_buffer_with_file(const char *file_name)
-{
+static sfx_buffer_handle_t create_buffer_with_file(const char *file_name) {
     WavHeader wav_header;
     usize wav_header_size = sizeof(WavHeader);
     FILE *wav_file = fopen(file_name, "r");
@@ -82,8 +77,7 @@ static sfx_buffer_handle_t create_buffer_with_file(const char *file_name)
     return buffer_handle;
 }
 
-static sfx_source_handle_t create_source(void)
-{
+static sfx_source_handle_t create_source(void) {
     sfx_source_handle_t source_handle;
     alGenSources((ALuint)1, &source_handle);
     alSourcef(source_handle, AL_PITCH, 1);
@@ -96,8 +90,7 @@ static sfx_source_handle_t create_source(void)
     return source_handle;
 }
 
-static void sfx_init(Sfx *sfx)
-{
+static void sfx_init(Sfx *sfx) {
 #ifndef SFX_DISABLED
     const char *default_device_name = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
     sfx->device = alcOpenDevice(default_device_name);
@@ -115,13 +108,11 @@ static void sfx_init(Sfx *sfx)
 #endif
 }
 
-static void sfx_play(Sfx *sfx, SfxId id)
-{
+static void sfx_play(Sfx *sfx, SfxId id) {
 #ifndef SFX_DISABLED
     sfx_buffer_handle_t buffer = 0;
     sfx_source_handle_t source = 0;
-    switch (id)
-    {
+    switch (id) {
     case SfxId::SfxStart:
         buffer = sfx->buffer_startgame;
         source = sfx->source_startgame;
@@ -157,8 +148,7 @@ static void sfx_play(Sfx *sfx, SfxId id)
     // }
 }
 
-static void sfx_deinit(Sfx *sfx)
-{
+static void sfx_deinit(Sfx *sfx) {
 #ifndef SFX_DISABLED
     alDeleteSources(1, &(sfx->source_startgame));
     alDeleteSources(1, &(sfx->source_gameover));
