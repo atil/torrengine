@@ -105,18 +105,21 @@ int main(void)
 
     UiRenderUnit ui_ru_splash_title;
     render_unit_ui_alloc(&ui_ru_splash_title, ui_shader, &font_data);
-    TextTransform text_transform_splash_title = texttransform_new(vec2_new(-0.8f, 0), 0.5f, FixedWidth, 1.6f);
+    TextTransform text_transform_splash_title =
+        texttransform_new(vec2_new(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f);
     render_unit_ui_update(&ui_ru_splash_title, &font_data, "TorrPong!", text_transform_splash_title);
 
     UiRenderUnit ui_ru_score;
     render_unit_ui_alloc(&ui_ru_score, ui_shader, &font_data);
-    TextTransform text_transform_score = texttransform_new(vec2_new(-0.9f, -0.9f), 0.3f, FreeWidth, 0.1f);
+    TextTransform text_transform_score =
+        texttransform_new(vec2_new(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f);
     // TODO @BUG: Set this with initial score
     render_unit_ui_update(&ui_ru_score, &font_data, "0", text_transform_score);
 
     UiRenderUnit ui_ru_intermission;
     render_unit_ui_alloc(&ui_ru_intermission, ui_shader, &font_data);
-    TextTransform text_transform_intermission = texttransform_new(vec2_new(-0.75f, 0.0f), 0.5f, FixedWidth, 1.5f);
+    TextTransform text_transform_intermission =
+        texttransform_new(vec2_new(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f);
     render_unit_ui_update(&ui_ru_intermission, &font_data, "Game Over", text_transform_intermission);
 
     //

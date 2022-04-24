@@ -14,11 +14,11 @@ struct TextBufferData
     usize ib_len;
 };
 
-typedef enum
+enum class TextWidthType
 {
     FixedWidth,
     FreeWidth,
-} TextWidthType;
+};
 
 struct TextTransform
 {

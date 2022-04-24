@@ -170,7 +170,8 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
     const usize char_count = strlen(text);
 
     Vec2 anchor = transform.anchor;
-    f32 width = transform.width_type == FixedWidth ? (transform.width / (f32)char_count) : transform.width;
+    f32 width =
+        transform.width_type == TextWidthType::FixedWidth ? (transform.width / (f32)char_count) : transform.width;
     f32 height = transform.height;
 
     u32 vert_curr = 0;
