@@ -21,6 +21,12 @@ static void arr_add(Array<T> *arr, T elem) {
 }
 
 template <typename T>
+static void arr_remove(Array<T> *arr, T *elem) {
+    // start from here: implement with memcmp
+    // - convert vec2_add()s to operator
+}
+
+template <typename T>
 static T *arr_get_ref(Array<T> *arr, usize index) {
     return &data[usize];
 }
