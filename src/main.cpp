@@ -1,6 +1,3 @@
-// start from here:
-// - convert vec2_add()s to operator
-// - try implementing array struct. references are annoying at this point
 // NOTE @DOCS: Game origin: up-left
 
 #define GLEW_STATIC                 // Statically linking glew
@@ -35,6 +32,7 @@
 #pragma warning(disable : 5045) // Spectre thing
 #pragma warning(disable : 4505) // Unreferenced functions
 #include "core.h"
+#include "container.h"
 #include "util.h"
 #include "tomath.h"
 #include "text.h"
@@ -47,8 +45,7 @@
 
 #pragma warning(disable : 5045) // Spectre thing
 
-enum class GameState
-{
+enum class GameState {
     Splash,
     Game,
     GameOver
