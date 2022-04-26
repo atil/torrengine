@@ -104,7 +104,7 @@ int main(void) {
                         gameobject_new(vec2_new(config.distance_from_center, 0.0f), config.pad_size)); // 1
     arr_add<GameObject>(&go_datas,
                         gameobject_new(vec2_new(-(config.distance_from_center), 0.0f), config.pad_size)); // 2
-    arr_add<GameObject>(&go_datas, gameobject_new(vec2_zero(), vec2_scale(vec2_one(), 0.2f)));            // ball
+    arr_add<GameObject>(&go_datas, gameobject_new(vec2_zero(), vec2_one() * 0.2f));                       // ball
 
     arr_add<GoRenderUnit>(&go_render,
                           render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
@@ -215,7 +215,7 @@ int main(void) {
 
             // UI draw
             //
-            if (result.did_score) { // Update score view
+            if (result.did_score) {      // Update score view
                 char int_str_buffer[32]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
                 sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", game.score);
                 render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);

@@ -105,7 +105,7 @@ static void particle_emitter_update(ParticleEmitter *ps, f32 dt) {
             vec2_new((f32)cos(ps->particles[i].angle * DEG2RAD), (f32)sin(ps->particles[i].angle * DEG2RAD));
 
         f32 speed = ps->props.speed + ps->particles[i].speed_offset;
-        ps->positions[i] = vec2_add(ps->positions[i], vec2_scale(dir, speed * dt));
+        ps->positions[i] = ps->positions[i] + dir * (speed * dt);
     }
 
     ps->life += dt;

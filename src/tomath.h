@@ -28,20 +28,16 @@ Vec2 operator+(Vec2 a, Vec2 b) {
     return vec2_new(a.x + b.x, a.y + b.y);
 }
 
+Vec2 operator*(Vec2 v, f32 s) {
+    return vec2_new(v.x * s, v.y * s);
+}
+
 static Vec2 vec2_zero(void) {
     return vec2_new(0.0f, 0.0f);
 }
 
 static Vec2 vec2_one(void) {
     return vec2_new(1.0f, 1.0f);
-}
-
-static Vec2 vec2_scale(Vec2 v, float s) {
-    return vec2_new(v.x * s, v.y * s);
-}
-
-static Vec2 vec2_add(Vec2 v1, Vec2 v2) {
-    return vec2_new(v1.x + v2.x, v1.y + v2.y);
 }
 
 static void vec2_normalize(Vec2 *vec) {

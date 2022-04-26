@@ -59,8 +59,8 @@ static GameObject gameobject_new(Vec2 pos, Vec2 size) {
 static Rect gameobject_get_world_rect(const GameObject *go) {
     Vec2 go_pos = mat4_get_pos_xy(&(go->transform));
     Rect rect_world = go->rect;
-    rect_world.min = vec2_add(rect_world.min, go_pos);
-    rect_world.max = vec2_add(rect_world.max, go_pos);
+    rect_world.min = rect_world.min + go_pos;
+    rect_world.max = rect_world.max + go_pos;
 
     return rect_world;
 }
@@ -155,8 +155,8 @@ static PongGameUpdateResult game_update(f32 dt, PongGame *game, Array<GameObject
     //
 
     Vec2 ball_pos = mat4_get_pos_xy(&ball_go->transform);
-    Vec2 ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * game->game_speed_coeff * dt));
-    Vec2 ball_next_pos = vec2_add(ball_pos, ball_displacement);
+    Vec2 ball_displacement = game->ball_move_dir * (config->ball_speed * game->game_speed_coeff * dt);
+    Vec2 ball_next_pos = ball_pos + ball_displacement;
 
     Vec2 collision_point;
     if (pad_ball_collision_check(pad1_go, ball_pos, ball_next_pos, &collision_point) ||
@@ -171,8 +171,8 @@ static PongGameUpdateResult game_update(f32 dt, PongGame *game, Array<GameObject
         game->ball_move_dir.y += rand_range(-1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
         vec2_normalize(&game->ball_move_dir);
 
-        ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * dt));
-        ball_next_pos = vec2_add(ball_pos, ball_displacement);
+        ball_displacement = game->ball_move_dir * (config->ball_speed * dt);
+        ball_next_pos = ball_pos + ball_displacement;
 
         (game->score)++;
         result.did_score = true;
@@ -191,8 +191,8 @@ static PongGameUpdateResult game_update(f32 dt, PongGame *game, Array<GameObject
         // Reflection from top/bottom
         game->ball_move_dir.y *= -1;
 
-        ball_displacement = vec2_scale(game->ball_move_dir, (config->ball_speed * dt));
-        ball_next_pos = vec2_add(ball_pos, ball_displacement);
+        ball_displacement = game->ball_move_dir * (config->ball_speed * dt);
+        ball_next_pos = ball_pos + ball_displacement;
 
         sfx_play(sfx, SfxId::SfxHitWall);
     }
