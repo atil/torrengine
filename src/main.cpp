@@ -1,3 +1,4 @@
+// start from here:  convert vec2_add()s to operator
 // NOTE @DOCS: Game origin: up-left
 
 #define GLEW_STATIC                 // Statically linking glew
@@ -89,22 +90,33 @@ int main(void) {
     config.pad_move_speed = 10.0f;
     config.game_speed_increase_coeff = 0.05f;
 
-    std::vector<EntityIndex> go_entities = {0, 1, 2, 3};
-    std::vector<GameObject> go_datas;
-    go_datas.push_back(gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10)));      // field
-    go_datas.push_back(gameobject_new(vec2_new(config.distance_from_center, 0.0f), config.pad_size));    // 1
-    go_datas.push_back(gameobject_new(vec2_new(-(config.distance_from_center), 0.0f), config.pad_size)); // 2
-    go_datas.push_back(gameobject_new(vec2_zero(), vec2_scale(vec2_one(), 0.2f)));                       // ball
+    // std::vector<EntityIndex> go_entities = {0, 1, 2, 3};
+    // std::vector<GameObject> go_datas;
+    // std::vector<GoRenderUnit> go_render;
 
-    std::vector<GoRenderUnit> go_render;
-    go_render.push_back(render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                                         sizeof(unit_square_indices), world_shader, "assets/Field.png"));
-    go_render.push_back(render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                                         sizeof(unit_square_indices), world_shader, "assets/PadBlue.png"));
-    go_render.push_back(render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                                         sizeof(unit_square_indices), world_shader, "assets/PadGreen.png"));
-    go_render.push_back(render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                                         sizeof(unit_square_indices), world_shader, "assets/Ball.png"));
+    Array<GameObject> go_datas = arr_new<GameObject>(10);
+    Array<GoRenderUnit> go_render = arr_new<GoRenderUnit>(10);
+
+    arr_add<GameObject>(&go_datas,
+                        gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10))); // field
+    arr_add<GameObject>(&go_datas,
+                        gameobject_new(vec2_new(config.distance_from_center, 0.0f), config.pad_size)); // 1
+    arr_add<GameObject>(&go_datas,
+                        gameobject_new(vec2_new(-(config.distance_from_center), 0.0f), config.pad_size)); // 2
+    arr_add<GameObject>(&go_datas, gameobject_new(vec2_zero(), vec2_scale(vec2_one(), 0.2f)));            // ball
+
+    arr_add<GoRenderUnit>(&go_render,
+                          render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                           sizeof(unit_square_indices), world_shader, "assets/Field.png"));
+    arr_add<GoRenderUnit>(&go_render,
+                          render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                           sizeof(unit_square_indices), world_shader, "assets/PadBlue.png"));
+    arr_add<GoRenderUnit>(&go_render,
+                          render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                           sizeof(unit_square_indices), world_shader, "assets/PadGreen.png"));
+    arr_add<GoRenderUnit>(&go_render,
+                          render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                           sizeof(unit_square_indices), world_shader, "assets/Ball.png"));
 
     //
     // UI
@@ -239,6 +251,9 @@ int main(void) {
     // render_unit_deinit(&pad2_ru);
     // render_unit_deinit(&ball_ru);
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
+
+    arr_deinit<GameObject>(&go_datas);
+    arr_deinit<GameObject>(&go_render);
 
     render_unit_ui_deinit(&ui_ru_score);
     render_unit_ui_deinit(&ui_ru_intermission);

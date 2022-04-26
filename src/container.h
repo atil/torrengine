@@ -7,7 +7,7 @@ struct Array {
 
 template <typename T>
 static Array<T> arr_new(usize capacity) {
-    Array arr;
+    Array<T> arr;
     arr.data = (T *)malloc(sizeof(T) * capacity);
     arr.count = 0;
     arr.capacity = capacity;
@@ -16,19 +16,27 @@ static Array<T> arr_new(usize capacity) {
 
 template <typename T>
 static void arr_add(Array<T> *arr, T elem) {
+    assert(arr->count < arr->capacity);
     arr->data[arr->count] = elem;
     arr->count++;
 }
 
 template <typename T>
 static void arr_remove(Array<T> *arr, T *elem) {
-    // start from here: implement with memcmp
-    // - convert vec2_add()s to operator
+    for (usize i = 0; i < arr->count; i++) {
+        if (memcmp(&arr->data[i], elem, sizeof(T)) == 0) {
+            for (usize j = i; j < arr->count - 1; j++) {
+                arr->data[j] = arr->data[j + 1];
+            }
+            arr->count--;
+            return;
+        }
+    }
 }
 
 template <typename T>
 static T *arr_get_ref(Array<T> *arr, usize index) {
-    return &data[usize];
+    return &(arr->data[index]);
 }
 
 template <typename T>
