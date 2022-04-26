@@ -1,12 +1,22 @@
-typedef uint32_t buffer_handle_t; // TODO @CLEANUP: Get rid of _t's
-typedef uint32_t texture_handle_t;
-typedef uint32_t shader_handle_t;
+struct Core {
+    Array<GameObject> go_data;
+    Array<GoRenderUnit> go_render;
+    Array<ParticleEmitter> particle_emitters;
+    Array<ParticleRenderUnit> particle_render;
+};
 
-typedef uint32_t u32;
-typedef uint16_t u16;
-typedef uint8_t u8;
-typedef int32_t i32;
-typedef size_t usize;
-typedef float f32;
+static void core_init(Core *core) {
+    core->go_data = arr_new<GameObject>(10);
+    core->go_render = arr_new<GoRenderUnit>(10);
+    core->particle_emitters = arr_new<ParticleEmitter>(10);
+    core->particle_render = arr_new<ParticleRenderUnit>(10);
+}
 
-typedef usize EntityIndex;
+static void core_deinit(Core *core) {
+    arr_deinit(core->go_data);
+    arr_deinit(core->go_render);
+    arr_deinit(core->go_particle_emitters);
+    arr_deinit(core->go_particle_render);
+    free(core);
+}
+

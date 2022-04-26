@@ -5,6 +5,7 @@ struct Array {
     usize capacity;
 
     // This exists because non-member function looks stupid and indexer operator cannot be a non-member
+    // and member indexer looks stupid when we give the array as a pointer parameter
     T *at(usize index) {
         return &(data[index]);
     }

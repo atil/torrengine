@@ -120,13 +120,13 @@ static void game_init(PongGame *game, Sfx *sfx) {
 }
 
 // TODO @CLEANUP: Signature looks ugly
-static PongGameUpdateResult game_update(f32 dt, PongGame *game, Array<GameObject> *gos, PongGameConfig *config,
+static PongGameUpdateResult game_update(f32 dt, PongGame *game, Core *core, PongGameConfig *config,
                                         GLFWwindow *window, Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
                                         ParticleSystemRegistry *particle_system_reg, Renderer *renderer) {
 
-    GameObject *pad1_go = gos->at(game->pad1_ref);
-    GameObject *pad2_go = gos->at(game->pad2_ref);
-    GameObject *ball_go = gos->at(game->ball_ref);
+    GameObject *pad1_go = core->go_data.at(game->pad1_ref);
+    GameObject *pad2_go = core->go_data.at(game->pad2_ref);
+    GameObject *ball_go = core->go_data.at(game->ball_ref);
 
     PongGameUpdateResult result;
     result.is_game_over = false;
@@ -183,8 +183,7 @@ static PongGameUpdateResult game_update(f32 dt, PongGame *game, Array<GameObject
         ParticleProps *hit_particle_prop =
             collision_point.x > 0 ? &particle_prop_reg->pad_hit_right : &particle_prop_reg->pad_hit_left;
 
-        ParticleSystem ps = particle_system_create(hit_particle_prop, renderer, collision_point);
-        particle_system_registry_add(particle_system_reg, ps);
+        particle_spawn(core, hit_particle_prop, renderer, collision_point);
     }
 
     if (ball_next_pos.y > config->area_extents.y || ball_next_pos.y < -config->area_extents.y) {

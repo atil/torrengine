@@ -1,4 +1,3 @@
-// start from here:  convert vec2_add()s to operator
 // NOTE @DOCS: Game origin: up-left
 
 #define GLEW_STATIC                 // Statically linking glew
@@ -32,7 +31,7 @@
 #pragma warning(disable : 4996) // TODO @ROBUSTNESS: Address these deprecated CRT functions
 #pragma warning(disable : 5045) // Spectre thing
 #pragma warning(disable : 4505) // Unreferenced functions
-#include "core.h"
+#include "types.h"
 #include "container.h"
 #include "util.h"
 #include "tomath.h"
@@ -45,6 +44,32 @@
 #pragma warning(pop)
 
 #pragma warning(disable : 5045) // Spectre thing
+
+// start from here:
+// - we hit a cyclic dependency: Core needs game.h (GameObject) and game.h needs Core. how to solve this?
+// - rename "game" to "world"
+
+struct Core {
+    Array<GameObject> go_data;
+    Array<GoRenderUnit> go_render;
+    Array<ParticleEmitter> particle_emitters;
+    Array<ParticleRenderUnit> particle_render;
+};
+
+static void core_init(Core *core) {
+    core->go_data = arr_new<GameObject>(10);
+    core->go_render = arr_new<GoRenderUnit>(10);
+    core->particle_emitters = arr_new<ParticleEmitter>(10);
+    core->particle_render = arr_new<ParticleRenderUnit>(10);
+}
+
+static void core_deinit(Core *core) {
+    arr_deinit(core->go_data);
+    arr_deinit(core->go_render);
+    arr_deinit(core->go_particle_emitters);
+    arr_deinit(core->go_particle_render);
+    free(core);
+}
 
 enum class GameState
 {
@@ -86,36 +111,34 @@ int main(void) {
     PongGameConfig config;
     config.area_extents = vec2_new(cam_size * renderer.aspect, cam_size);
     config.pad_size = vec2_new(0.3f, 2.0f);
-    config.ball_speed = 4.0f; //* 0.0000001f;
+    config.ball_speed = 4.0f;
     config.distance_from_center = 4.0f;
     config.pad_move_speed = 10.0f;
     config.game_speed_increase_coeff = 0.05f;
 
-    // std::vector<EntityIndex> go_entities = {0, 1, 2, 3};
-    // std::vector<GameObject> go_datas;
-    // std::vector<GoRenderUnit> go_render;
+    Core core;
+    core_init(&core);
 
-    Array<GameObject> go_datas = arr_new<GameObject>(10);
-    Array<GoRenderUnit> go_render = arr_new<GoRenderUnit>(10);
+    // TODO @INCOMPLETE: Add entity_index array. Currently there's no way to tell entities apart
 
-    arr_add<GameObject>(&go_datas,
+    arr_add<GameObject>(&(core.go_data),
                         gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10))); // field
-    arr_add<GameObject>(&go_datas,
+    arr_add<GameObject>(&(core.go_data),
                         gameobject_new(vec2_new(config.distance_from_center, 0.0f), config.pad_size)); // 1
-    arr_add<GameObject>(&go_datas,
+    arr_add<GameObject>(&(core.go_data),
                         gameobject_new(vec2_new(-(config.distance_from_center), 0.0f), config.pad_size)); // 2
-    arr_add<GameObject>(&go_datas, gameobject_new(vec2_zero(), vec2_one() * 0.2f));                       // ball
+    arr_add<GameObject>(&(core.go_data), gameobject_new(vec2_zero(), vec2_one() * 0.2f));                 // ball
 
-    arr_add<GoRenderUnit>(&go_render,
+    arr_add<GoRenderUnit>(&(core.go_render),
                           render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
                                            sizeof(unit_square_indices), world_shader, "assets/Field.png"));
-    arr_add<GoRenderUnit>(&go_render,
+    arr_add<GoRenderUnit>(&(core.go_render),
                           render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
                                            sizeof(unit_square_indices), world_shader, "assets/PadBlue.png"));
-    arr_add<GoRenderUnit>(&go_render,
+    arr_add<GoRenderUnit>(&(core.go_render),
                           render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
                                            sizeof(unit_square_indices), world_shader, "assets/PadGreen.png"));
-    arr_add<GoRenderUnit>(&go_render,
+    arr_add<GoRenderUnit>(&(core.go_render),
                           render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
                                            sizeof(unit_square_indices), world_shader, "assets/Ball.png"));
 
@@ -147,19 +170,11 @@ int main(void) {
         texttransform_new(vec2_new(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f);
     render_unit_ui_update(&ui_ru_intermission, &font_data, "Game Over", text_transform_intermission);
 
-    //
-    // Particles
-
     ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
-    ParticleSystemRegistry particle_system_reg = particle_system_registry_create();
 
     glUseProgram(world_shader);
     shader_set_mat4(world_shader, "u_view", &renderer.view);
     shader_set_mat4(world_shader, "u_proj", &renderer.proj);
-
-    //
-    // Game objects
-    //
 
     GameState game_state = GameState::Splash;
 
@@ -186,8 +201,8 @@ int main(void) {
                 game_state = GameState::Game;
             }
         } else if (game_state == GameState::Game) {
-            PongGameUpdateResult result = game_update(dt, &game, &go_datas, &config, window, &sfx,
-                                                      &particle_prop_reg, &particle_system_reg, &renderer);
+            PongGameUpdateResult result =
+                game_update(dt, &game, &core, &config, window, &sfx, &particle_prop_reg, &renderer);
 
             if (result.is_game_over) {
                 sfx_play(&sfx, SfxId::SfxGameOver);
@@ -202,20 +217,26 @@ int main(void) {
                 render_unit_draw(go_render.at(i), &(go_datas.at(i)->transform));
             }
 
-            for (usize i = 0; i < particle_system_reg.system_count; i++) {
-                ParticleSystem ps = particle_system_reg.array_ptr[i];
-                if (!ps.emitter->isAlive) {
-                    particle_system_registry_remove(&particle_system_reg, ps);
+            // Particle update/draw
+            Array<EntityIndex> dead_particle_indices = arr_new(core.particle_emitters.count);
+            for (usize i = 0; i < core.particle_emitters.count; i++) {
+                ParticleEmitter *pe = core.particle_emitters.at(i);
+                if (!pe->isAlive) {
+                    arr_add<EntityIndex>(&dead_particle_indices, i);
                     continue;
                 }
 
-                particle_emitter_update(ps.emitter, dt);
-                render_unit_particle_draw(ps.render_unit, ps.emitter);
+                particle_emitter_update(pe, dt);
+                render_unit_particle_draw(&core.particle_render.at(i), pe);
             }
+            for (EntityIndex i = 0; i < dead_particle_emitters.count; i++) {
+                particle_despawn(&core, i);
+            }
+            arr_deinit(&dead_particle_emitters);
 
             // UI draw
-            //
-            if (result.did_score) {      // Update score view
+            if (result.did_score) {
+                // Update score view
                 char int_str_buffer[32]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
                 sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", game.score);
                 render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
@@ -245,15 +266,9 @@ int main(void) {
 
     sfx_deinit(&sfx);
 
-    // TODO @INCOMPLETE: Delete entity systems
-    // render_unit_deinit(&field_ru);
-    // render_unit_deinit(&pad1_ru);
-    // render_unit_deinit(&pad2_ru);
-    // render_unit_deinit(&ball_ru);
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
 
-    arr_deinit<GameObject>(&go_datas);
-    arr_deinit<GoRenderUnit>(&go_render);
+    core_deinit(&core);
 
     render_unit_ui_deinit(&ui_ru_score);
     render_unit_ui_deinit(&ui_ru_intermission);

@@ -38,17 +38,6 @@ struct ParticleRenderUnit {
     f32 *vert_data;
 };
 
-struct ParticleSystem {
-    ParticleEmitter *emitter;
-    ParticleRenderUnit *render_unit;
-};
-
-struct ParticleSystemRegistry {
-    ParticleSystem *array_ptr;
-    usize system_count;
-    usize system_capacity;
-};
-
 struct ParticlePropRegistry {
     ParticleProps pad_hit_right;
     ParticleProps pad_hit_left;
@@ -75,25 +64,24 @@ static ParticlePropRegistry particle_prop_registry_create(void) {
     return reg;
 }
 
-static ParticleEmitter *particle_emitter_init(ParticleProps props, Vec2 emit_point) {
-    ParticleEmitter *pe = (ParticleEmitter *)malloc(sizeof(ParticleEmitter));
-    pe->positions = (Vec2 *)malloc(props.count * sizeof(Vec2));
-    pe->particles = (Particle *)malloc(props.count * sizeof(Particle));
-    pe->life = 0;
-    pe->isAlive = false;
-    pe->props = props;
-    pe->emit_point = emit_point;
+static ParticleEmitter particle_emitter_init(ParticleProps *props, Vec2 emit_point) {
+    ParticleEmitter pe;
+    pe.positions = (Vec2 *)malloc(props->count * sizeof(Vec2));
+    pe.particles = (Particle *)malloc(props->count * sizeof(Particle));
+    pe.life = 0;
+    pe.isAlive = false;
+    pe.props = *props; // TODO @SPEED: It's better to keep a pointer to props?
+    pe.emit_point = emit_point;
 
-    for (u32 i = 0; i < pe->props.count; i++) {
-        pe->particles[i].index = i;
-        pe->particles[i].angle = // Notice the "-1", we want the end angle to be inclusive
-            lerp(pe->props.angle_limits.x, pe->props.angle_limits.y, (f32)i / (f32)(pe->props.count - 1));
+    for (u32 i = 0; i < pe.props.count; i++) {
+        pe.particles[i].index = i;
+        pe.particles[i].angle = // Notice the "-1", we want the end angle to be inclusive
+            lerp(pe.props.angle_limits.x, pe.props.angle_limits.y, (f32)i / (f32)(pe.props.count - 1));
 
-        pe->particles[i].angle += rand_range(-pe->props.angle_offset, pe->props.angle_offset);
-        pe->particles[i].speed_offset =
-            pe->props.speed * rand_range(-pe->props.speed_offset, pe->props.speed_offset);
+        pe.particles[i].angle += rand_range(-pe.props.angle_offset, pe.props.angle_offset);
+        pe.particles[i].speed_offset = pe.props.speed * rand_range(-pe.props.speed_offset, pe.props.speed_offset);
 
-        pe->positions[i] = pe->emit_point;
+        pe.positions[i] = pe.emit_point;
     }
 
     return pe;
@@ -111,12 +99,6 @@ static void particle_emitter_update(ParticleEmitter *ps, f32 dt) {
     ps->life += dt;
     ps->transparency = (ps->props.lifetime - ps->life) / ps->props.lifetime;
     ps->isAlive = ps->life < ps->props.lifetime;
-}
-
-static void particle_emitter_deinit(ParticleEmitter *ps) {
-    free(ps->positions);
-    free(ps->particles);
-    free(ps);
 }
 
 static ParticleRenderUnit *render_unit_particle_init(usize particle_count, shader_handle_t shader,
@@ -223,7 +205,33 @@ static void render_unit_particle_draw(ParticleRenderUnit *ru, ParticleEmitter *p
     glDrawElements(GL_TRIANGLES, (GLsizeiptr)ru->index_count, GL_UNSIGNED_INT, 0);
 }
 
-static void render_unit_particle_deinit(ParticleRenderUnit *ru) {
+static void particle_spawn(Core *core, ParticleProps *prop, Renderer *renderer, Vec2 spawn_point) {
+
+    shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
+    ParticleEmitter emitter = particle_emitter_init(props, emit_point);
+    ParticleRenderUnit ru = render_unit_particle_init(props->count, particle_shader, "assets/Ball.png");
+    emitter.isAlive = true; // TODO @INCOMPLETE: We might want make this alive later
+
+    shader_handle_t curr_particle_shader = ps.render_unit->shader;
+    glUseProgram(curr_particle_shader);
+    Mat4 mat_identity = mat4_identity();
+    shader_set_mat4(curr_particle_shader, "u_model", &mat_identity);
+    shader_set_mat4(curr_particle_shader, "u_view", &(renderer->view));
+    shader_set_mat4(curr_particle_shader, "u_proj", &(renderer->proj));
+
+    arr_add<ParticleEmitter>(&core->particle_emitters, emitter);
+    arr_add<ParticleRenderUnit>(&core->particle_render, ru);
+}
+
+static void particle_despawn(Core *core, EntityIndex ent_index) {
+    ParticleEmitter *pe = core->particle_emitters.at(ent_index);
+    arr_remove(&core->particle_emitters, pe);
+    free(pe->positions);
+    free(pe->particles);
+    free(pe);
+
+    ParticleRenderUnit *ru = core->particle_render.at(ent_index);
+    arr_remove(&core->particle_render, ru);
     glDeleteVertexArrays(1, &(ru->vao));
     glDeleteBuffers(1, &(ru->vbo));
     glDeleteBuffers(1, &(ru->uv_bo));
@@ -234,70 +242,4 @@ static void render_unit_particle_deinit(ParticleRenderUnit *ru) {
 
     free(ru->vert_data);
     free(ru);
-}
-
-static ParticleSystem particle_system_create(ParticleProps *props, Renderer *renderer, Vec2 emit_point) {
-    ParticleSystem ps;
-    shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
-    ps.emitter = particle_emitter_init(*props, emit_point);
-    ps.render_unit = render_unit_particle_init(props->count, particle_shader, "assets/Ball.png");
-    ps.emitter->isAlive = true; // TODO @INCOMPLETE: We might want make this alive later
-
-    shader_handle_t curr_particle_shader = ps.render_unit->shader;
-    glUseProgram(curr_particle_shader);
-    Mat4 mat_identity = mat4_identity();
-    shader_set_mat4(curr_particle_shader, "u_model", &mat_identity);
-    shader_set_mat4(curr_particle_shader, "u_view", &(renderer->view));
-    shader_set_mat4(curr_particle_shader, "u_proj", &(renderer->proj));
-
-    return ps;
-}
-
-static ParticleSystemRegistry particle_system_registry_create(void) {
-    ParticleSystemRegistry reg;
-    reg.system_capacity = 10;
-    reg.array_ptr = (ParticleSystem *)calloc(reg.system_capacity, sizeof(ParticleSystem));
-    reg.system_count = 0;
-    return reg;
-}
-
-static void particle_system_registry_add(ParticleSystemRegistry *reg, ParticleSystem ps) {
-    if (reg->system_count == reg->system_capacity) {
-        printf("too many particle systems\n");
-        return;
-    }
-
-    reg->array_ptr[reg->system_count] = ps;
-    reg->system_count++;
-}
-
-static bool particle_system_is_equal(ParticleSystem a, ParticleSystem b) {
-    return a.emitter == b.emitter && a.render_unit == b.render_unit;
-}
-
-static ParticleSystem particle_system_registry_get(ParticleSystemRegistry *reg, usize index) {
-    return reg->array_ptr[index];
-}
-
-static void particle_system_registry_remove(ParticleSystemRegistry *reg, ParticleSystem ps) {
-    for (usize i = 0; i < reg->system_count; i++) {
-        if (particle_system_is_equal(reg->array_ptr[i], ps)) {
-            for (usize j = i; j < reg->system_count - 1; j++) // Shift the rest of the array
-            {
-                reg->array_ptr[j] = reg->array_ptr[j + 1];
-            }
-
-            reg->system_count--;
-            return;
-        }
-    }
-}
-
-static void particle_system_registry_deinit(ParticleSystemRegistry *reg) {
-    for (usize i = 0; i < reg->system_count; i++) {
-        particle_emitter_deinit(reg->array_ptr[i].emitter);
-        render_unit_particle_deinit(reg->array_ptr[i].render_unit);
-    }
-
-    free(reg);
 }
