@@ -46,7 +46,8 @@
 
 #pragma warning(disable : 5045) // Spectre thing
 
-enum class GameState {
+enum class GameState
+{
     Splash,
     Game,
     GameOver
@@ -185,7 +186,7 @@ int main(void) {
                 game_state = GameState::Game;
             }
         } else if (game_state == GameState::Game) {
-            PongGameUpdateResult result = game_update(dt, &game, go_datas, &config, window, &sfx,
+            PongGameUpdateResult result = game_update(dt, &game, &go_datas, &config, window, &sfx,
                                                       &particle_prop_reg, &particle_system_reg, &renderer);
 
             if (result.is_game_over) {
@@ -197,8 +198,8 @@ int main(void) {
             glActiveTexture(GL_TEXTURE0);
             glUseProgram(world_shader);
 
-            for (usize i = 0; i < go_render.size(); i++) {
-                render_unit_draw(&go_render[i], &go_datas[i].transform);
+            for (usize i = 0; i < go_render.count; i++) {
+                render_unit_draw(go_render.at(i), &(go_datas.at(i)->transform));
             }
 
             for (usize i = 0; i < particle_system_reg.system_count; i++) {
@@ -214,8 +215,7 @@ int main(void) {
 
             // UI draw
             //
-            if (result.did_score) // Update score view
-            {
+            if (result.did_score) { // Update score view
                 char int_str_buffer[32]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
                 sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", game.score);
                 render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
@@ -253,7 +253,7 @@ int main(void) {
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
 
     arr_deinit<GameObject>(&go_datas);
-    arr_deinit<GameObject>(&go_render);
+    arr_deinit<GoRenderUnit>(&go_render);
 
     render_unit_ui_deinit(&ui_ru_score);
     render_unit_ui_deinit(&ui_ru_intermission);

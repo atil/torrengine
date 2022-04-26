@@ -3,6 +3,11 @@ struct Array {
     T *data;
     usize count;
     usize capacity;
+
+    // This exists because non-member function looks stupid and indexer operator cannot be a non-member
+    T *at(usize index) {
+        return &(data[index]);
+    }
 };
 
 template <typename T>
@@ -35,14 +40,8 @@ static void arr_remove(Array<T> *arr, T *elem) {
 }
 
 template <typename T>
-static T *arr_get_ref(Array<T> *arr, usize index) {
-    return &(arr->data[index]);
-}
-
-template <typename T>
 static void arr_deinit(Array<T> *arr) {
-
-    // Note that we don't call any destructors here. We assume that this is a POD array
+    // TODO @ROBUSTNESS: Note that we don't call any destructors here. We assume that this is a POD array
     free(arr->data);
     free(arr);
 }
