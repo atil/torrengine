@@ -9,7 +9,7 @@ struct GameObject {
     Mat4 transform;
 };
 
-struct PongGame {
+struct PongWorld {
     EntityIndex field_ref;
     EntityIndex pad1_ref;
     EntityIndex pad2_ref;
@@ -19,7 +19,7 @@ struct PongGame {
     f32 game_speed_coeff;
 };
 
-struct PongGameConfig {
+struct PongWorldConfig {
     Vec2 pad_size;
     f32 distance_from_center;
     f32 ball_speed;
@@ -28,7 +28,7 @@ struct PongGameConfig {
     f32 game_speed_increase_coeff;
 };
 
-struct PongGameUpdateResult {
+struct PongWorldUpdateResult {
     bool is_game_over;
     bool did_score;
 };
@@ -105,37 +105,37 @@ static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_
     return false;
 }
 
-static void game_init(PongGame *game, Sfx *sfx) {
+static void world_init(PongWorld *world, Sfx *sfx) {
 
     // TODO @CLEANUP: Hardcoded entity indices. These should be set by the entity creation system
-    game->pad1_ref = 1;
-    game->pad2_ref = 2;
-    game->ball_ref = 3;
+    world->pad1_ref = 1;
+    world->pad2_ref = 2;
+    world->ball_ref = 3;
 
-    game->ball_move_dir = vec2_new(1.0f, 0.0f);
-    game->score = 0;
-    game->game_speed_coeff = 1.0f;
+    world->ball_move_dir = vec2_new(1.0f, 0.0f);
+    world->score = 0;
+    world->game_speed_coeff = 1.0f;
 
     sfx_play(sfx, SfxId::SfxStart);
 }
 
 // TODO @CLEANUP: Signature looks ugly
-static PongGameUpdateResult game_update(f32 dt, PongGame *game, Core *core, PongGameConfig *config,
-                                        GLFWwindow *window, Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
-                                        Renderer *renderer) {
+static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, PongWorldConfig *config,
+                                          GLFWwindow *window, Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
+                                          Renderer *renderer) {
 
-    GameObject *pad1_go = core->go_data.at(game->pad1_ref);
-    GameObject *pad2_go = core->go_data.at(game->pad2_ref);
-    GameObject *ball_go = core->go_data.at(game->ball_ref);
+    GameObject *pad1_go = core->go_data.at(world->pad1_ref);
+    GameObject *pad2_go = core->go_data.at(world->pad2_ref);
+    GameObject *ball_go = core->go_data.at(world->ball_ref);
 
-    PongGameUpdateResult result;
+    PongWorldUpdateResult result;
     result.is_game_over = false;
     result.did_score = false;
 
     Rect pad1_world_rect = gameobject_get_world_rect(pad1_go);
     Rect pad2_world_rect = gameobject_get_world_rect(pad2_go);
 
-    f32 pad_move_speed = config->pad_move_speed * game->game_speed_coeff * dt;
+    f32 pad_move_speed = config->pad_move_speed * world->game_speed_coeff * dt;
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pad2_world_rect.max.y < config->area_extents.y) {
         mat4_translate_xy(&pad2_go->transform, vec2_new(0.0f, pad_move_speed));
@@ -155,7 +155,7 @@ static PongGameUpdateResult game_update(f32 dt, PongGame *game, Core *core, Pong
     //
 
     Vec2 ball_pos = mat4_get_pos_xy(&ball_go->transform);
-    Vec2 ball_displacement = game->ball_move_dir * (config->ball_speed * game->game_speed_coeff * dt);
+    Vec2 ball_displacement = world->ball_move_dir * (config->ball_speed * world->game_speed_coeff * dt);
     Vec2 ball_next_pos = ball_pos + ball_displacement;
 
     Vec2 collision_point;
@@ -164,19 +164,19 @@ static PongGameUpdateResult game_update(f32 dt, PongGame *game, Core *core, Pong
         // Hit paddles
 
         ball_pos = collision_point; // Snap to hit position
-        game->ball_move_dir.x *= -1;
+        world->ball_move_dir.x *= -1;
 
         // randomness
         const f32 ball_pad_hit_randomness_coeff = 0.2f;
-        game->ball_move_dir.y += rand_range(-1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
-        vec2_normalize(&game->ball_move_dir);
+        world->ball_move_dir.y += rand_range(-1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
+        vec2_normalize(&world->ball_move_dir);
 
-        ball_displacement = game->ball_move_dir * (config->ball_speed * dt);
+        ball_displacement = world->ball_move_dir * (config->ball_speed * dt);
         ball_next_pos = ball_pos + ball_displacement;
 
-        (game->score)++;
+        (world->score)++;
         result.did_score = true;
-        game->game_speed_coeff += config->game_speed_increase_coeff;
+        world->game_speed_coeff += config->game_speed_increase_coeff;
 
         sfx_play(sfx, SfxId::SfxHitPad);
 
@@ -188,9 +188,9 @@ static PongGameUpdateResult game_update(f32 dt, PongGame *game, Core *core, Pong
 
     if (ball_next_pos.y > config->area_extents.y || ball_next_pos.y < -config->area_extents.y) {
         // Reflection from top/bottom
-        game->ball_move_dir.y *= -1;
+        world->ball_move_dir.y *= -1;
 
-        ball_displacement = game->ball_move_dir * (config->ball_speed * dt);
+        ball_displacement = world->ball_move_dir * (config->ball_speed * dt);
         ball_next_pos = ball_pos + ball_displacement;
 
         sfx_play(sfx, SfxId::SfxHitWall);

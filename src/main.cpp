@@ -41,7 +41,7 @@
 #include "render.h"
 #include "particle.h"
 #include "sfx.h"
-#include "game.h"
+#include "world.h"
 #pragma warning(pop)
 
 #pragma warning(disable : 5045) // Spectre thing
@@ -87,7 +87,7 @@ int main(void) {
 
     Renderer renderer = render_init(WIDTH, HEIGHT, cam_size);
 
-    PongGameConfig config;
+    PongWorldConfig config;
     config.area_extents = vec2_new(cam_size * renderer.aspect, cam_size);
     config.pad_size = vec2_new(0.3f, 2.0f);
     config.ball_speed = 4.0f;
@@ -157,7 +157,7 @@ int main(void) {
 
     GameState game_state = GameState::Splash;
 
-    PongGame game;
+    PongWorld world;
 
     f32 game_time = (f32)glfwGetTime();
     f32 dt = 0.0f;
@@ -176,12 +176,12 @@ int main(void) {
             render_unit_ui_draw(&ui_ru_splash_title);
 
             if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
-                game_init(&game, &sfx);
+                world_init(&world, &sfx);
                 game_state = GameState::Game;
             }
         } else if (game_state == GameState::Game) {
-            PongGameUpdateResult result =
-                game_update(dt, &game, &core, &config, window, &sfx, &particle_prop_reg, &renderer);
+            PongWorldUpdateResult result =
+                world_update(dt, &world, &core, &config, window, &sfx, &particle_prop_reg, &renderer);
 
             if (result.is_game_over) {
                 sfx_play(&sfx, SfxId::SfxGameOver);
@@ -217,7 +217,7 @@ int main(void) {
             if (result.did_score) {
                 // Update score view
                 char int_str_buffer[32]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
-                sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", game.score);
+                sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", world.score);
                 render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
             }
 
@@ -234,7 +234,7 @@ int main(void) {
                 render_unit_ui_update(&ui_ru_score, &font_data, "0", text_transform_score);
                 glDrawElements(GL_TRIANGLES, (GLsizei)ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
 
-                game_init(&game, &sfx);
+                world_init(&world, &sfx);
                 game_state = GameState::Game;
             }
         }
