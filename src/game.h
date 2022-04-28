@@ -122,7 +122,7 @@ static void game_init(PongGame *game, Sfx *sfx) {
 // TODO @CLEANUP: Signature looks ugly
 static PongGameUpdateResult game_update(f32 dt, PongGame *game, Core *core, PongGameConfig *config,
                                         GLFWwindow *window, Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
-                                        ParticleSystemRegistry *particle_system_reg, Renderer *renderer) {
+                                        Renderer *renderer) {
 
     GameObject *pad1_go = core->go_data.at(game->pad1_ref);
     GameObject *pad2_go = core->go_data.at(game->pad2_ref);

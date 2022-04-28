@@ -35,6 +35,7 @@
 #include "container.h"
 #include "util.h"
 #include "tomath.h"
+#include "core.h"
 #include "text.h"
 #include "shader.h"
 #include "render.h"
@@ -48,28 +49,6 @@
 // start from here:
 // - we hit a cyclic dependency: Core needs game.h (GameObject) and game.h needs Core. how to solve this?
 // - rename "game" to "world"
-
-struct Core {
-    Array<GameObject> go_data;
-    Array<GoRenderUnit> go_render;
-    Array<ParticleEmitter> particle_emitters;
-    Array<ParticleRenderUnit> particle_render;
-};
-
-static void core_init(Core *core) {
-    core->go_data = arr_new<GameObject>(10);
-    core->go_render = arr_new<GoRenderUnit>(10);
-    core->particle_emitters = arr_new<ParticleEmitter>(10);
-    core->particle_render = arr_new<ParticleRenderUnit>(10);
-}
-
-static void core_deinit(Core *core) {
-    arr_deinit(core->go_data);
-    arr_deinit(core->go_render);
-    arr_deinit(core->go_particle_emitters);
-    arr_deinit(core->go_particle_render);
-    free(core);
-}
 
 enum class GameState
 {
@@ -213,12 +192,12 @@ int main(void) {
             glActiveTexture(GL_TEXTURE0);
             glUseProgram(world_shader);
 
-            for (usize i = 0; i < go_render.count; i++) {
-                render_unit_draw(go_render.at(i), &(go_datas.at(i)->transform));
+            for (usize i = 0; i < core.go_render.count; i++) {
+                render_unit_draw(core.go_render.at(i), &(core.go_data.at(i)->transform));
             }
 
             // Particle update/draw
-            Array<EntityIndex> dead_particle_indices = arr_new(core.particle_emitters.count);
+            Array<EntityIndex> dead_particle_indices = arr_new<EntityIndex>(core.particle_emitters.count);
             for (usize i = 0; i < core.particle_emitters.count; i++) {
                 ParticleEmitter *pe = core.particle_emitters.at(i);
                 if (!pe->isAlive) {
@@ -227,12 +206,12 @@ int main(void) {
                 }
 
                 particle_emitter_update(pe, dt);
-                render_unit_particle_draw(&core.particle_render.at(i), pe);
+                render_unit_particle_draw(core.particle_render.at(i), pe);
             }
-            for (EntityIndex i = 0; i < dead_particle_emitters.count; i++) {
+            for (EntityIndex i = 0; i < dead_particle_indices.count; i++) {
                 particle_despawn(&core, i);
             }
-            arr_deinit(&dead_particle_emitters);
+            arr_deinit(&dead_particle_indices);
 
             // UI draw
             if (result.did_score) {
@@ -274,8 +253,6 @@ int main(void) {
     render_unit_ui_deinit(&ui_ru_intermission);
     render_unit_ui_deinit(&ui_ru_splash_title);
     glDeleteProgram(ui_shader); // TODO @CLEANUP: Same with above
-
-    particle_system_registry_deinit(&particle_system_reg);
 
     glfwTerminate();
     return 0;

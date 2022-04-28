@@ -101,14 +101,14 @@ static void particle_emitter_update(ParticleEmitter *ps, f32 dt) {
     ps->isAlive = ps->life < ps->props.lifetime;
 }
 
-static ParticleRenderUnit *render_unit_particle_init(usize particle_count, shader_handle_t shader,
-                                                     const char *texture_file_name) {
-    ParticleRenderUnit *ru = (ParticleRenderUnit *)malloc(sizeof(ParticleRenderUnit));
+static ParticleRenderUnit render_unit_particle_init(usize particle_count, shader_handle_t shader,
+                                                    const char *texture_file_name) {
+    ParticleRenderUnit ru;
 
     // TODO @CLEANUP: VLAs would simplify this allocation
     f32 single_particle_vert[8] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
     usize vert_data_len = particle_count * sizeof(single_particle_vert);
-    ru->vert_data = (f32 *)malloc(vert_data_len);
+    ru.vert_data = (f32 *)malloc(vert_data_len);
 
     f32 single_particle_uvs[8] = {0, 0, 1, 0, 1, 1, 0, 1};
     usize uv_data_len = particle_count * sizeof(single_particle_uvs);
@@ -122,7 +122,7 @@ static ParticleRenderUnit *render_unit_particle_init(usize particle_count, shade
         // Learning: '+' operator for pointers doesn't increment by bytes.
         // The increment amount is of the pointer's type. So for this one above, it increments 8 f32s.
 
-        memcpy(ru->vert_data + i * 8, single_particle_vert, sizeof(single_particle_vert));
+        memcpy(ru.vert_data + i * 8, single_particle_vert, sizeof(single_particle_vert));
 
         u32 particle_index_at_i[6] = {
             single_particle_index[0] + (i * 4), single_particle_index[1] + (i * 4),
@@ -134,33 +134,33 @@ static ParticleRenderUnit *render_unit_particle_init(usize particle_count, shade
         memcpy(uv_data + i * 8, single_particle_uvs, sizeof(single_particle_uvs));
     }
 
-    ru->vert_data_len = (u32)vert_data_len;
-    ru->index_count = (u32)index_data_len;
-    ru->shader = shader;
+    ru.vert_data_len = (u32)vert_data_len;
+    ru.index_count = (u32)index_data_len;
+    ru.shader = shader;
 
-    glGenVertexArrays(1, &(ru->vao));
-    glGenBuffers(1, &(ru->vbo));
-    glGenBuffers(1, &(ru->ibo));
-    glGenBuffers(1, &(ru->uv_bo));
+    glGenVertexArrays(1, &(ru.vao));
+    glGenBuffers(1, &(ru.vbo));
+    glGenBuffers(1, &(ru.ibo));
+    glGenBuffers(1, &(ru.uv_bo));
 
-    glBindVertexArray(ru->vao);
+    glBindVertexArray(ru.vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
-    glBufferData(GL_ARRAY_BUFFER, (GLsizei)vert_data_len, ru->vert_data, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, ru.vbo);
+    glBufferData(GL_ARRAY_BUFFER, (GLsizei)vert_data_len, ru.vert_data, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void *)0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, ru->uv_bo);
+    glBindBuffer(GL_ARRAY_BUFFER, ru.uv_bo);
     glBufferData(GL_ARRAY_BUFFER, (GLsizei)uv_data_len, uv_data, GL_STATIC_DRAW);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void *)0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru->ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ru.ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizei)index_data_len, index_data, GL_STATIC_DRAW);
 
-    glGenTextures(1, &(ru->texture));
-    glBindTexture(GL_TEXTURE_2D, ru->texture);
+    glGenTextures(1, &(ru.texture));
+    glBindTexture(GL_TEXTURE_2D, ru.texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -205,19 +205,18 @@ static void render_unit_particle_draw(ParticleRenderUnit *ru, ParticleEmitter *p
     glDrawElements(GL_TRIANGLES, (GLsizeiptr)ru->index_count, GL_UNSIGNED_INT, 0);
 }
 
-static void particle_spawn(Core *core, ParticleProps *prop, Renderer *renderer, Vec2 spawn_point) {
+static void particle_spawn(Core *core, ParticleProps *props, Renderer *renderer, Vec2 emit_point) {
 
     shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
     ParticleEmitter emitter = particle_emitter_init(props, emit_point);
     ParticleRenderUnit ru = render_unit_particle_init(props->count, particle_shader, "assets/Ball.png");
     emitter.isAlive = true; // TODO @INCOMPLETE: We might want make this alive later
 
-    shader_handle_t curr_particle_shader = ps.render_unit->shader;
-    glUseProgram(curr_particle_shader);
+    glUseProgram(ru.shader);
     Mat4 mat_identity = mat4_identity();
-    shader_set_mat4(curr_particle_shader, "u_model", &mat_identity);
-    shader_set_mat4(curr_particle_shader, "u_view", &(renderer->view));
-    shader_set_mat4(curr_particle_shader, "u_proj", &(renderer->proj));
+    shader_set_mat4(ru.shader, "u_model", &mat_identity);
+    shader_set_mat4(ru.shader, "u_view", &(renderer->view));
+    shader_set_mat4(ru.shader, "u_proj", &(renderer->proj));
 
     arr_add<ParticleEmitter>(&core->particle_emitters, emitter);
     arr_add<ParticleRenderUnit>(&core->particle_render, ru);
