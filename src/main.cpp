@@ -47,8 +47,8 @@
 #pragma warning(disable : 5045) // Spectre thing
 
 // start from here:
-// - we hit a cyclic dependency: Core needs game.h (GameObject) and game.h needs Core. how to solve this?
-// - rename "game" to "world"
+// - put ui stuff into core
+// - consider game over case. do we recreate the core? reset it?
 
 enum class GameState
 {
