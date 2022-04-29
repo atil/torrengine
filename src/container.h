@@ -46,3 +46,26 @@ static void arr_deinit(Array<T> *arr) {
     free(arr->data);
     free(arr);
 }
+
+//
+// String
+//
+
+struct String {
+    char *data;
+    usize len;
+};
+
+static String str_init(char *chars) {
+    String str;
+    str.len = 0;
+    for (usize i = 0; chars[i] != 0; i++, str.len++)
+        ;
+    str.data = (char *)malloc(sizeof(char) * str.len);
+    memcpy(str.data, chars, str.len);
+    return str;
+}
+
+static void str_deinit(String *str) {
+    free(str->data);
+}

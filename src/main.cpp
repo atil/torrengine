@@ -41,6 +41,7 @@
 #include "render.h"
 #include "particle.h"
 #include "sfx.h"
+#include "ui.h"
 #include "world.h"
 #pragma warning(pop)
 
