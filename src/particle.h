@@ -15,7 +15,7 @@ struct ParticleProps {
     u8 _padding[4];
 };
 
-struct ParticleEmitter {
+struct ParticleSource {
     Vec2 *positions;
     Particle *particles;
     ParticleProps props;
@@ -24,7 +24,7 @@ struct ParticleEmitter {
     f32 transparency;
     bool isAlive;
     u8 _padding[7];
-}; // TODO @CLEANUP: Rename to ParticleSource?
+};
 
 struct ParticleRenderUnit {
     buffer_handle_t vao;
@@ -64,8 +64,8 @@ static ParticlePropRegistry particle_prop_registry_create(void) {
     return reg;
 }
 
-static ParticleEmitter particle_emitter_init(ParticleProps *props, Vec2 emit_point) {
-    ParticleEmitter pe;
+static ParticleSource particle_emitter_init(ParticleProps *props, Vec2 emit_point) {
+    ParticleSource pe;
     pe.positions = (Vec2 *)malloc(props->count * sizeof(Vec2));
     pe.particles = (Particle *)malloc(props->count * sizeof(Particle));
     pe.life = 0;
@@ -87,7 +87,7 @@ static ParticleEmitter particle_emitter_init(ParticleProps *props, Vec2 emit_poi
     return pe;
 }
 
-static void particle_emitter_update(ParticleEmitter *ps, f32 dt) {
+static void particle_emitter_update(ParticleSource *ps, f32 dt) {
     for (u32 i = 0; i < ps->props.count; i++) {
         Vec2 dir =
             vec2_new((f32)cos(ps->particles[i].angle * DEG2RAD), (f32)sin(ps->particles[i].angle * DEG2RAD));
@@ -180,7 +180,7 @@ static ParticleRenderUnit render_unit_particle_init(usize particle_count, shader
     return ru;
 }
 
-static void render_unit_particle_draw(ParticleRenderUnit *ru, ParticleEmitter *pe) {
+static void render_unit_particle_draw(ParticleRenderUnit *ru, ParticleSource *pe) {
     glUseProgram(ru->shader);
     glBindVertexArray(ru->vao);
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);
@@ -208,7 +208,7 @@ static void render_unit_particle_draw(ParticleRenderUnit *ru, ParticleEmitter *p
 static void particle_spawn(Core *core, ParticleProps *props, Renderer *renderer, Vec2 emit_point) {
 
     shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
-    ParticleEmitter emitter = particle_emitter_init(props, emit_point);
+    ParticleSource emitter = particle_emitter_init(props, emit_point);
     ParticleRenderUnit ru = render_unit_particle_init(props->count, particle_shader, "assets/Ball.png");
     emitter.isAlive = true; // TODO @INCOMPLETE: We might want make this alive later
 
@@ -218,13 +218,13 @@ static void particle_spawn(Core *core, ParticleProps *props, Renderer *renderer,
     shader_set_mat4(ru.shader, "u_view", &(renderer->view));
     shader_set_mat4(ru.shader, "u_proj", &(renderer->proj));
 
-    arr_add<ParticleEmitter>(&core->particle_emitters, emitter);
+    arr_add<ParticleSource>(&core->particle_sources, emitter);
     arr_add<ParticleRenderUnit>(&core->particle_render, ru);
 }
 
 static void particle_despawn(Core *core, EntityIndex ent_index) {
-    ParticleEmitter *pe = core->particle_emitters.at(ent_index);
-    arr_remove(&core->particle_emitters, pe);
+    ParticleSource *pe = core->particle_sources.at(ent_index);
+    arr_remove(&core->particle_sources, pe);
     free(pe->positions);
     free(pe->particles);
     free(pe);

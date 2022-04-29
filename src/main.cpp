@@ -197,9 +197,9 @@ int main(void) {
             }
 
             // Particle update/draw
-            Array<EntityIndex> dead_particle_indices = arr_new<EntityIndex>(core.particle_emitters.count);
-            for (usize i = 0; i < core.particle_emitters.count; i++) {
-                ParticleEmitter *pe = core.particle_emitters.at(i);
+            Array<EntityIndex> dead_particle_indices = arr_new<EntityIndex>(core.particle_sources.count);
+            for (usize i = 0; i < core.particle_sources.count; i++) {
+                ParticleSource *pe = core.particle_sources.at(i);
                 if (!pe->isAlive) {
                     arr_add<EntityIndex>(&dead_particle_indices, i);
                     continue;
