@@ -1,3 +1,4 @@
+// #define WORLD_DISABLE_BALL_RANDOMNESS
 
 struct Rect {
     Vec2 min;
@@ -167,9 +168,11 @@ static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, 
         world->ball_move_dir.x *= -1;
 
         // randomness
+#ifndef WORLD_DISABLE_BALL_RANDOMNESS
         const f32 ball_pad_hit_randomness_coeff = 0.2f;
         world->ball_move_dir.y += rand_range(-1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
         vec2_normalize(&world->ball_move_dir);
+#endif
 
         ball_displacement = world->ball_move_dir * (config->ball_speed * dt);
         ball_next_pos = ball_pos + ball_displacement;

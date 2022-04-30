@@ -201,7 +201,7 @@ int main(void) {
                     continue;
                 }
 
-                particle_emitter_update(pe, dt);
+                particle_source_update(pe, dt);
                 render_unit_particle_draw(core.particle_render[i], pe);
             }
             for (EntityIndex i = 0; i < dead_particle_indices.count; i++) {

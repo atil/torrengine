@@ -18,6 +18,7 @@ struct Array {
     }
 
     void remove(T *elem) {
+        // NOTE: This destroys elem completely
         for (usize i = 0; i < count; i++) {
             if (memcmp(&data[i], elem, sizeof(T)) == 0) {
                 for (usize j = i; j < count - 1; j++) {

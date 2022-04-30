@@ -1,11 +1,9 @@
 #ifndef _UTIL_H_
 #define _UTIL_H_ // TODO @CLEANUP: Is this included multiple times?
 
-static char *read_file(const char *file_path)
-{
+static char *read_file(const char *file_path) {
     FILE *f = fopen(file_path, "rb");
-    if (!f)
-    {
+    if (!f) {
         printf("failed to open file %s", file_path);
         return NULL;
     }
