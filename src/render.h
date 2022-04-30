@@ -146,6 +146,7 @@ static void render_unit_ui_alloc(UiRenderUnit *ru, shader_handle_t shader, FontD
     glUseProgram(shader);
     shader_set_int(shader, "u_texture_ui", 0);
 }
+
 static void render_unit_ui_deinit(UiRenderUnit *ru) {
     glDeleteVertexArrays(1, &(ru->vao));
     glDeleteBuffers(1, &(ru->vbo));
@@ -224,9 +225,8 @@ static void text_buffer_fill(TextBufferData *text_data, FontData *font_data, con
     }
 }
 
-static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const char *text,
-                                  TextTransform transform) {
-    const usize char_count = strlen(text);
+static void render_unit_ui_update(UiRenderUnit *ru, Widget *widget) {
+    usize char_count = strlen(widget->string.data); // TODO @SPEED: Use string.len
 
     TextBufferData text_data;
     text_data.vb_len = char_count * 16 * sizeof(f32); // TODO @DOCS: Explain the data layout
@@ -234,7 +234,7 @@ static void render_unit_ui_update(UiRenderUnit *ru, FontData *font_data, const c
     text_data.vb_data = (f32 *)malloc(text_data.vb_len);
     text_data.ib_data = (u32 *)malloc(text_data.ib_len);
 
-    text_buffer_fill(&text_data, font_data, text, transform);
+    text_buffer_fill(&text_data, widget->font_data, widget->string.data, widget->transform);
 
     glBindVertexArray(ru->vao);
     glBindBuffer(GL_ARRAY_BUFFER, ru->vbo);

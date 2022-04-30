@@ -38,18 +38,14 @@
 #include "core.h"
 #include "text.h"
 #include "shader.h"
+#include "ui.h"
 #include "render.h"
 #include "particle.h"
 #include "sfx.h"
-#include "ui.h"
 #include "world.h"
 #pragma warning(pop)
 
 #pragma warning(disable : 5045) // Spectre thing
-
-// start from here:
-// - put ui stuff into core
-// - consider game over case. do we recreate the core? reset it?
 
 enum class GameState
 {
@@ -59,6 +55,15 @@ enum class GameState
 };
 
 int main(void) {
+
+    // start from here:
+    // - fix array_deinit()
+    // - put ui stuff into core
+    // - consider game over case. do we recreate the core? reset it?
+
+    Array<size_t> test = arr_new<size_t>(10);
+    arr_deinit<size_t>(&test);
+    return 0;
     srand((unsigned long)time(NULL));
 
     glfwInit();
@@ -131,24 +136,26 @@ int main(void) {
 
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
 
+    Widget widget_splash_title = widget_init(
+        "TorrPong!!\0", texttransform_new(vec2_new(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f), &font_data);
+    // TODO @BUG: Set this with initial score
+    Widget widget_score = widget_init(
+        "0\0", texttransform_new(vec2_new(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f), &font_data);
+    Widget widget_intermission =
+        widget_init("Game Over\0",
+                    texttransform_new(vec2_new(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f), &font_data);
+
     UiRenderUnit ui_ru_splash_title;
     render_unit_ui_alloc(&ui_ru_splash_title, ui_shader, &font_data);
-    TextTransform text_transform_splash_title =
-        texttransform_new(vec2_new(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f);
-    render_unit_ui_update(&ui_ru_splash_title, &font_data, "TorrPong!", text_transform_splash_title);
+    render_unit_ui_update(&ui_ru_splash_title, &widget_splash_title);
 
     UiRenderUnit ui_ru_score;
     render_unit_ui_alloc(&ui_ru_score, ui_shader, &font_data);
-    TextTransform text_transform_score =
-        texttransform_new(vec2_new(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f);
-    // TODO @BUG: Set this with initial score
-    render_unit_ui_update(&ui_ru_score, &font_data, "0", text_transform_score);
+    render_unit_ui_update(&ui_ru_score, &widget_score);
 
     UiRenderUnit ui_ru_intermission;
     render_unit_ui_alloc(&ui_ru_intermission, ui_shader, &font_data);
-    TextTransform text_transform_intermission =
-        texttransform_new(vec2_new(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f);
-    render_unit_ui_update(&ui_ru_intermission, &font_data, "Game Over", text_transform_intermission);
+    render_unit_ui_update(&ui_ru_intermission, &widget_intermission);
 
     ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
 
@@ -217,9 +224,8 @@ int main(void) {
             // UI draw
             if (result.did_score) {
                 // Update score view
-                char int_str_buffer[32]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
-                sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", world.score);
-                render_unit_ui_update(&ui_ru_score, &font_data, int_str_buffer, text_transform_score);
+                widget_set_string(&widget_score, world.score);
+                render_unit_ui_update(&ui_ru_score, &widget_score);
             }
 
             render_unit_ui_draw(&ui_ru_score);
@@ -232,8 +238,9 @@ int main(void) {
                 glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
                 glUseProgram(ui_ru_score.shader);
                 glBindVertexArray(ui_ru_score.vao);
-                render_unit_ui_update(&ui_ru_score, &font_data, "0", text_transform_score);
+                render_unit_ui_update(&ui_ru_score, &widget_score);
                 glDrawElements(GL_TRIANGLES, (GLsizei)ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
+                // render_unit_ui_draw(&ui_ru_score, &widget_score);
 
                 world_init(&world, &sfx);
                 game_state = GameState::Game;

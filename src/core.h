@@ -21,7 +21,7 @@ static void core_deinit(Core *core) {
     arr_deinit<struct GoRenderUnit>(&core->go_render);
     arr_deinit<struct ParticleSource>(&core->particle_sources);
     arr_deinit<struct ParticleRenderUnit>(&core->particle_render);
-    arr_deinit<struct Widget>(&core->ui_widgets); // TODO @LEAK: This leaks the string inside
+    arr_deinit<struct Widget>(&core->ui_widgets); // TODO @LEAK: This leaks the strings inside
     arr_deinit<struct UiRenderUnit>(&core->ui_render);
     free(core);
 }

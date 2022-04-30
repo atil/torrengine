@@ -13,8 +13,13 @@ struct Array {
 
 template <typename T>
 static Array<T> arr_new(usize capacity) {
+    if (capacity == 0) {
+        // TODO @ROBUSTNESS: Check what malloc returns when called with zero
+        capacity = 1; // TODO @ROBUSTNESS: Should the caller make sure the capacity is not zero?
+    }
     Array<T> arr;
-    arr.data = (T *)malloc(sizeof(T) * capacity);
+    usize size = sizeof(T) * capacity;
+    arr.data = (T *)malloc(size);
     arr.count = 0;
     arr.capacity = capacity;
     return arr;
@@ -61,8 +66,9 @@ static String str_init(char *chars) {
     str.len = 0;
     for (usize i = 0; chars[i] != 0; i++, str.len++)
         ;
-    str.data = (char *)malloc(sizeof(char) * str.len);
+    str.data = (char *)malloc(sizeof(char) * (str.len + 1));
     memcpy(str.data, chars, str.len);
+    str.data[str.len] = 0;
     return str;
 }
 
