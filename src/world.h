@@ -124,9 +124,9 @@ static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, 
                                           GLFWwindow *window, Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
                                           Renderer *renderer) {
 
-    GameObject *pad1_go = core->go_data.at(world->pad1_ref);
-    GameObject *pad2_go = core->go_data.at(world->pad2_ref);
-    GameObject *ball_go = core->go_data.at(world->ball_ref);
+    GameObject *pad1_go = core->go_data[world->pad1_ref];
+    GameObject *pad2_go = core->go_data[world->pad2_ref];
+    GameObject *ball_go = core->go_data[world->ball_ref];
 
     PongWorldUpdateResult result;
     result.is_game_over = false;

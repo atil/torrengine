@@ -236,18 +236,18 @@ static void particle_spawn(Core *core, ParticleProps *props, Renderer *renderer,
     shader_set_mat4(ru.shader, "u_view", &(renderer->view));
     shader_set_mat4(ru.shader, "u_proj", &(renderer->proj));
 
-    arr_add<ParticleSource>(&core->particle_sources, emitter);
-    arr_add<ParticleRenderUnit>(&core->particle_render, ru);
+    core->particle_sources.add(emitter);
+    core->particle_render.add(ru);
 }
 
 static void particle_despawn(Core *core, EntityIndex ent_index) {
-    ParticleSource *pe = core->particle_sources.at(ent_index);
-    arr_remove(&core->particle_sources, pe);
+    ParticleSource *pe = core->particle_sources[ent_index];
+    core->particle_sources.remove(pe);
     particle_source_deinit(pe);
     free(pe);
 
-    ParticleRenderUnit *ru = core->particle_render.at(ent_index);
-    arr_remove(&core->particle_render, ru);
+    ParticleRenderUnit *ru = core->particle_render[ent_index];
+    core->particle_render.remove(ru);
     render_unit_particle_deinit(ru);
     free(ru);
 }

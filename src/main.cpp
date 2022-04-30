@@ -98,30 +98,22 @@ int main(void) {
     config.game_speed_increase_coeff = 0.05f;
 
     Core core;
-    core_init(&core);
 
     // TODO @INCOMPLETE: Add entity_index array. Currently there's no way to tell entities apart
 
-    arr_add<GameObject>(&(core.go_data),
-                        gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10))); // field
-    arr_add<GameObject>(&(core.go_data),
-                        gameobject_new(vec2_new(config.distance_from_center, 0.0f), config.pad_size)); // 1
-    arr_add<GameObject>(&(core.go_data),
-                        gameobject_new(vec2_new(-(config.distance_from_center), 0.0f), config.pad_size)); // 2
-    arr_add<GameObject>(&(core.go_data), gameobject_new(vec2_zero(), vec2_one() * 0.2f));                 // ball
+    core.go_data.add(gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10)));      // field
+    core.go_data.add(gameobject_new(vec2_new(config.distance_from_center, 0.0f), config.pad_size));    // 1
+    core.go_data.add(gameobject_new(vec2_new(-(config.distance_from_center), 0.0f), config.pad_size)); // 2
+    core.go_data.add(gameobject_new(vec2_zero(), vec2_one() * 0.2f));                                  // ball
 
-    arr_add<GoRenderUnit>(&(core.go_render),
-                          render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                                           sizeof(unit_square_indices), world_shader, "assets/Field.png"));
-    arr_add<GoRenderUnit>(&(core.go_render),
-                          render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                                           sizeof(unit_square_indices), world_shader, "assets/PadBlue.png"));
-    arr_add<GoRenderUnit>(&(core.go_render),
-                          render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                                           sizeof(unit_square_indices), world_shader, "assets/PadGreen.png"));
-    arr_add<GoRenderUnit>(&(core.go_render),
-                          render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                                           sizeof(unit_square_indices), world_shader, "assets/Ball.png"));
+    core.go_render.add(render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                        sizeof(unit_square_indices), world_shader, "assets/Field.png"));
+    core.go_render.add(render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                        sizeof(unit_square_indices), world_shader, "assets/PadBlue.png"));
+    core.go_render.add(render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                        sizeof(unit_square_indices), world_shader, "assets/PadGreen.png"));
+    core.go_render.add(render_unit_init(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                        sizeof(unit_square_indices), world_shader, "assets/Ball.png"));
 
     //
     // UI
@@ -132,14 +124,14 @@ int main(void) {
 
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
 
-    Widget widget_splash_title = widget_init(
+    Widget widget_splash_title(
         "TorrPong!!\0", texttransform_new(vec2_new(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f), &font_data);
     // TODO @BUG: Set this with initial score
-    Widget widget_score = widget_init(
-        "0\0", texttransform_new(vec2_new(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f), &font_data);
-    Widget widget_intermission =
-        widget_init("Game Over\0",
-                    texttransform_new(vec2_new(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f), &font_data);
+    Widget widget_score("0\0", texttransform_new(vec2_new(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f),
+                        &font_data);
+    Widget widget_intermission("Game Over\0",
+                               texttransform_new(vec2_new(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f),
+                               &font_data);
 
     UiRenderUnit ui_ru_splash_title;
     render_unit_ui_alloc(&ui_ru_splash_title, ui_shader, &font_data);
@@ -197,25 +189,24 @@ int main(void) {
             glUseProgram(world_shader);
 
             for (usize i = 0; i < core.go_render.count; i++) {
-                render_unit_draw(core.go_render.at(i), &(core.go_data.at(i)->transform));
+                render_unit_draw(core.go_render[i], &(core.go_data[i]->transform));
             }
 
             // Particle update/draw
-            Array<EntityIndex> dead_particle_indices = arr_new<EntityIndex>(core.particle_sources.count, nullptr);
+            Array<EntityIndex> dead_particle_indices(core.particle_sources.count);
             for (usize i = 0; i < core.particle_sources.count; i++) {
-                ParticleSource *pe = core.particle_sources.at(i);
+                ParticleSource *pe = core.particle_sources[i];
                 if (!pe->isAlive) {
-                    arr_add<EntityIndex>(&dead_particle_indices, i);
+                    dead_particle_indices.add(i);
                     continue;
                 }
 
                 particle_emitter_update(pe, dt);
-                render_unit_particle_draw(core.particle_render.at(i), pe);
+                render_unit_particle_draw(core.particle_render[i], pe);
             }
             for (EntityIndex i = 0; i < dead_particle_indices.count; i++) {
                 particle_despawn(&core, i);
             }
-            arr_deinit(&dead_particle_indices);
 
             // UI draw
             if (result.did_score) {
@@ -250,8 +241,6 @@ int main(void) {
     sfx_deinit(&sfx);
 
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
-
-    core_deinit(&core);
 
     render_unit_ui_deinit(&ui_ru_score);
     render_unit_ui_deinit(&ui_ru_intermission);
