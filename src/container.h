@@ -49,7 +49,6 @@ template <typename T>
 static void arr_deinit(Array<T> *arr) {
     // TODO @ROBUSTNESS: Note that we don't call any destructors here. We assume that this is a POD array
     free(arr->data);
-    free(arr);
 }
 
 //

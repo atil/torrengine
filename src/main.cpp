@@ -57,13 +57,9 @@ enum class GameState
 int main(void) {
 
     // start from here:
-    // - fix array_deinit()
     // - put ui stuff into core
     // - consider game over case. do we recreate the core? reset it?
 
-    Array<size_t> test = arr_new<size_t>(10);
-    arr_deinit<size_t>(&test);
-    return 0;
     srand((unsigned long)time(NULL));
 
     glfwInit();
