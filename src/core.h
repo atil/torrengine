@@ -7,13 +7,18 @@ struct Core {
     Array<struct UiRenderUnit> ui_render;
 };
 
+static void particle_source_deinit(struct ParticleSource *source);
+static void render_unit_particle_deinit(struct ParticleRenderUnit *ru);
+static void widget_deinit(struct Widget *widget);
+static void render_unit_ui_deinit(struct UiRenderUnit *ru);
+
 static void core_init(Core *core) {
-    core->go_data = arr_new<struct GameObject>(10);
-    core->go_render = arr_new<struct GoRenderUnit>(10);
-    core->particle_sources = arr_new<struct ParticleSource>(10);
-    core->particle_render = arr_new<struct ParticleRenderUnit>(10);
-    core->ui_widgets = arr_new<struct Widget>(10);
-    core->ui_render = arr_new<struct UiRenderUnit>(10);
+    core->go_data = arr_new<struct GameObject>(10, nullptr);
+    core->go_render = arr_new<struct GoRenderUnit>(10, nullptr);
+    core->particle_sources = arr_new<struct ParticleSource>(10, &particle_source_deinit);
+    core->particle_render = arr_new<struct ParticleRenderUnit>(10, &render_unit_particle_deinit);
+    core->ui_widgets = arr_new<struct Widget>(10, &widget_deinit);
+    core->ui_render = arr_new<struct UiRenderUnit>(10, &render_unit_ui_deinit);
 }
 
 static void core_deinit(Core *core) {

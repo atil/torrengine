@@ -64,7 +64,7 @@ static ParticlePropRegistry particle_prop_registry_create(void) {
     return reg;
 }
 
-static ParticleSource particle_emitter_init(ParticleProps *props, Vec2 emit_point) {
+static ParticleSource particle_source_init(ParticleProps *props, Vec2 emit_point) {
     ParticleSource pe;
     pe.positions = (Vec2 *)malloc(props->count * sizeof(Vec2));
     pe.particles = (Particle *)malloc(props->count * sizeof(Particle));
@@ -99,6 +99,12 @@ static void particle_emitter_update(ParticleSource *ps, f32 dt) {
     ps->life += dt;
     ps->transparency = (ps->props.lifetime - ps->life) / ps->props.lifetime;
     ps->isAlive = ps->life < ps->props.lifetime;
+}
+
+static void particle_source_deinit(ParticleSource *pe) {
+    free(pe->positions);
+    free(pe->particles);
+    free(pe);
 }
 
 static ParticleRenderUnit render_unit_particle_init(usize particle_count, shader_handle_t shader,
@@ -205,10 +211,22 @@ static void render_unit_particle_draw(ParticleRenderUnit *ru, ParticleSource *pe
     glDrawElements(GL_TRIANGLES, (GLsizeiptr)ru->index_count, GL_UNSIGNED_INT, 0);
 }
 
+static void render_unit_particle_deinit(ParticleRenderUnit *ru) {
+    glDeleteVertexArrays(1, &(ru->vao));
+    glDeleteBuffers(1, &(ru->vbo));
+    glDeleteBuffers(1, &(ru->uv_bo));
+    glDeleteBuffers(1, &(ru->ibo));
+
+    glDeleteProgram(ru->shader);
+    glDeleteTextures(1, &ru->texture);
+
+    free(ru->vert_data);
+}
+
 static void particle_spawn(Core *core, ParticleProps *props, Renderer *renderer, Vec2 emit_point) {
 
     shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
-    ParticleSource emitter = particle_emitter_init(props, emit_point);
+    ParticleSource emitter = particle_source_init(props, emit_point);
     ParticleRenderUnit ru = render_unit_particle_init(props->count, particle_shader, "assets/Ball.png");
     emitter.isAlive = true; // TODO @INCOMPLETE: We might want make this alive later
 
@@ -225,20 +243,11 @@ static void particle_spawn(Core *core, ParticleProps *props, Renderer *renderer,
 static void particle_despawn(Core *core, EntityIndex ent_index) {
     ParticleSource *pe = core->particle_sources.at(ent_index);
     arr_remove(&core->particle_sources, pe);
-    free(pe->positions);
-    free(pe->particles);
+    particle_source_deinit(pe);
     free(pe);
 
     ParticleRenderUnit *ru = core->particle_render.at(ent_index);
     arr_remove(&core->particle_render, ru);
-    glDeleteVertexArrays(1, &(ru->vao));
-    glDeleteBuffers(1, &(ru->vbo));
-    glDeleteBuffers(1, &(ru->uv_bo));
-    glDeleteBuffers(1, &(ru->ibo));
-
-    glDeleteProgram(ru->shader);
-    glDeleteTextures(1, &ru->texture);
-
-    free(ru->vert_data);
+    render_unit_particle_deinit(ru);
     free(ru);
 }

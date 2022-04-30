@@ -3,6 +3,7 @@ struct Array {
     T *data;
     usize count;
     usize capacity;
+    void (*deinit_func)(T *);
 
     // This exists because non-member function looks stupid and indexer operator cannot be a non-member
     // and member indexer looks stupid when we give the array as a pointer parameter
@@ -12,7 +13,7 @@ struct Array {
 };
 
 template <typename T>
-static Array<T> arr_new(usize capacity) {
+static Array<T> arr_new(usize capacity, void (*deinit_func)(T *)) {
     if (capacity == 0) {
         // TODO @ROBUSTNESS: Check what malloc returns when called with zero
         capacity = 1; // TODO @ROBUSTNESS: Should the caller make sure the capacity is not zero?
@@ -22,6 +23,7 @@ static Array<T> arr_new(usize capacity) {
     arr.data = (T *)malloc(size);
     arr.count = 0;
     arr.capacity = capacity;
+    arr.deinit_func = deinit_func;
     return arr;
 }
 
@@ -47,7 +49,11 @@ static void arr_remove(Array<T> *arr, T *elem) {
 
 template <typename T>
 static void arr_deinit(Array<T> *arr) {
-    // TODO @ROBUSTNESS: Note that we don't call any destructors here. We assume that this is a POD array
+    if (arr->deinit_func != nullptr) {
+        for (usize i = 0; i < arr->count; i++) {
+            arr->deinit_func(&arr->data[i]);
+        }
+    }
     free(arr->data);
 }
 
