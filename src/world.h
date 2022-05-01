@@ -106,7 +106,7 @@ static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_
     return false;
 }
 
-static void world_init(PongWorld *world, Sfx *sfx) {
+static void world_init(PongWorld *world) {
 
     // TODO @CLEANUP: Hardcoded entity indices. These should be set by the entity creation system
     world->pad1_ref = 1;
@@ -116,13 +116,11 @@ static void world_init(PongWorld *world, Sfx *sfx) {
     world->ball_move_dir = vec2_new(1.0f, 0.0f);
     world->score = 0;
     world->game_speed_coeff = 1.0f;
-
-    sfx_play(sfx, SfxId::SfxStart);
 }
 
 // TODO @CLEANUP: Signature looks ugly
 static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, PongWorldConfig *config,
-                                          GLFWwindow *window, Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
+                                          Input *input, Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
                                           Renderer *renderer) {
 
     GameObject *pad1_go = core->go_data[world->pad1_ref];
@@ -138,16 +136,15 @@ static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, 
 
     f32 pad_move_speed = config->pad_move_speed * world->game_speed_coeff * dt;
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pad2_world_rect.max.y < config->area_extents.y) {
+    if (input->is_down(KeyCode::W) && pad2_world_rect.max.y < config->area_extents.y) {
         mat4_translate_xy(&pad2_go->transform, vec2_new(0.0f, pad_move_speed));
-    } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && pad2_world_rect.min.y > -config->area_extents.y) {
+    } else if (input->is_down(KeyCode::S) && pad2_world_rect.min.y > -config->area_extents.y) {
         mat4_translate_xy(&pad2_go->transform, vec2_new(0.0f, -pad_move_speed));
     }
 
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && pad1_world_rect.max.y < config->area_extents.y) {
+    if (input->is_down(KeyCode::Up) && pad1_world_rect.max.y < config->area_extents.y) {
         mat4_translate_xy(&pad1_go->transform, vec2_new(0.0f, pad_move_speed));
-    } else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS &&
-               pad1_world_rect.min.y > -config->area_extents.y) {
+    } else if (input->is_down(KeyCode::Down) && pad1_world_rect.min.y > -config->area_extents.y) {
         mat4_translate_xy(&pad1_go->transform, vec2_new(0.0f, -pad_move_speed));
     }
 

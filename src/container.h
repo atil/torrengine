@@ -34,6 +34,13 @@ struct Array {
         }
     }
 
+    void clear() {
+        for (usize i = 0; i < count; i++) {
+            data[i].~T();
+        }
+        count = 0;
+    }
+
     ~Array() {
         delete[] data;
     }
