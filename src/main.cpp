@@ -58,6 +58,7 @@ int main(void) {
 
     // start from here:
     // - put ui stuff into core
+    // - add key down
     // - consider game over case. do we recreate the core? reset it?
 
     srand((unsigned long)time(NULL));

@@ -241,9 +241,10 @@ static void particle_spawn(Core *core, ParticleProps *props, Renderer *renderer,
 
 static void particle_despawn(Core *core, EntityIndex ent_index) {
     ParticleSource *ps = core->particle_sources[ent_index];
-    particle_source_deinit(ps); // Needs to be before the remove, since remove completely destroys the element
+    // NOTE @BUGFIX: Needs to be before the remove, since remove completely destroys the element
+    particle_source_deinit(ps);
     core->particle_sources.remove(ps);
-    // We don't free *ps here, because we didn't allocate that ps with malloc, but on the stack
+    // NOTE @BUGFIX: We don't free *ps here, because we didn't allocate that ps with malloc, but on the stack
 
     ParticleRenderUnit *ru = core->particle_render[ent_index];
     render_unit_particle_deinit(ru);
