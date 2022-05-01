@@ -70,7 +70,6 @@ int main(void) {
     glewInit(); // Needs to be after context creation
 
     FontData font_data;
-    text_init(&font_data);
 
     Sfx sfx;
     sfx_init(&sfx);
