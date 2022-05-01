@@ -54,6 +54,99 @@ enum class GameState
     GameOver
 };
 
+static void loop(GLFWwindow *window, Core *core, PongWorld *world, PongWorldConfig *config, Renderer *renderer,
+                 ParticlePropRegistry *particle_prop_reg, Sfx *sfx, shader_handle_t world_shader) {
+
+    EntityIndex ui_entity_splash = 0; // TODO @CLEANUP: These are duplicate
+    EntityIndex ui_entity_score = 1;
+    EntityIndex ui_entity_intermission = 2;
+
+    GameState game_state = GameState::Splash;
+    f32 game_time = (f32)glfwGetTime();
+    f32 dt = 0.0f;
+    while (!glfwWindowShouldClose(window)) {
+        dt = (f32)glfwGetTime() - game_time;
+        game_time = (f32)glfwGetTime();
+
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            glfwSetWindowShouldClose(window, true);
+        }
+
+        glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        if (game_state == GameState::Splash) {
+            render_unit_ui_draw(core->ui_render[ui_entity_splash]);
+
+            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
+                world_init(world, sfx);
+                game_state = GameState::Game;
+            }
+        } else if (game_state == GameState::Game) {
+            PongWorldUpdateResult result =
+                world_update(dt, world, core, config, window, sfx, particle_prop_reg, renderer);
+
+            if (result.is_game_over) {
+                sfx_play(sfx, SfxId::SfxGameOver);
+                game_state = GameState::GameOver;
+            }
+
+            // Game draw
+            glActiveTexture(GL_TEXTURE0);
+            glUseProgram(world_shader);
+
+            for (usize i = 0; i < core->go_render.count; i++) {
+                render_unit_draw(core->go_render[i], &(core->go_data[i]->transform));
+            }
+
+            // Particle update/draw
+            Array<EntityIndex> dead_particle_indices(core->particle_sources.count);
+            for (usize i = 0; i < core->particle_sources.count; i++) {
+                ParticleSource *pe = core->particle_sources[i];
+                if (!pe->isAlive) {
+                    dead_particle_indices.add(i);
+                    continue;
+                }
+
+                particle_source_update(pe, dt);
+                render_unit_particle_draw(core->particle_render[i], pe);
+            }
+            for (EntityIndex i = 0; i < dead_particle_indices.count; i++) {
+                particle_despawn(core, i);
+            }
+
+            // UI draw
+            if (result.did_score) {
+                // Update score view
+                widget_set_string(core->ui_widgets[ui_entity_score], world->score);
+                render_unit_ui_update(core->ui_render[ui_entity_score], core->ui_widgets[ui_entity_score]);
+            }
+
+            render_unit_ui_draw(core->ui_render[ui_entity_score]);
+        } else if (game_state == GameState::GameOver) {
+            render_unit_ui_draw(core->ui_render[ui_entity_intermission]);
+
+            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
+                // Reset score
+                UiRenderUnit *ui_ru_score = core->ui_render[ui_entity_score];
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, ui_ru_score->texture);
+                glUseProgram(ui_ru_score->shader);
+                glBindVertexArray(ui_ru_score->vao);
+                render_unit_ui_update(ui_ru_score, core->ui_widgets[ui_entity_score]);
+                glDrawElements(GL_TRIANGLES, (GLsizei)(ui_ru_score->index_count), GL_UNSIGNED_INT, 0);
+                // render_unit_ui_draw(&ui_ru_score, &widget_score);
+
+                world_init(world, sfx);
+                game_state = GameState::Game;
+            }
+        }
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+}
+
 int main(void) {
 
     // start from here:
@@ -70,7 +163,6 @@ int main(void) {
     glewInit(); // Needs to be after context creation
 
     FontData font_data;
-
     Sfx sfx;
 
     const f32 cam_size = 5.0f;
@@ -148,93 +240,9 @@ int main(void) {
     shader_set_mat4(world_shader, "u_view", &renderer.view);
     shader_set_mat4(world_shader, "u_proj", &renderer.proj);
 
-    GameState game_state = GameState::Splash;
-
     PongWorld world;
 
-    f32 game_time = (f32)glfwGetTime();
-    f32 dt = 0.0f;
-    while (!glfwWindowShouldClose(window)) {
-        dt = (f32)glfwGetTime() - game_time;
-        game_time = (f32)glfwGetTime();
-
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            glfwSetWindowShouldClose(window, true);
-        }
-
-        glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        if (game_state == GameState::Splash) {
-            render_unit_ui_draw(core.ui_render[ui_entity_splash]);
-
-            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
-                world_init(&world, &sfx);
-                game_state = GameState::Game;
-            }
-        } else if (game_state == GameState::Game) {
-            PongWorldUpdateResult result =
-                world_update(dt, &world, &core, &config, window, &sfx, &particle_prop_reg, &renderer);
-
-            if (result.is_game_over) {
-                sfx_play(&sfx, SfxId::SfxGameOver);
-                game_state = GameState::GameOver;
-            }
-
-            // Game draw
-            glActiveTexture(GL_TEXTURE0);
-            glUseProgram(world_shader);
-
-            for (usize i = 0; i < core.go_render.count; i++) {
-                render_unit_draw(core.go_render[i], &(core.go_data[i]->transform));
-            }
-
-            // Particle update/draw
-            Array<EntityIndex> dead_particle_indices(core.particle_sources.count);
-            for (usize i = 0; i < core.particle_sources.count; i++) {
-                ParticleSource *pe = core.particle_sources[i];
-                if (!pe->isAlive) {
-                    dead_particle_indices.add(i);
-                    continue;
-                }
-
-                particle_source_update(pe, dt);
-                render_unit_particle_draw(core.particle_render[i], pe);
-            }
-            for (EntityIndex i = 0; i < dead_particle_indices.count; i++) {
-                particle_despawn(&core, i);
-            }
-
-            // UI draw
-            if (result.did_score) {
-                // Update score view
-                widget_set_string(core.ui_widgets[ui_entity_score], world.score);
-                render_unit_ui_update(core.ui_render[ui_entity_score], core.ui_widgets[ui_entity_score]);
-            }
-
-            render_unit_ui_draw(core.ui_render[ui_entity_score]);
-        } else if (game_state == GameState::GameOver) {
-            render_unit_ui_draw(core.ui_render[ui_entity_intermission]);
-
-            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
-                // Reset score
-                UiRenderUnit *ui_ru_score = core.ui_render[ui_entity_score];
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, ui_ru_score->texture);
-                glUseProgram(ui_ru_score->shader);
-                glBindVertexArray(ui_ru_score->vao);
-                render_unit_ui_update(ui_ru_score, core.ui_widgets[ui_entity_score]);
-                glDrawElements(GL_TRIANGLES, (GLsizei)(ui_ru_score->index_count), GL_UNSIGNED_INT, 0);
-                // render_unit_ui_draw(&ui_ru_score, &widget_score);
-
-                world_init(&world, &sfx);
-                game_state = GameState::Game;
-            }
-        }
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
+    loop(window, &core, &world, &config, &renderer, &particle_prop_reg, &sfx, world_shader);
 
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
     glDeleteProgram(ui_shader);    // TODO @CLEANUP: Same with above
