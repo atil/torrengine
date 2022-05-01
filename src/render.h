@@ -247,6 +247,13 @@ static void render_unit_ui_update(UiRenderUnit *ru, Widget *widget) {
     free(text_data.ib_data);
 }
 
+static UiRenderUnit render_unit_ui_init(shader_handle_t shader, Widget *widget) {
+    UiRenderUnit ru;
+    render_unit_ui_alloc(&ru, shader, widget->font_data);
+    render_unit_ui_update(&ru, widget);
+    return ru;
+}
+
 static void render_unit_ui_draw(UiRenderUnit *ru) {
     glBindVertexArray(ru->vao);
     glActiveTexture(GL_TEXTURE0);

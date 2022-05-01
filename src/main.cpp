@@ -125,26 +125,25 @@ int main(void) {
 
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
 
-    Widget widget_splash_title(
-        "TorrPong!!\0", texttransform_new(vec2_new(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f), &font_data);
+    EntityIndex ui_entity_splash = 0;
+    EntityIndex ui_entity_score = 1;
+    EntityIndex ui_entity_intermission = 2;
+
+    // Splash
+    core.ui_widgets.add(Widget(
+        "TorrPong!!\0", texttransform_new(vec2_new(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f), &font_data));
+
     // TODO @BUG: Set this with initial score
-    Widget widget_score("0\0", texttransform_new(vec2_new(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f),
-                        &font_data);
-    Widget widget_intermission("Game Over\0",
+    core.ui_widgets.add(Widget(
+        "0\0", texttransform_new(vec2_new(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f), &font_data));
+    // Intermission
+    core.ui_widgets.add(Widget("Game Over\0",
                                texttransform_new(vec2_new(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f),
-                               &font_data);
+                               &font_data));
 
-    UiRenderUnit ui_ru_splash_title;
-    render_unit_ui_alloc(&ui_ru_splash_title, ui_shader, &font_data);
-    render_unit_ui_update(&ui_ru_splash_title, &widget_splash_title);
-
-    UiRenderUnit ui_ru_score;
-    render_unit_ui_alloc(&ui_ru_score, ui_shader, &font_data);
-    render_unit_ui_update(&ui_ru_score, &widget_score);
-
-    UiRenderUnit ui_ru_intermission;
-    render_unit_ui_alloc(&ui_ru_intermission, ui_shader, &font_data);
-    render_unit_ui_update(&ui_ru_intermission, &widget_intermission);
+    core.ui_render.add(UiRenderUnit(render_unit_ui_init(ui_shader, core.ui_widgets[ui_entity_splash])));
+    core.ui_render.add(UiRenderUnit(render_unit_ui_init(ui_shader, core.ui_widgets[ui_entity_score])));
+    core.ui_render.add(UiRenderUnit(render_unit_ui_init(ui_shader, core.ui_widgets[ui_entity_intermission])));
 
     ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
 
@@ -170,7 +169,7 @@ int main(void) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         if (game_state == GameState::Splash) {
-            render_unit_ui_draw(&ui_ru_splash_title);
+            render_unit_ui_draw(core.ui_render[ui_entity_splash]);
 
             if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
                 world_init(&world, &sfx);
@@ -212,22 +211,23 @@ int main(void) {
             // UI draw
             if (result.did_score) {
                 // Update score view
-                widget_set_string(&widget_score, world.score);
-                render_unit_ui_update(&ui_ru_score, &widget_score);
+                widget_set_string(core.ui_widgets[ui_entity_score], world.score);
+                render_unit_ui_update(core.ui_render[ui_entity_score], core.ui_widgets[ui_entity_score]);
             }
 
-            render_unit_ui_draw(&ui_ru_score);
+            render_unit_ui_draw(core.ui_render[ui_entity_score]);
         } else if (game_state == GameState::GameOver) {
-            render_unit_ui_draw(&ui_ru_intermission);
+            render_unit_ui_draw(core.ui_render[ui_entity_intermission]);
 
             if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
                 // Reset score
+                UiRenderUnit *ui_ru_score = core.ui_render[ui_entity_score];
                 glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, ui_ru_score.texture);
-                glUseProgram(ui_ru_score.shader);
-                glBindVertexArray(ui_ru_score.vao);
-                render_unit_ui_update(&ui_ru_score, &widget_score);
-                glDrawElements(GL_TRIANGLES, (GLsizei)ui_ru_score.index_count, GL_UNSIGNED_INT, 0);
+                glBindTexture(GL_TEXTURE_2D, ui_ru_score->texture);
+                glUseProgram(ui_ru_score->shader);
+                glBindVertexArray(ui_ru_score->vao);
+                render_unit_ui_update(ui_ru_score, core.ui_widgets[ui_entity_score]);
+                glDrawElements(GL_TRIANGLES, (GLsizei)(ui_ru_score->index_count), GL_UNSIGNED_INT, 0);
                 // render_unit_ui_draw(&ui_ru_score, &widget_score);
 
                 world_init(&world, &sfx);
@@ -242,11 +242,7 @@ int main(void) {
     sfx_deinit(&sfx);
 
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
-
-    render_unit_ui_deinit(&ui_ru_score);
-    render_unit_ui_deinit(&ui_ru_intermission);
-    render_unit_ui_deinit(&ui_ru_splash_title);
-    glDeleteProgram(ui_shader); // TODO @CLEANUP: Same with above
+    glDeleteProgram(ui_shader);    // TODO @CLEANUP: Same with above
 
     glfwTerminate();
     return 0;
