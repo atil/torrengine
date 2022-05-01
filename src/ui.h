@@ -4,6 +4,9 @@ struct Widget {
     u8 _padding[4];
     FontData *font_data;
 
+    Widget() : string(), font_data(nullptr) {
+    }
+
     explicit Widget(char *chars, TextTransform transform, FontData *font_data)
         : string(chars), transform(transform), font_data(font_data) {
     }

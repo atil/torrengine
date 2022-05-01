@@ -3,16 +3,20 @@ struct Array {
     T *data;
     usize count;
     usize capacity;
-    void (*deinit_func)(T *);
 
     explicit Array(usize cap) {
-        data = (T *)malloc(sizeof(T) * cap);
+        data = new T[cap];
         count = 0;
         capacity = cap;
     }
 
-    void add(T elem) {
-        assert(count < capacity);
+    void add(const T &elem) {
+        // NOTE @BUGFIX: This argument used to be "add(T elem)" e.g. the value itself
+        // When "elem" keeps some resources (e.g. memory), it's released at the end of this function,
+        // since it's passed by value and that copy dies at the end of this scope
+        // The caller of this function shouldn't have to care about whether T has a dtor or not. This is a point
+        // where we differ from "handmade" C++
+        assert(count < capacity); // TODO @INCOMPLETE: Realloc when it's full
         data[count] = elem;
         count++;
     }
@@ -31,11 +35,9 @@ struct Array {
     }
 
     ~Array() {
-        for (usize i = 0; i < count; i++) {
-            data[i].~T();
-        }
-        free(data);
+        delete[] data;
     }
+    // Array(const &Array rhs) = delete;
 
     T *operator[](usize index) {
         return &(data[index]);
@@ -46,9 +48,12 @@ struct Array {
 // String
 //
 
-struct String {
+struct String { // TODO @INCOMPLETE: Empty string constant
     char *data;
     usize len;
+
+    String() : data(nullptr), len(0) {
+    }
 
     explicit String(char *chars) {
         len = 0;
@@ -59,7 +64,24 @@ struct String {
         data[len] = 0;
     }
 
+    void operator=(const String &rvalue) { // Assigning a string means deep copy
+        // NOTE @BUGFIX: When adding a String to an Array<String>, we do a deep copy, so that when add() function's
+        // parameter is out of scope (and the destructor is called), it won't release the resources of the in-array
+        // string
+        len = rvalue.len;
+        if (data != nullptr) {
+            free(data);
+        }
+        data = (char *)malloc(sizeof(char) * (len + 1));
+        memcpy(data, rvalue.data, len + 1); // We know rvalue.data is null-terminated
+    }
+
     ~String() {
-        free(data);
+        if (data != nullptr) {
+            // NOTE @BUGFIX: Having this pointer null is a valid case: When we have an Array<String>,
+            // not all new'ed (therefore initialized) memory is used, some of it has still nullptr
+            free(data);
+        }
+        data = (char *)nullptr;
     }
 };
