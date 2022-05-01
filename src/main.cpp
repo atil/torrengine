@@ -72,7 +72,6 @@ int main(void) {
     FontData font_data;
 
     Sfx sfx;
-    sfx_init(&sfx);
 
     const f32 cam_size = 5.0f;
 
@@ -236,8 +235,6 @@ int main(void) {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
-    sfx_deinit(&sfx);
 
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
     glDeleteProgram(ui_shader);    // TODO @CLEANUP: Same with above

@@ -32,7 +32,7 @@ struct FontData {
     f32 descent;                                // In pixels
     stbtt_bakedchar font_char_data[CHAR_COUNT]; // TODO @LEAK: This is not leaked, but research anyway
 
-    explicit FontData() {
+    FontData() {
         // TODO @ROBUSTNESS: Assert that it's called once
         u8 *font_bytes = (u8 *)read_file("assets/Consolas.ttf");
         assert(font_bytes != NULL);
