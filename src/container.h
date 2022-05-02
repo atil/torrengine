@@ -21,6 +21,12 @@ struct Array {
         count++;
     }
 
+    void replace(const T &elem, usize index) {
+        assert(index < count);
+        data[index].~T();
+        data[index] = elem;
+    }
+
     void remove(T *elem) {
         // This destroys elem completely
         for (usize i = 0; i < count; i++) {

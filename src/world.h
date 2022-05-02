@@ -11,10 +11,6 @@ struct GameObject {
 };
 
 struct PongWorld {
-    EntityIndex field_ref;
-    EntityIndex pad1_ref;
-    EntityIndex pad2_ref;
-    EntityIndex ball_ref;
     Vec2 ball_move_dir;
     u32 score;
     f32 game_speed_coeff;
@@ -107,12 +103,6 @@ static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_
 }
 
 static void world_init(PongWorld *world) {
-
-    // TODO @CLEANUP: Hardcoded entity indices. These should be set by the entity creation system
-    world->pad1_ref = 1;
-    world->pad2_ref = 2;
-    world->ball_ref = 3;
-
     world->ball_move_dir = vec2_new(1.0f, 0.0f);
     world->score = 0;
     world->game_speed_coeff = 1.0f;
@@ -120,12 +110,12 @@ static void world_init(PongWorld *world) {
 
 // TODO @CLEANUP: Signature looks ugly
 static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, PongWorldConfig *config,
-                                          Input *input, Sfx *sfx, ParticlePropRegistry *particle_prop_reg,
-                                          Renderer *renderer) {
+                                          PongEntities *entities, Input *input, Sfx *sfx,
+                                          ParticlePropRegistry *particle_prop_reg, Renderer *renderer) {
 
-    GameObject *pad1_go = core->go_data[world->pad1_ref];
-    GameObject *pad2_go = core->go_data[world->pad2_ref];
-    GameObject *ball_go = core->go_data[world->ball_ref];
+    GameObject *pad1_go = core->go_data[entities->entity_world_pad1];
+    GameObject *pad2_go = core->go_data[entities->entity_world_pad2];
+    GameObject *ball_go = core->go_data[entities->entity_world_ball];
 
     PongWorldUpdateResult result;
     result.is_game_over = false;

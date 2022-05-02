@@ -43,6 +43,19 @@
 #include "render.h"
 #include "particle.h"
 #include "sfx.h"
+
+// TODO @CLEANUP: How to deal with this? Move to its own file?
+struct PongEntities {
+    EntityIndex entity_ui_splash = 0;
+    EntityIndex entity_ui_score = 1;
+    EntityIndex entity_ui_intermission = 2;
+
+    EntityIndex entity_world_field = 0;
+    EntityIndex entity_world_pad1 = 1;
+    EntityIndex entity_world_pad2 = 2;
+    EntityIndex entity_world_ball = 3;
+};
+
 #include "world.h"
 #pragma warning(pop)
 
@@ -55,29 +68,41 @@ enum class GameState
     GameOver
 };
 
-void reset_game(Core *core, PongWorldConfig *config) {
+// EntityIndex register_gameobject(Core *core, GameObject *go, GoRenderUnit *ru) {
+//     assert(core->go_data.count == core->go_render.count);
+//     core->go_data.add(*go);
+//     core->go_render.add(*ru);
+//     return core->go_data.count - 1;
+// }
 
-    core->go_data.clear();
+// EntityIndex register_widget(Core *core, Widget *widget, UiRenderUnit *ru) {
+//     assert(core->ui_widgets.count == core->ui_render.count);
+//     core->ui_widgets.add(*widget);
+//     core->ui_render.add(*ru);
+//     return core->ui_widgets.count - 1;
+// }
 
-    core->go_data.add(gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10)));        // field
-    core->go_data.add(gameobject_new(vec2_new(config->distance_from_center, 0.0f), config->pad_size));    // 1
-    core->go_data.add(gameobject_new(vec2_new(-(config->distance_from_center), 0.0f), config->pad_size)); // 2
-    core->go_data.add(gameobject_new(vec2_zero(), vec2_one() * 0.2f));                                    // ball
+void reset_game(Core *core, PongEntities *entities, PongWorldConfig *config) {
+    core->go_data.replace(gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10)),
+                          (usize)entities->entity_world_field);
+    core->go_data.replace(gameobject_new(vec2_new(config->distance_from_center, 0.0f), config->pad_size),
+                          (usize)entities->entity_world_pad1);
+    core->go_data.replace(gameobject_new(vec2_new(-(config->distance_from_center), 0.0f), config->pad_size),
+                          (usize)entities->entity_world_pad2);
+    core->go_data.replace(gameobject_new(vec2_zero(), vec2_one() * 0.2f), (usize)entities->entity_world_ball);
 
     // Reset score
-    EntityIndex ui_entity_score = 1; // TODO @CLEANUP: Where to keep these?
-    widget_set_string(core->ui_widgets[ui_entity_score], 0);
-    render_unit_ui_update(core->ui_render[ui_entity_score], core->ui_widgets[ui_entity_score]);
-    render_unit_ui_draw(core->ui_render[ui_entity_score]);
+    EntityIndex entity_ui_score = entities->entity_ui_score;
+    widget_set_string(core->ui_widgets[entity_ui_score], 0);
+    render_unit_ui_update(core->ui_render[entity_ui_score], core->ui_widgets[entity_ui_score]);
+    render_unit_ui_draw(core->ui_render[entity_ui_score]);
 }
 
-static void loop(Core *core, PongWorld *world, PongWorldConfig *config, GLFWwindow *window, Input *input,
-                 Renderer *renderer, ParticlePropRegistry *particle_prop_reg, Sfx *sfx,
+static void loop(Core *core, PongWorld *world, PongEntities *entities, PongWorldConfig *config, GLFWwindow *window,
+                 Input *input, Renderer *renderer, ParticlePropRegistry *particle_prop_reg, Sfx *sfx,
                  shader_handle_t world_shader) {
 
-    EntityIndex ui_entity_splash = 0; // TODO @CLEANUP: These are duplicate
-    EntityIndex ui_entity_score = 1;
-    EntityIndex ui_entity_intermission = 2;
+    EntityIndex entity_ui_score = entities->entity_ui_score;
 
     GameState game_state = GameState::Splash;
     f32 game_time = (f32)glfwGetTime();
@@ -96,7 +121,7 @@ static void loop(Core *core, PongWorld *world, PongWorldConfig *config, GLFWwind
         glClear(GL_COLOR_BUFFER_BIT);
 
         if (game_state == GameState::Splash) {
-            render_unit_ui_draw(core->ui_render[ui_entity_splash]);
+            render_unit_ui_draw(core->ui_render[entities->entity_ui_splash]);
 
             if (input->just_pressed(KeyCode::Enter)) {
                 world_init(world);
@@ -106,7 +131,7 @@ static void loop(Core *core, PongWorld *world, PongWorldConfig *config, GLFWwind
             }
         } else if (game_state == GameState::Game) {
             PongWorldUpdateResult result =
-                world_update(dt, world, core, config, input, sfx, particle_prop_reg, renderer);
+                world_update(dt, world, core, config, entities, input, sfx, particle_prop_reg, renderer);
 
             if (result.is_game_over) {
                 sfx_play(sfx, SfxId::SfxGameOver);
@@ -140,16 +165,16 @@ static void loop(Core *core, PongWorld *world, PongWorldConfig *config, GLFWwind
             // UI draw
             if (result.did_score) {
                 // Update score view
-                widget_set_string(core->ui_widgets[ui_entity_score], world->score);
-                render_unit_ui_update(core->ui_render[ui_entity_score], core->ui_widgets[ui_entity_score]);
+                widget_set_string(core->ui_widgets[entity_ui_score], world->score);
+                render_unit_ui_update(core->ui_render[entity_ui_score], core->ui_widgets[entity_ui_score]);
             }
 
-            render_unit_ui_draw(core->ui_render[ui_entity_score]);
+            render_unit_ui_draw(core->ui_render[entity_ui_score]);
         } else if (game_state == GameState::GameOver) {
-            render_unit_ui_draw(core->ui_render[ui_entity_intermission]);
+            render_unit_ui_draw(core->ui_render[entities->entity_ui_intermission]);
 
             if (input->just_pressed(KeyCode::Enter)) {
-                reset_game(core, config);
+                reset_game(core, entities, config);
                 world_init(world);
                 sfx_play(sfx, SfxId::SfxStart);
                 game_state = GameState::Game;
@@ -225,10 +250,6 @@ int main(void) {
 
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
 
-    EntityIndex ui_entity_splash = 0;
-    EntityIndex ui_entity_score = 1;
-    EntityIndex ui_entity_intermission = 2;
-
     // Splash
     core.ui_widgets.add(Widget(
         "TorrPong!!\0", texttransform_new(vec2_new(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f), &font_data));
@@ -241,11 +262,15 @@ int main(void) {
                                texttransform_new(vec2_new(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f),
                                &font_data));
 
-    core.ui_render.add(UiRenderUnit(render_unit_ui_init(ui_shader, core.ui_widgets[ui_entity_splash])));
-    core.ui_render.add(UiRenderUnit(render_unit_ui_init(ui_shader, core.ui_widgets[ui_entity_score])));
-    core.ui_render.add(UiRenderUnit(render_unit_ui_init(ui_shader, core.ui_widgets[ui_entity_intermission])));
+    PongEntities entities;
+    core.ui_render.add(render_unit_ui_init(ui_shader, core.ui_widgets[entities.entity_ui_splash]));
+    core.ui_render.add(render_unit_ui_init(ui_shader, core.ui_widgets[entities.entity_ui_score]));
+    core.ui_render.add(render_unit_ui_init(ui_shader, core.ui_widgets[entities.entity_ui_intermission]));
 
-    reset_game(&core, &config); // Also does UI reset
+    core.go_data.add(gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10)));
+    core.go_data.add(gameobject_new(vec2_new(config.distance_from_center, 0.0f), config.pad_size));
+    core.go_data.add(gameobject_new(vec2_new(-(config.distance_from_center), 0.0f), config.pad_size));
+    core.go_data.add(gameobject_new(vec2_zero(), vec2_one() * 0.2f));
 
     ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
 
@@ -256,7 +281,7 @@ int main(void) {
     PongWorld world;
     Input input;
 
-    loop(&core, &world, &config, window, &input, &renderer, &particle_prop_reg, &sfx, world_shader);
+    loop(&core, &world, &entities, &config, window, &input, &renderer, &particle_prop_reg, &sfx, world_shader);
 
     glDeleteProgram(world_shader); // TODO @CLEANUP: We'll have some sort of batching probably
     glDeleteProgram(ui_shader);    // TODO @CLEANUP: Same with above
