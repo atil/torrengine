@@ -14,7 +14,9 @@ struct Input {
     bool prev[KeyCode::MAX];
 
     void update(GLFWwindow *window) {
-        memcpy(prev, curr, (usize)KeyCode::MAX * sizeof(KeyCode));
+        // NOTE @BUGFIX: There used to write "sizeof(KeyCode)" here, which is the size of an integer (the enum's
+        // underlying type. But our array is 6 bools
+        memcpy(prev, curr, (usize)KeyCode::MAX * sizeof(bool));
         curr[(usize)KeyCode::W] = (bool)glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
         curr[(usize)KeyCode::S] = (bool)glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
         curr[(usize)KeyCode::Down] = (bool)glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS;
