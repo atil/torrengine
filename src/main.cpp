@@ -1,6 +1,9 @@
 // start from here:
 // - make the engine a library. in which way do we divide things into its own modules?
-// - gameObject ctor
+//   - replace "particle_spawn" with the "register" thing that we did for other stuff
+// - write down which structs need ctor/dtor, i.e. the ones that can be array elements
+// - implement Array::add_move(). deepcopy'ing stuff every time we add to array is bad
+// - rename: deinit->dispose
 // - mat4 shenanigans
 // - EntityId struct. keeps EntityIndex and a tag string
 
