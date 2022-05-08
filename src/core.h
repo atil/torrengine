@@ -1,6 +1,16 @@
 struct EntityId {
     EntityIndex index;
     String tag;
+
+    // NOTE @BUGFIX: Default ctor isn't auto-generated as soon as we define _any_ ctor. Because of the explicit
+    // ctor below, we need this manual default ctor
+    EntityId() : index(0), tag() {
+    }
+
+    explicit EntityId(EntityIndex i, String tag_arg) {
+        index = i;
+        tag = tag_arg;
+    }
 };
 
 struct Core {

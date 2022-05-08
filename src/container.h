@@ -4,8 +4,12 @@ struct Array {
     usize count;
     usize capacity;
 
+    Array() = delete;
+
     explicit Array(usize cap) {
+        // NOTE @BUGFIX: If a type can be an array element, then it needs a default ctor because of this:
         data = new T[cap];
+
         count = 0;
         capacity = cap;
     }

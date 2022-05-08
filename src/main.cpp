@@ -1,10 +1,10 @@
 // start from here:
+// - populate entityIds and implement get_entity_by_tag() to get rid of PongEntities
 // - make the engine a library. in which way do we divide things into its own modules?
 // - write down which structs need ctor/dtor, i.e. the ones that can be array elements
 // - implement Array::add_move(). deepcopy'ing stuff every time we add to array is bad
 // - rename: deinit->dispose
 // - mat4 shenanigans
-// - EntityId struct. keeps EntityIndex and a tag string
 
 // NOTE @DOCS: Game origin: up-left
 
@@ -84,7 +84,11 @@ EntityIndex register_particle(Core *core, ParticleProps *props, Renderer *render
     core->particle_sources.add(source);
     core->particle_render.add(ru);
 
-    return core->particle_sources.count - 1;
+    EntityIndex index = core->particle_sources.count - 1;
+
+    // core->entities.add(index, "Particle"); // Would this work?
+
+    return index;
 }
 
 static void deregister_particle(Core *core, EntityIndex ent_index) {
