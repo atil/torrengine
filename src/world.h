@@ -173,7 +173,7 @@ static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, 
         ParticleProps *hit_particle_prop =
             collision_point.x > 0 ? &particle_prop_reg->pad_hit_right : &particle_prop_reg->pad_hit_left;
 
-        particle_spawn(core, hit_particle_prop, renderer, collision_point);
+        register_particle(core, hit_particle_prop, renderer, collision_point);
     }
 
     if (ball_next_pos.y > config->area_extents.y || ball_next_pos.y < -config->area_extents.y) {

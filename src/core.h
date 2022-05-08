@@ -13,7 +13,9 @@ struct Core {
 
     Array<EntityId> entities; // This is gonna replace PongEntities
 
-    Core() : go_data(10), go_render(10), particle_sources(10), particle_render(10), ui_widgets(10), ui_render(10) {
+    Core()
+        : go_data(10), go_render(10), particle_sources(10), particle_render(10), ui_widgets(10), ui_render(10),
+          entities(100) {
     }
 
     Core(const Core &) = delete;
@@ -21,6 +23,6 @@ struct Core {
     Core &operator=(const Core &) = delete;
     Core &operator=(const Core &&) = delete;
 
-    EntityIndex get_entity_by_tag(String *tag);
+    EntityIndex get_entity_by_tag(String *tag); // TODO @INCOMPLETE
 };
 

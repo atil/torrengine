@@ -1,6 +1,5 @@
 // start from here:
 // - make the engine a library. in which way do we divide things into its own modules?
-//   - replace "particle_spawn" with the "register" thing that we did for other stuff
 // - write down which structs need ctor/dtor, i.e. the ones that can be array elements
 // - implement Array::add_move(). deepcopy'ing stuff every time we add to array is bad
 // - rename: deinit->dispose
@@ -40,18 +39,23 @@
 #pragma warning(disable : 4996) // TODO @ROBUSTNESS: Address these deprecated CRT functions
 #pragma warning(disable : 5045) // Spectre thing
 #pragma warning(disable : 4505) // Unreferenced functions
+
+// Core module (lib)
 #include "types.h"
 #include "container.h"
 #include "util.h"
 #include "tomath.h"
-#include "core.h"
 
+// Engine module
+#include "core.h"
 #include "input.h"
 #include "shader.h"
 #include "ui.h"
 #include "render.h"
 #include "particle.h"
 #include "sfx.h"
+
+// Game module
 
 // TODO @CLEANUP: How to deal with this? Move to its own file?
 struct PongEntities {
@@ -64,6 +68,36 @@ struct PongEntities {
     EntityIndex entity_world_pad2 = 2;
     EntityIndex entity_world_ball = 3;
 };
+
+EntityIndex register_particle(Core *core, ParticleProps *props, Renderer *renderer, Vec2 emit_point) {
+    shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
+    ParticleSource source = particle_source_init(props, emit_point);
+    ParticleRenderUnit ru = render_unit_particle_init(props->count, particle_shader, "assets/Ball.png");
+    source.isAlive = true; // TODO @INCOMPLETE: We might want make this alive later
+
+    glUseProgram(ru.shader);
+    Mat4 mat_identity = mat4_identity();
+    shader_set_mat4(ru.shader, "u_model", &mat_identity);
+    shader_set_mat4(ru.shader, "u_view", &(renderer->view));
+    shader_set_mat4(ru.shader, "u_proj", &(renderer->proj));
+
+    core->particle_sources.add(source);
+    core->particle_render.add(ru);
+
+    return core->particle_sources.count - 1;
+}
+
+static void deregister_particle(Core *core, EntityIndex ent_index) {
+    ParticleSource *ps = core->particle_sources[ent_index];
+    // NOTE @BUGFIX: Needs to be before the remove, since remove completely destroys the element
+    particle_source_deinit(ps);
+    core->particle_sources.remove(ps);
+    // NOTE @BUGFIX: We don't free *ps here, because we didn't allocate that ps with malloc, but on the stack
+
+    ParticleRenderUnit *ru = core->particle_render[ent_index];
+    render_unit_particle_deinit(ru);
+    core->particle_render.remove(ru);
+}
 
 #include "world.h"
 #pragma warning(pop)
@@ -117,6 +151,7 @@ void reset_game(Core *core, PongEntities *entities, PongWorldConfig *config) {
     render_unit_ui_draw(core->ui_render[entity_ui_score]);
 }
 
+// This is gonna be a part of the game module
 static void loop(Core *core, PongWorld *world, PongEntities *entities, PongWorldConfig *config, GLFWwindow *window,
                  Input *input, Renderer *renderer, ParticlePropRegistry *particle_prop_reg, Sfx *sfx,
                  shader_handle_t world_shader) {
@@ -178,7 +213,7 @@ static void loop(Core *core, PongWorld *world, PongEntities *entities, PongWorld
                 render_unit_particle_draw(core->particle_render[i], pe);
             }
             for (EntityIndex i = 0; i < dead_particle_indices.count; i++) {
-                particle_despawn(core, i);
+                deregister_particle(core, i);
             }
 
             // UI draw

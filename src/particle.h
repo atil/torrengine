@@ -221,32 +221,3 @@ static void render_unit_particle_deinit(ParticleRenderUnit *ru) {
 
     free(ru->vert_data);
 }
-
-static void particle_spawn(Core *core, ParticleProps *props, Renderer *renderer, Vec2 emit_point) {
-
-    shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
-    ParticleSource source = particle_source_init(props, emit_point);
-    ParticleRenderUnit ru = render_unit_particle_init(props->count, particle_shader, "assets/Ball.png");
-    source.isAlive = true; // TODO @INCOMPLETE: We might want make this alive later
-
-    glUseProgram(ru.shader);
-    Mat4 mat_identity = mat4_identity();
-    shader_set_mat4(ru.shader, "u_model", &mat_identity);
-    shader_set_mat4(ru.shader, "u_view", &(renderer->view));
-    shader_set_mat4(ru.shader, "u_proj", &(renderer->proj));
-
-    core->particle_sources.add(source);
-    core->particle_render.add(ru);
-}
-
-static void particle_despawn(Core *core, EntityIndex ent_index) {
-    ParticleSource *ps = core->particle_sources[ent_index];
-    // NOTE @BUGFIX: Needs to be before the remove, since remove completely destroys the element
-    particle_source_deinit(ps);
-    core->particle_sources.remove(ps);
-    // NOTE @BUGFIX: We don't free *ps here, because we didn't allocate that ps with malloc, but on the stack
-
-    ParticleRenderUnit *ru = core->particle_render[ent_index];
-    render_unit_particle_deinit(ru);
-    core->particle_render.remove(ru);
-}
