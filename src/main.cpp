@@ -1,5 +1,5 @@
 // start from here:
-// - populate entityIds and implement get_entity_by_tag() to get rid of PongEntities
+// - replace entityId with entity, which has an id and the bitmask
 // - make the engine a library. in which way do we divide things into its own modules?
 // - write down which structs need ctor/dtor, i.e. the ones that can be array elements
 // - implement Array::add_move(). deepcopy'ing stuff every time we add to array is bad

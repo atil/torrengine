@@ -13,13 +13,18 @@ struct EntityId {
     }
 };
 
+struct Entity {
+    u32 index;
+    u32 mask;
+};
+
 struct Core {
-    Array<struct GameObject> go_data;
-    Array<struct GoRenderUnit> go_render;
-    Array<struct ParticleSource> particle_sources;
-    Array<struct ParticleRenderUnit> particle_render;
-    Array<struct Widget> ui_widgets;
-    Array<struct UiRenderUnit> ui_render;
+    Array<struct GameObject> go_data;                 // 0
+    Array<struct GoRenderUnit> go_render;             // 1
+    Array<struct ParticleSource> particle_sources;    // 2
+    Array<struct ParticleRenderUnit> particle_render; // 3
+    Array<struct Widget> ui_widgets;                  // 4
+    Array<struct UiRenderUnit> ui_render;             // 5
 
     Array<EntityId> entities; // This is gonna replace PongEntities
 
