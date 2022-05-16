@@ -86,12 +86,15 @@ struct String { // TODO @INCOMPLETE: Empty string constant
         data[len] = 0;
     }
 
+    // TODO @ROBUSTNESS: There are so many strings attach to this operator. Rethink this.
     void operator=(const String &rhs) { // Assigning a string means deep copy
         // NOTE @BUGFIX: When adding a String to an Array<String>, we do a deep copy, so that when add() function's
         // parameter is out of scope (and the destructor is called), it won't release the resources of the in-array
         // string
         len = rhs.len;
         if (data != nullptr) {
+            // TODO @ROBUSTNESS: This means we have to zero-initialize this struct _every_ time
+            // i.e. can't just malloc and start using it
             free(data);
         }
         data = (char *)malloc(sizeof(char) * (len + 1));
@@ -221,6 +224,8 @@ struct TagMap {
             bucket = bucket->next;
         }
 
+        // TODO @ROBUSTNESS: Need calloc to zero-initalize the key string. 
+        // Otherwise its assignment operator fails
         bucket = (TagMapNode<T> *)calloc(1, sizeof(TagMapNode<T>));
         bucket->key = *key; // Copies key string
         bucket->value = value;
