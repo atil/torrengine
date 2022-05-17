@@ -56,7 +56,8 @@ struct Core {
     Array<struct Widget> ui_widgets;                  // 4
     Array<struct UiRenderUnit> ui_render;             // 5
 
-    Array<Entity> entities; // This is gonna replace PongEntities
+    Array<Entity> entities;
+    TagMap<Entity> tagged_entities; // This is gonna replace PongEntities
 
     ComponentArray<struct GameObject> go_data_comps;
     ComponentArray<struct GoRenderUnit> go_render_comps;
@@ -83,6 +84,11 @@ struct Core {
         e.id = next_entity_id;
         next_entity_id++;
         return e;
+    }
+
+    void remove_entity(Entity e) {
+        entities.remove(&e);
+        // TODO @INCOMPLETE: Remove it from the tagmap as well
     }
 };
 

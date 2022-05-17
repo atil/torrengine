@@ -1,10 +1,12 @@
 // tasks:
-// - continue implement map
-// - we should get rid of pointer types in components. it'll be a lot clearer if they're dumb data
+// - add tagged entities to Core.tagged_entities and remove PongEntities
+// - get rid of EntityIndex
+// - assess if we need to use "new" in Array's ctor. what if we don't call the ctors of elements?
+// - assess if we can get rid of pointer types in components. it'll be a lot clearer if they're dumb data
 // - make the engine a library. in which way do we divide things into its own modules?
 // - write down which structs need ctor/dtor, i.e. the ones that can be array elements
 // - implement Array::add_move(). deepcopy'ing stuff every time we add to array is bad
-// - rename: deinit->dispose
+// - clear glossary. create or init? rename: deinit->dispose
 // - mat4 shenanigans
 
 // NOTE @DOCS: Game origin: up-left
@@ -97,17 +99,19 @@ EntityIndex register_particle(Core *core, ParticleProps *props, Renderer *render
 
 #pragma warning(disable : 5045) // Spectre thing
 
-int main(void) {
+int _main(void) { // Testbed
     TagMap<usize> tagmap(30);
-    String key("test");
-    tagmap.add_or_update(&key, 3);
-    usize *result = tagmap.get(&key);
-    // Test more adds with collisions, and removal
+    String key1("test1");
+    String key2("test2");
+    tagmap.add_or_update(&key2, 5);
+    tagmap.add_or_update(&key1, 3);
+    tagmap.remove(&key2);
+    usize *result = tagmap.get(&key1);
     printf("result: %zd\n", *result);
     return 0;
 }
 
-int _main(void) {
+int main(void) {
     main_game();
     return 0;
 }

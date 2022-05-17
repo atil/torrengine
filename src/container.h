@@ -38,7 +38,7 @@ struct Array {
     void remove(T *elem) {
         // This destroys elem completely
         for (usize i = 0; i < count; i++) {
-            if (memcmp(&data[i], elem, sizeof(T)) == 0) {
+            if (memcmp(&data[i], elem, sizeof(T)) == 0) { // Shift the rest to keep the order
                 for (usize j = i; j < count - 1; j++) {
                     data[j] = data[j + 1];
                 }
@@ -204,11 +204,12 @@ struct TagMap {
     }
 
     usize hash_func(String *key) {
-        u32 sum = 0;
-        for (usize i = 0; i < key->len; i++) {
-            sum += (u32)key->data[i];
-        }
-        return (sum % 599) % capacity;
+        return 4;
+        // u32 sum = 0;
+        // for (usize i = 0; i < key->len; i++) {
+        //     sum += (u32)key->data[i];
+        // }
+        // return (sum % 599) % capacity;
     }
 
     void add_or_update(String *key, T value) {
@@ -224,7 +225,7 @@ struct TagMap {
             bucket = bucket->next;
         }
 
-        // TODO @ROBUSTNESS: Need calloc to zero-initalize the key string. 
+        // TODO @ROBUSTNESS: Need calloc to zero-initalize the key string.
         // Otherwise its assignment operator fails
         bucket = (TagMapNode<T> *)calloc(1, sizeof(TagMapNode<T>));
         bucket->key = *key; // Copies key string
@@ -252,21 +253,28 @@ struct TagMap {
 
     void remove(String *key) {
         usize bucket_index = hash_func(key);
-        TagMapNode<T> *bucket_to_remove = buckets[i];
+        TagMapNode<T> *node_to_remove = buckets[bucket_index];
+        TagMapNode<T> *prev_node = nullptr;
 
-        while (bucket_to_remove != nullptr) {
-            if (bucket_to_remove->key == key) {
+        while (node_to_remove != nullptr) {
+            if (node_to_remove->key == key) {
                 break;
             }
-            bucket_to_remove = bucket_to_remove->next;
+            prev_node = node_to_remove;
+            node_to_remove = node_to_remove->next;
         }
-        assert(bucket_to_remove != nullptr);
+        assert(node_to_remove != nullptr);
 
-        bucket_to_remove->key.~String();
-        TagMapNode<T> *next = bucket_to_remove->next;
-        bucket_to_remove->value.~T();
-        free(bucket_to_remove);
-        bucket_to_remove = next;
+        node_to_remove->key.~String();
+        node_to_remove->value.~T();
+        TagMapNode<T> *next = node_to_remove->next;
+        free(node_to_remove);
+
+        if (prev_node == nullptr) {
+            buckets[bucket_index] = next; // Removing the first node of the bucket
+        } else {
+            prev_node->next = next;
+        }
     }
 
     ~TagMap() {
@@ -280,6 +288,8 @@ struct TagMap {
                 bucket = next;
             }
         }
+
+        free(buckets);
     }
 
     TagMap(const TagMap &) = delete;

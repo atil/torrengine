@@ -166,6 +166,8 @@ static void main_game() {
 
     glewInit(); // Needs to be after context creation
 
+    // TODO @CLEANUP: Remove the init code for these from default ctors
+    // It's weird to have code run on variable declarations
     FontData font_data;
     Sfx sfx;
 
