@@ -29,6 +29,47 @@ struct Array {
         count++;
     }
 
+/*
+    // One way of implementing move, C++98 style
+    // Cons: introduces inheritence, have to use new, can't use malloc
+    // Pros: stays c-with-classes-with-new-instead-of-malloc
+    
+    void add_move(T *elem) {
+        data[count] = elem->move();
+    }
+
+    template<class T>
+    struct IMoveable {
+        virtual T move() = 0;
+    };
+
+    struct String : public IMoveable<String> {...} 
+
+    String::move() {
+        String s = *this;
+        this->data = nullptr;
+        return s;
+    }
+*/
+/*
+    // Other way, with rvalue references
+    // Cons: goes beyond c-with-classes, strange mix of malloc and move, wtf
+    // Pros: no inheritence
+    
+    static T&& move(T *obj) {
+        return (T&&) (*obj);
+    }
+    
+    void add_move(T *elem) {
+        data[count] = move(elem);
+    }
+
+    void operator=(String&& moved_out_of) {
+        this->data = moved_out_of->data;
+        moved_out_of->data = nullptr;
+    }
+*/
+
     void replace(const T &elem, usize index) {
         assert(index < count);
         data[index].~T();
@@ -39,6 +80,7 @@ struct Array {
         // This destroys elem completely
         for (usize i = 0; i < count; i++) {
             if (memcmp(&data[i], elem, sizeof(T)) == 0) { // Shift the rest to keep the order
+                // TODO @BUG: If elem keeps a pointer, we need to free that. Call dtor here
                 for (usize j = i; j < count - 1; j++) {
                     data[j] = data[j + 1];
                 }
