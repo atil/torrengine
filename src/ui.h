@@ -69,7 +69,7 @@ static TextTransform texttransform_new(Vec2 anchor, f32 height, TextWidthType wi
 }
 
 struct Widget {
-    String string;
+    std::string string;
     TextTransform transform;
     u8 _padding[4];
     FontData *font_data;
@@ -85,6 +85,6 @@ struct Widget {
 static void widget_set_string(Widget *widget, u32 integer) {
     char int_str_buffer[32]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
     sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", integer);
-    widget->string.~String();
-    widget->string = String(int_str_buffer);
+
+    // TODO @INCOMPLETE: Implement
 }

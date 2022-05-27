@@ -3,11 +3,27 @@
 struct Rect {
     Vec2 min;
     Vec2 max;
+
+    explicit Rect(Vec2 center, Vec2 size) {
+        f32 x_min = center.x - size.x / 2.0f;
+        f32 x_max = center.x + size.x / 2.0f;
+        f32 y_min = center.y - size.y / 2.0f;
+        f32 y_max = center.y + size.y / 2.0f;
+
+        min = vec2_new(x_min, y_min);
+        max = vec2_new(x_max, y_max);
+    }
 };
 
-struct GameObject {
+struct GoData {
     Rect rect;
     Mat4 transform;
+
+    explicit GoData(Vec2 pos, Vec2 size) : rect(vec2_zero(), size) {
+        transform = mat4_identity();
+        mat4_translate_xy(&transform, pos);
+        mat4_set_scale_xy(&transform, size);
+    }
 };
 
 struct PongWorld {
@@ -30,44 +46,21 @@ struct PongWorldUpdateResult {
     bool did_score;
 };
 
-static Rect rect_new(Vec2 center, Vec2 size) {
-    f32 x_min = center.x - size.x / 2.0f;
-    f32 x_max = center.x + size.x / 2.0f;
-    f32 y_min = center.y - size.y / 2.0f;
-    f32 y_max = center.y + size.y / 2.0f;
-
-    Rect r;
-    r.min = vec2_new(x_min, y_min);
-    r.max = vec2_new(x_max, y_max);
-    return r;
-}
-
-static GameObject gameobject_new(Vec2 pos, Vec2 size) {
-    GameObject go;
-    go.rect = rect_new(vec2_zero(), size);
-    Mat4 transform = mat4_identity();
-    mat4_translate_xy(&transform, pos);
-    mat4_set_scale_xy(&transform, size);
-    go.transform = transform;
-
-    return go;
-}
-
-static Rect gameobject_get_world_rect(const GameObject *go) {
-    Vec2 go_pos = mat4_get_pos_xy(&(go->transform));
-    Rect rect_world = go->rect;
+static Rect gameobject_get_world_rect(const GoData &go) {
+    Vec2 go_pos = mat4_get_pos_xy(&(go.transform));
+    Rect rect_world = go.rect;
     rect_world.min = rect_world.min + go_pos;
     rect_world.max = rect_world.max + go_pos;
 
     return rect_world;
 }
 
-static bool gameobject_is_point_in(GameObject *go, Vec2 p) {
+static bool gameobject_is_point_in(const GoData &go, Vec2 p) {
     Rect rect_world = gameobject_get_world_rect(go);
     return p.x > rect_world.min.x && p.x < rect_world.max.x && p.y > rect_world.min.y && p.y < rect_world.max.y;
 }
 
-static bool pad_resolve_point(GameObject *pad_go, Vec2 p, int resolve_dir, f32 *out_resolved_x) {
+static bool pad_resolve_point(const GoData &pad_go, Vec2 p, int resolve_dir, f32 *out_resolved_x) {
     if (gameobject_is_point_in(pad_go, p)) {
         // 1 is right pad, -1 is left
         // TODO @ROBUSNESS: Assert here that resolve_dir is either -1 or 1
@@ -79,8 +72,8 @@ static bool pad_resolve_point(GameObject *pad_go, Vec2 p, int resolve_dir, f32 *
     return false;
 }
 
-static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_from, Vec2 ball_displacement_to,
-                                     Vec2 *collision_point) {
+static bool pad_ball_collision_check(const GoData &pad_go, Vec2 ball_displacement_from, Vec2 ball_displacement_to,
+                                     Vec2 *out_collision_point) {
     Rect rect_world = gameobject_get_world_rect(pad_go);
     Vec2 edges[4] = {
         rect_world.min,
@@ -94,7 +87,7 @@ static bool pad_ball_collision_check(GameObject *pad_go, Vec2 ball_displacement_
         bool has_intersection = check_line_segment_intersection(ball_displacement_from, ball_displacement_to,
                                                                 edges[i], edges[(i + 1) % 4], &intersection);
         if (has_intersection) {
-            *collision_point = intersection;
+            *out_collision_point = intersection;
             return true;
         }
     }
@@ -111,11 +104,11 @@ static void world_init(PongWorld *world) {
 // TODO @CLEANUP: Signature looks ugly
 static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, PongWorldConfig *config,
                                           PongEntities *entities, Input *input, Sfx *sfx,
-                                          ParticlePropRegistry *particle_prop_reg, Renderer *renderer) {
+                                          ParticlePropRegistry *particle_prop_reg, const Renderer &renderer) {
 
-    GameObject *pad1_go = core->go_data[entities->entity_world_pad1];
-    GameObject *pad2_go = core->go_data[entities->entity_world_pad2];
-    GameObject *ball_go = core->go_data[entities->entity_world_ball];
+    GoData &pad1_go = core->go_data[entities->entity_world_pad1];
+    GoData &pad2_go = core->go_data[entities->entity_world_pad2];
+    GoData &ball_go = core->go_data[entities->entity_world_ball];
 
     PongWorldUpdateResult result;
     result.is_game_over = false;
@@ -127,22 +120,22 @@ static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, 
     f32 pad_move_speed = config->pad_move_speed * world->game_speed_coeff * dt;
 
     if (input->is_down(KeyCode::W) && pad2_world_rect.max.y < config->area_extents.y) {
-        mat4_translate_xy(&pad2_go->transform, vec2_new(0.0f, pad_move_speed));
+        mat4_translate_xy(&pad2_go.transform, vec2_new(0.0f, pad_move_speed));
     } else if (input->is_down(KeyCode::S) && pad2_world_rect.min.y > -config->area_extents.y) {
-        mat4_translate_xy(&pad2_go->transform, vec2_new(0.0f, -pad_move_speed));
+        mat4_translate_xy(&pad2_go.transform, vec2_new(0.0f, -pad_move_speed));
     }
 
     if (input->is_down(KeyCode::Up) && pad1_world_rect.max.y < config->area_extents.y) {
-        mat4_translate_xy(&pad1_go->transform, vec2_new(0.0f, pad_move_speed));
+        mat4_translate_xy(&pad1_go.transform, vec2_new(0.0f, pad_move_speed));
     } else if (input->is_down(KeyCode::Down) && pad1_world_rect.min.y > -config->area_extents.y) {
-        mat4_translate_xy(&pad1_go->transform, vec2_new(0.0f, -pad_move_speed));
+        mat4_translate_xy(&pad1_go.transform, vec2_new(0.0f, -pad_move_speed));
     }
 
     //
     // Ball move
     //
 
-    Vec2 ball_pos = mat4_get_pos_xy(&ball_go->transform);
+    Vec2 ball_pos = mat4_get_pos_xy(&ball_go.transform);
     Vec2 ball_displacement = world->ball_move_dir * (config->ball_speed * world->game_speed_coeff * dt);
     Vec2 ball_next_pos = ball_pos + ball_displacement;
 
@@ -170,8 +163,8 @@ static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, 
 
         sfx_play(sfx, SfxId::SfxHitPad);
 
-        ParticleProps *hit_particle_prop =
-            collision_point.x > 0 ? &particle_prop_reg->pad_hit_right : &particle_prop_reg->pad_hit_left;
+        const ParticleProps &hit_particle_prop =
+            collision_point.x > 0 ? particle_prop_reg->pad_hit_right : particle_prop_reg->pad_hit_left;
 
         register_particle(core, hit_particle_prop, renderer, collision_point);
     }
@@ -188,7 +181,7 @@ static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, 
 
     result.is_game_over = ball_next_pos.x > config->area_extents.x || ball_next_pos.x < -config->area_extents.x;
 
-    mat4_set_pos_xy(&ball_go->transform, ball_next_pos);
+    mat4_set_pos_xy(&ball_go.transform, ball_next_pos);
 
     return result;
 }

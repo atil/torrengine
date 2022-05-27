@@ -1,15 +1,5 @@
 // tasks:
-// - add tagged entities to Core.tagged_entities and remove PongEntities
-// - get rid of EntityIndex
-// - either: assess if we can get rid of pointer types in components. it'll be a lot clearer if they're dumb data
-//   - directly construct stuff into the component arrays
-// - or: containers assesment:
-//   - assess if we need to use "new" in Array's ctor. what if we don't call the ctors of elements?
-//   - guideline: containers own their data
-//   - implement Array::add_move(). deepcopy'ing stuff every time we add to array is bad. see the comments in array
-//   - write down which structs need ctor/dtor, i.e. the ones that can be array elements
-// - make the engine a library. in which way do we divide things into its own modules?
-// - have clear glossary. create or init? rename: deinit->dispose
+// - core vectors should be: gameobjects, particles, ui.
 // - mat4 shenanigans
 
 // NOTE @DOCS: Game origin: up-left
@@ -36,6 +26,7 @@
 #include <string.h>
 #include <time.h>
 #include <vector>
+#include <string>
 #pragma warning(pop)
 
 #define WIDTH 640
@@ -48,7 +39,6 @@
 
 // Core module (lib)
 #include "types.h"
-#include "container.h"
 #include "util.h"
 #include "tomath.h"
 
@@ -75,44 +65,13 @@ struct PongEntities {
     EntityIndex entity_world_ball = 3;
 };
 
-EntityIndex register_particle(Core *core, ParticleProps *props, Renderer *renderer, Vec2 emit_point) {
-    shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
-    ParticleSource source = particle_source_init(props, emit_point);
-    ParticleRenderUnit ru = render_unit_particle_init(props->count, particle_shader, "assets/Ball.png");
-    source.isAlive = true; // TODO @INCOMPLETE: We might want make this alive later
-
-    glUseProgram(ru.shader);
-    Mat4 mat_identity = mat4_identity();
-    shader_set_mat4(ru.shader, "u_model", &mat_identity);
-    shader_set_mat4(ru.shader, "u_view", &(renderer->view));
-    shader_set_mat4(ru.shader, "u_proj", &(renderer->proj));
-
-    Entity e = core->generate_entity();
-    e.mask = (1 << (u32)ComponentType::ParticleData) | (1 << (u32)ComponentType::ParticleRender);
-    core->particle_data_comps.register_component(e, source);
-    core->particle_render_comps.register_component(e, ru);
-    core->entities.add(e);
-
-    return 0;
-}
+EntityIndex register_particle(Core *core, const ParticleProps &props, const Renderer &renderer, Vec2 emit_point);
 
 #include "world.h"
 #include "game.h"
 #pragma warning(pop)
 
 #pragma warning(disable : 5045) // Spectre thing
-
-int _main(void) { // Testbed
-    TagMap<usize> tagmap(30);
-    String key1("test1");
-    String key2("test2");
-    tagmap.add_or_update(&key2, 5);
-    tagmap.add_or_update(&key1, 3);
-    tagmap.remove(&key2);
-    usize *result = tagmap.get(&key1);
-    printf("result: %zd\n", *result);
-    return 0;
-}
 
 int main(void) {
     main_game();
