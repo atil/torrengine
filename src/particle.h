@@ -22,7 +22,7 @@ struct ParticleSource {
     f32 life;
     Vec2 emit_point;
     f32 transparency;
-    bool isAlive;
+    bool is_alive;
     u8 _padding[7];
 
     explicit ParticleSource(const ParticleProps &props, Vec2 emit_point) : props(props), emit_point(emit_point) {
@@ -30,7 +30,9 @@ struct ParticleSource {
         particles = new Particle[props.count];
 
         life = 0;
-        isAlive = false;
+
+        // TODO @INCOMPLETE: Probably we'll pool particle sources and keep them "dead" until we instantiate one
+        is_alive = true;
 
         for (u32 i = 0; i < props.count; i++) {
             particles[i].index = i;
@@ -44,7 +46,9 @@ struct ParticleSource {
         }
     }
 
-    ParticleSource(ParticleSource &&rhs) : props(rhs.props) {
+    ParticleSource(ParticleSource &&rhs)
+        : props(rhs.props), life(rhs.life), emit_point(rhs.emit_point), transparency(rhs.transparency),
+          is_alive(rhs.is_alive) {
         positions = rhs.positions;
         particles = rhs.particles;
         rhs.positions = nullptr;
@@ -59,8 +63,8 @@ struct ParticleSource {
         return *this;
     }
 
-    ParticleSource(const ParticleSource &rhs) = default;
-    ParticleSource &operator=(const ParticleSource &rhs) = default;
+    ParticleSource(const ParticleSource &rhs) = delete;
+    ParticleSource &operator=(const ParticleSource &rhs) = delete;
 
     ~ParticleSource() {
         delete positions;
@@ -77,7 +81,7 @@ struct ParticleSource {
 
         life += dt;
         transparency = (props.lifetime - life) / props.lifetime;
-        isAlive = life < props.lifetime;
+        is_alive = life < props.lifetime;
     }
 };
 
@@ -92,7 +96,8 @@ struct ParticleRenderUnit {
     u32 vert_data_len; // TODO @CLEANUP: Why is this u32?
     f32 *vert_data;
 
-    explicit ParticleRenderUnit(usize particle_count, shader_handle_t shader, const char *texture_file_name) {
+    explicit ParticleRenderUnit(usize particle_count, shader_handle_t shader, const char *texture_file_name)
+        : shader(shader) {
         // TODO @CLEANUP: VLAs would simplify this allocation
         f32 single_particle_vert[8] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
         vert_data_len = (u32)particle_count * sizeof(single_particle_vert);
@@ -123,7 +128,6 @@ struct ParticleRenderUnit {
         }
 
         index_count = (u32)index_data_len;
-        shader = shader;
 
         glGenVertexArrays(1, &(vao));
         glGenBuffers(1, &(vbo));
@@ -165,7 +169,8 @@ struct ParticleRenderUnit {
         free(uv_data);
     }
 
-    ParticleRenderUnit(ParticleRenderUnit &&rhs) {
+    ParticleRenderUnit(ParticleRenderUnit &&rhs)
+        : vao(rhs.vao), vbo(rhs.vbo), ibo(rhs.ibo), shader(rhs.shader), texture(rhs.texture) {
         vert_data = rhs.vert_data;
         rhs.vert_data = nullptr;
     }
@@ -176,8 +181,8 @@ struct ParticleRenderUnit {
         return *this;
     }
 
-    ParticleRenderUnit(const ParticleRenderUnit &rhs) = default;
-    ParticleRenderUnit &operator=(const ParticleRenderUnit &rhs) = default;
+    ParticleRenderUnit(const ParticleRenderUnit &rhs) = delete;
+    ParticleRenderUnit &operator=(const ParticleRenderUnit &rhs) = delete;
 
     ~ParticleRenderUnit() {
         glDeleteVertexArrays(1, &(vao));
@@ -185,7 +190,7 @@ struct ParticleRenderUnit {
         glDeleteBuffers(1, &(uv_bo));
         glDeleteBuffers(1, &(ibo));
 
-        glDeleteProgram(shader);
+        glDeleteProgram(shader); // This shader is created for this renderUnit specifically
         glDeleteTextures(1, &texture);
 
         free(vert_data);

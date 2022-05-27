@@ -24,6 +24,10 @@ struct TextTransform {
     f32 height; // In NDC
     TextWidthType width_type;
     f32 width; // In NDC
+
+    explicit TextTransform(Vec2 anchor, f32 height, TextWidthType width_type, f32 width)
+        : anchor(anchor), height(height), width_type(width_type), width(width) {
+    }
 };
 
 struct FontData {
@@ -59,32 +63,19 @@ struct FontData {
     }
 };
 
-static TextTransform texttransform_new(Vec2 anchor, f32 height, TextWidthType width_type, f32 width) {
-    TextTransform tx;
-    tx.anchor = anchor;
-    tx.height = height;
-    tx.width_type = width_type;
-    tx.width = width;
-    return tx;
-}
-
 struct Widget {
-    std::string string;
+    std::string text;
     TextTransform transform;
     u8 _padding[4];
     FontData *font_data;
 
-    Widget() : string(), font_data(nullptr) {
+    explicit Widget(const char *chars, TextTransform transform, FontData *font_data)
+        : text(chars), transform(transform), font_data(font_data) {
     }
 
-    explicit Widget(char *chars, TextTransform transform, FontData *font_data)
-        : string(chars), transform(transform), font_data(font_data) {
+    void set_str(u32 integer) {
+        char int_str_buffer[32]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
+        sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", integer);
+        text = int_str_buffer;
     }
 };
-
-static void widget_set_string(Widget *widget, u32 integer) {
-    char int_str_buffer[32]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
-    sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", integer);
-
-    // TODO @INCOMPLETE: Implement
-}

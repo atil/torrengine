@@ -12,7 +12,20 @@ struct Core {
     std::vector<struct Widget> ui_widgets;
     std::vector<struct UiRenderUnit> ui_render;
 
-    Core() = default;
+    Core() {
+
+        // TODO @DEBT @ROBUSTNESS: As soon as this reservation is reached and the vector need to do further
+        // allocation, it calls the destructors for its members. We need to prevent that by either replacing
+        // std::vector with our own, or using another (custom) collection for the struct which should never
+        // destroyed implicitly (like during allocation)
+
+        go_data.reserve(10);
+        go_render.reserve(10);
+        particle_sources.reserve(10);
+        particle_render.reserve(10);
+        ui_widgets.reserve(10);
+        ui_render.reserve(10);
+    }
 
     Core(const Core &) = delete;
     Core(Core &&) = delete;

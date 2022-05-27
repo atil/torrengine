@@ -1,17 +1,14 @@
 EntityIndex register_particle(Core *core, const ParticleProps &props, const Renderer &renderer, Vec2 emit_point) {
     shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
-    ParticleSource source(props, emit_point);
-    ParticleRenderUnit ru(props.count, particle_shader, "assets/Ball.png");
-    source.isAlive = true; // TODO @INCOMPLETE: We might want make this alive later
 
-    glUseProgram(ru.shader);
+    glUseProgram(particle_shader);
     Mat4 mat_identity = mat4_identity();
-    shader_set_mat4(ru.shader, "u_model", &mat_identity);
-    shader_set_mat4(ru.shader, "u_view", &(renderer.view));
-    shader_set_mat4(ru.shader, "u_proj", &(renderer.proj));
+    shader_set_mat4(particle_shader, "u_model", &mat_identity);
+    shader_set_mat4(particle_shader, "u_view", &(renderer.view));
+    shader_set_mat4(particle_shader, "u_proj", &(renderer.proj));
 
-    core->particle_sources.push_back(source);
-    core->particle_render.push_back(ru);
+    core->particle_sources.emplace_back(props, emit_point);
+    core->particle_render.emplace_back(props.count, particle_shader, "assets/Ball.png");
 
     return core->particle_sources.size();
 }
@@ -35,12 +32,9 @@ EntityIndex register_gameobject(Core *core, Vec2 pos, Vec2 size, char *texture_p
                                0.5f,  0.5f,  1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 1.0f};
     u32 unit_square_indices[] = {0, 1, 2, 0, 2, 3};
 
-    GoData go_data(pos, size);
-    GoRenderUnit go_ru(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                       sizeof(unit_square_indices), world_shader, texture_path);
-
-    core->go_data.push_back(go_data);
-    core->go_render.push_back(go_ru);
+    core->go_data.emplace_back(pos, size);
+    core->go_render.emplace_back(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                                 sizeof(unit_square_indices), world_shader, texture_path);
 
     return core->go_data.size();
 }
@@ -49,27 +43,26 @@ EntityIndex register_ui_entity(Core *core, char *text, TextTransform transform, 
                                shader_handle_t ui_shader) {
     Widget widget(text, transform, font_data);
     core->ui_widgets.push_back(widget);
-    core->ui_render.push_back(UiRenderUnit(ui_shader, widget));
+    core->ui_render.emplace_back(ui_shader, widget);
 
     return core->ui_widgets.size();
 }
 
-// TODO @INCOMPLETE
-// void reset_game(Core *core, PongEntities *entities, PongWorldConfig *config) {
-//     core->go_data.replace(gameobject_new(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10)),
-//                           (usize)entities->entity_world_field);
-//     core->go_data.replace(gameobject_new(vec2_new(config->distance_from_center, 0.0f), config->pad_size),
-//                           (usize)entities->entity_world_pad1);
-//     core->go_data.replace(gameobject_new(vec2_new(-(config->distance_from_center), 0.0f), config->pad_size),
-//                           (usize)entities->entity_world_pad2);
-//     core->go_data.replace(gameobject_new(vec2_zero(), vec2_one() * 0.2f), (usize)entities->entity_world_ball);
+void reset_game(Core *core, PongEntities *entities, PongWorldConfig *config) {
 
-//     // Reset score
-//     EntityIndex entity_ui_score = entities->entity_ui_score;
-//     widget_set_string(core->ui_widgets[entity_ui_score], 0);
-//     render_unit_ui_update(core->ui_render[entity_ui_score], core->ui_widgets[entity_ui_score]);
-//     render_unit_ui_draw(core->ui_render[entity_ui_score]);
-// }
+    core->go_data[entities->entity_world_field] =
+        GoData(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10));
+    core->go_data[entities->entity_world_pad1] =
+        GoData(vec2_new(config->distance_from_center, 0.0f), config->pad_size);
+    core->go_data[entities->entity_world_pad2] =
+        GoData(vec2_new(-(config->distance_from_center), 0.0f), config->pad_size);
+    core->go_data[entities->entity_world_ball] = GoData(vec2_zero(), vec2_one() * 0.2f);
+
+    EntityIndex entity_ui_score = entities->entity_ui_score;
+    core->ui_widgets[entity_ui_score].set_str(0);
+    core->ui_render[entity_ui_score].update(core->ui_widgets[entity_ui_score]);
+    core->ui_render[entity_ui_score].draw();
+}
 
 // This is gonna be a part of the game module
 static void loop(Core *core, PongWorld *world, PongEntities *entities, PongWorldConfig *config, GLFWwindow *window,
@@ -124,7 +117,7 @@ static void loop(Core *core, PongWorld *world, PongEntities *entities, PongWorld
             std::vector<EntityIndex> dead_particle_indices;
             for (usize i = 0; i < core->particle_sources.size(); i++) {
                 ParticleSource &ps = core->particle_sources[i];
-                if (!ps.isAlive) {
+                if (!ps.is_alive) {
                     dead_particle_indices.push_back(i);
                     continue;
                 }
@@ -140,7 +133,7 @@ static void loop(Core *core, PongWorld *world, PongEntities *entities, PongWorld
             if (result.did_score) {
 
                 // Update score view
-                widget_set_string(&core->ui_widgets[entity_ui_score], world->score); // TODO @INCOMPLETE
+                core->ui_widgets[entity_ui_score].set_str(world->score);
                 core->ui_render[entity_ui_score].update(core->ui_widgets[entity_ui_score]);
             }
 
@@ -149,11 +142,10 @@ static void loop(Core *core, PongWorld *world, PongEntities *entities, PongWorld
             core->ui_render[entities->entity_ui_intermission].draw();
 
             if (input->just_pressed(KeyCode::Enter)) {
-                // reset_game(core, entities, config);
-                // world_init(world);
-                // sfx_play(sfx, SfxId::SfxStart);
-                // game_state = GameState::Game;
-                printf("not implemented: reset game\n");
+                reset_game(core, entities, config);
+                world_init(world);
+                sfx_play(sfx, SfxId::SfxStart);
+                game_state = GameState::Game;
             }
         }
 
@@ -206,24 +198,22 @@ static void main_game() {
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
 
     register_ui_entity(&core, "TorrPong!\0",
-                       texttransform_new(vec2_new(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f), &font_data,
+                       TextTransform(vec2_new(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f), &font_data,
                        ui_shader);
-    // register_ui_entity(&core, "0\0",
-    //                    texttransform_new(vec2_new(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f),
-    //                    &font_data, ui_shader);
-    // register_ui_entity(&core, "Game Over\0",
-    //                    texttransform_new(vec2_new(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f),
-    //                    &font_data, ui_shader);
+    register_ui_entity(&core, "0\0", TextTransform(vec2_new(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f),
+                       &font_data, ui_shader);
+    register_ui_entity(&core, "Game Over\0",
+                       TextTransform(vec2_new(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f), &font_data,
+                       ui_shader);
 
-    // register_gameobject(&core, vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10), "assets/Field.png",
-    //                     world_shader);
-    // register_gameobject(&core, vec2_new(config.distance_from_center, 0.0f), config.pad_size,
-    // "assets/PadBlue.png",
-    //                     world_shader);
-    // register_gameobject(&core, vec2_new(-config.distance_from_center, 0.0f), config.pad_size,
-    //                     "assets/PadGreen.png", world_shader);
+    register_gameobject(&core, vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10), "assets/Field.png",
+                        world_shader);
+    register_gameobject(&core, vec2_new(config.distance_from_center, 0.0f), config.pad_size, "assets/PadBlue.png",
+                        world_shader);
+    register_gameobject(&core, vec2_new(-config.distance_from_center, 0.0f), config.pad_size,
+                        "assets/PadGreen.png", world_shader);
 
-    // register_gameobject(&core, vec2_zero(), vec2_one() * 0.2f, "assets/Ball.png", world_shader);
+    register_gameobject(&core, vec2_zero(), vec2_one() * 0.2f, "assets/Ball.png", world_shader);
 
     ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
 

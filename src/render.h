@@ -9,6 +9,10 @@ struct GoRenderUnit {
     shader_handle_t shader;
     texture_handle_t texture;
 
+    GoRenderUnit(const GoRenderUnit &) = default;
+    GoRenderUnit &operator=(const GoRenderUnit &) = delete;
+    GoRenderUnit &operator=(GoRenderUnit &&) = delete;
+
     explicit GoRenderUnit(const f32 *vert_data, usize vert_data_len, const u32 *index_data, usize index_data_len,
                           shader_handle_t shader, const char *texture_file_name)
         : index_count((u32)index_data_len), vert_data_len(vert_data_len), shader(shader) {
@@ -47,12 +51,13 @@ struct GoRenderUnit {
         stbi_image_free(data);
     }
 
-    void draw(const Mat4 &model) {
-        glBindVertexArray(vao);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        shader_set_mat4(shader, "u_model", &model);
-        // TODO @DOCS: How can that last parameter be zero?
-        glDrawElements(GL_TRIANGLES, (GLsizei)index_count, GL_UNSIGNED_INT, 0);
+    GoRenderUnit(GoRenderUnit &&rhs)
+        : vao(rhs.vao), vbo(rhs.vbo), ibo(rhs.ibo), shader(rhs.shader), texture(rhs.texture) {
+        rhs.vao = 0;
+        rhs.vbo = 0;
+        rhs.ibo = 0;
+        rhs.shader = 0;
+        rhs.texture = 0;
     }
 
     ~GoRenderUnit() {
@@ -66,6 +71,14 @@ struct GoRenderUnit {
         // the world. NOTE @FUTURE: Probably gonna have a batch sort of thing,
         // the guys who share the same shader
     }
+
+    void draw(const Mat4 &model) {
+        glBindVertexArray(vao);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        shader_set_mat4(shader, "u_model", &model);
+        // TODO @DOCS: How can that last parameter be zero?
+        glDrawElements(GL_TRIANGLES, (GLsizei)index_count, GL_UNSIGNED_INT, 0);
+    }
 };
 
 struct UiRenderUnit {
@@ -76,10 +89,9 @@ struct UiRenderUnit {
     shader_handle_t shader;
     texture_handle_t texture;
 
-    UiRenderUnit(const UiRenderUnit &) = default;
-    UiRenderUnit &operator=(const UiRenderUnit &) = delete;
-    UiRenderUnit &operator=(UiRenderUnit &&) = delete;
-    // Move ctor is in use
+    UiRenderUnit(const UiRenderUnit &rhs) = default;
+    UiRenderUnit &operator=(const UiRenderUnit &rhs) = default;
+    UiRenderUnit &operator=(UiRenderUnit &&rhs) = default;
 
     explicit UiRenderUnit(shader_handle_t shader, const Widget &widget) : shader(shader) {
         glGenVertexArrays(1, &(vao));
@@ -120,6 +132,15 @@ struct UiRenderUnit {
         shader_set_int(shader, "u_texture_ui", 0);
 
         update(widget);
+    }
+
+    UiRenderUnit(UiRenderUnit &&rhs)
+        : vao(rhs.vao), vbo(rhs.vbo), ibo(rhs.ibo), shader(rhs.shader), texture(rhs.texture) {
+        rhs.vao = 0;
+        rhs.vbo = 0;
+        rhs.ibo = 0;
+        rhs.shader = 0;
+        rhs.texture = 0;
     }
 
     ~UiRenderUnit() {
@@ -201,7 +222,7 @@ struct UiRenderUnit {
     }
 
     void update(const Widget &widget) {
-        usize char_count = widget.string.length();
+        usize char_count = widget.text.length();
 
         TextBufferData text_data;
         text_data.vb_len = char_count * 16 * sizeof(f32); // TODO @DOCS: Explain the data layout
@@ -209,7 +230,7 @@ struct UiRenderUnit {
         text_data.vb_data = (f32 *)malloc(text_data.vb_len);
         text_data.ib_data = (u32 *)malloc(text_data.ib_len);
 
-        text_buffer_fill(&text_data, widget.font_data, widget.string.c_str(),
+        text_buffer_fill(&text_data, widget.font_data, widget.text.c_str(),
                          widget.transform); // TODO @CLEANUP: Send the string itself
 
         glBindVertexArray(vao);
