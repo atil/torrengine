@@ -73,7 +73,7 @@ struct ParticleSource {
 
     void update(f32 dt) {
         for (u32 i = 0; i < props.count; i++) {
-            Vec2 dir = vec2_new((f32)cos(particles[i].angle * DEG2RAD), (f32)sin(particles[i].angle * DEG2RAD));
+            Vec2 dir = Vec2((f32)cos(particles[i].angle * DEG2RAD), (f32)sin(particles[i].angle * DEG2RAD));
 
             f32 speed = props.speed + particles[i].speed_offset;
             positions[i] = positions[i] + dir * (speed * dt);
@@ -229,7 +229,7 @@ struct ParticlePropRegistry {
 
 static ParticlePropRegistry particle_prop_registry_create(void) {
     ParticlePropRegistry reg;
-    reg.pad_hit_right.angle_limits = vec2_new(90, 270);
+    reg.pad_hit_right.angle_limits = Vec2(90, 270);
     reg.pad_hit_right.count = 5;
     reg.pad_hit_right.lifetime = 1;
     reg.pad_hit_right.speed = 1;
@@ -237,7 +237,7 @@ static ParticlePropRegistry particle_prop_registry_create(void) {
     reg.pad_hit_right.speed_offset = 0.1f;
     reg.pad_hit_right.size = 0.3f;
 
-    reg.pad_hit_left.angle_limits = vec2_new(-90, 90);
+    reg.pad_hit_left.angle_limits = Vec2(-90, 90);
     reg.pad_hit_left.count = 5;
     reg.pad_hit_left.lifetime = 1;
     reg.pad_hit_left.speed = 1;

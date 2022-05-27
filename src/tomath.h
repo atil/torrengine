@@ -15,83 +15,80 @@ static float rand_range(float lo, float hi) {
 
 struct Vec2 {
     float x, y;
+
+    Vec2() : x(0), y(0) {
+    }
+
+    explicit Vec2(float x, float y) : x(x), y(y) {
+    }
+
+    void normalize() {
+        float len = sqrtf(x * x + y * y);
+        x = x / len;
+        y = y / len;
+    }
+
+    static Vec2 zero() {
+        return Vec2(0.0f, 0.0f);
+    }
+
+    static Vec2 one() {
+        return Vec2(1.0f, 1.0f);
+    }
 };
 
-static Vec2 vec2_new(float x, float y) {
-    Vec2 v;
-    v.x = x;
-    v.y = y;
-    return v;
-}
-
 Vec2 operator+(Vec2 a, Vec2 b) {
-    return vec2_new(a.x + b.x, a.y + b.y);
+    return Vec2(a.x + b.x, a.y + b.y);
 }
 
 Vec2 operator*(Vec2 v, f32 s) {
-    return vec2_new(v.x * s, v.y * s);
+    return Vec2(v.x * s, v.y * s);
 }
 
-static Vec2 vec2_zero(void) {
-    return vec2_new(0.0f, 0.0f);
-}
+struct Mat4 {
+    float data[16]; // Column major
 
-static Vec2 vec2_one(void) {
-    return vec2_new(1.0f, 1.0f);
-}
+    void translate_xy(Vec2 vec) {
+        data[12] += vec.x;
+        data[13] += vec.y;
+    }
 
-static void vec2_normalize(Vec2 *vec) {
-    // TODO @SPEED: Measure if moving the fields to local
-    // variables has any effect
-    float len = sqrtf(vec->x * vec->x + vec->y * vec->y);
-    vec->x = vec->x / len;
-    vec->y = vec->y / len;
-}
+    Vec2 get_pos_xy() const {
+        return Vec2(data[12], data[13]);
+    }
 
-typedef struct {
-    float data[16];
-} Mat4;
+    void set_pos_xy(Vec2 vec) {
+        data[12] = vec.x;
+        data[13] = vec.y;
+    }
 
-static Mat4 mat4_identity(void) {
-    Mat4 identity;
-    float identity_data[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+    void set_scale_xy(Vec2 vec) {
+        data[0] *= vec.x;
+        data[5] *= vec.y;
+    }
 
-    // TODO @LEAK: Check if this is leaked
-    memcpy(&identity.data, identity_data, sizeof(identity_data));
-    return identity;
-}
+    static Mat4 identity() {
+        Mat4 identity;
+        float identity_data[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 
-static Mat4 mat4_ortho(float left, float right, float bottom, float top, float near, float far) {
-    Mat4 m = mat4_identity();
+        // TODO @LEAK: Check if this is leaked
+        memcpy(&identity.data, identity_data, sizeof(identity_data));
+        return identity;
+    }
 
-    m.data[0 * 4 + 0] = 2 / (right - left);
-    m.data[1 * 4 + 1] = 2 / (top - bottom);
-    m.data[2 * 4 + 2] = -2 / (far - near);
-    m.data[3 * 4 + 0] = -(right + left) / (right - left);
-    m.data[3 * 4 + 1] = -(top + bottom) / (top - bottom);
-    m.data[3 * 4 + 2] = -(far + near) / (far - near);
+    static Mat4 ortho(float left, float right, float bottom, float top, float near, float far) {
+        Mat4 m = Mat4::identity();
 
-    return m;
-}
+        m.data[0 * 4 + 0] = 2 / (right - left);
+        m.data[1 * 4 + 1] = 2 / (top - bottom);
+        m.data[2 * 4 + 2] = -2 / (far - near);
+        m.data[3 * 4 + 0] = -(right + left) / (right - left);
+        m.data[3 * 4 + 1] = -(top + bottom) / (top - bottom);
+        m.data[3 * 4 + 2] = -(far + near) / (far - near);
 
-static void mat4_translate_xy(Mat4 *mat, Vec2 vec) {
-    mat->data[12] += vec.x; // Column major
-    mat->data[13] += vec.y;
-}
-
-static Vec2 mat4_get_pos_xy(const Mat4 *mat) {
-    return vec2_new(mat->data[12], mat->data[13]);
-}
-
-static void mat4_set_pos_xy(Mat4 *mat, Vec2 vec) {
-    mat->data[12] = vec.x;
-    mat->data[13] = vec.y;
-}
-
-static void mat4_set_scale_xy(Mat4 *mat, Vec2 vec) {
-    mat->data[0] *= vec.x;
-    mat->data[5] *= vec.y;
-}
+        return m;
+    }
+};
 
 static bool check_line_segment_intersection(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4, Vec2 *intersection) {
     f32 x1 = p1.x;
@@ -119,7 +116,7 @@ static bool check_line_segment_intersection(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4, 
     }
 
     f32 t = t_nom / t_den;
-    *intersection = vec2_new(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
+    *intersection = Vec2(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
 
     return true;
 }

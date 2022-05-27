@@ -36,11 +36,11 @@ struct FontData {
     f32 descent;                                // In pixels
     stbtt_bakedchar font_char_data[CHAR_COUNT]; // TODO @LEAK: This is not leaked, but research anyway
 
-    FontData() {
+    explicit FontData(const char *ttf_path) {
         // TODO @ROBUSTNESS: Assert that it's called once
-        u8 *font_bytes = (u8 *)read_file("assets/Consolas.ttf");
-        assert(font_bytes != NULL);
-        font_bitmap = (u8 *)malloc(FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT * sizeof(u8));
+        u8 *font_bytes = (u8 *)read_file(ttf_path);
+        assert(font_bytes != nullptr);
+        font_bitmap = new u8[FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT];
 
         stbtt_BakeFontBitmap((u8 *)font_bytes, 0, FONT_TEXT_HEIGHT, font_bitmap, FONT_ATLAS_WIDTH,
                              FONT_ATLAS_HEIGHT, ' ', CHAR_COUNT, font_char_data);
@@ -59,7 +59,7 @@ struct FontData {
     }
 
     ~FontData() {
-        free(font_bitmap);
+        delete font_bitmap;
     }
 };
 

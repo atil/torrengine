@@ -1,11 +1,12 @@
-EntityIndex register_particle(Core *core, const ParticleProps &props, const Renderer &renderer, Vec2 emit_point) {
+EntityIndex register_particle(Core *core, const ParticleProps &props, const RenderInfo &render_info,
+                              Vec2 emit_point) {
     shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
 
     glUseProgram(particle_shader);
-    Mat4 mat_identity = mat4_identity();
+    Mat4 mat_identity = Mat4::identity();
     shader_set_mat4(particle_shader, "u_model", &mat_identity);
-    shader_set_mat4(particle_shader, "u_view", &(renderer.view));
-    shader_set_mat4(particle_shader, "u_proj", &(renderer.proj));
+    shader_set_mat4(particle_shader, "u_view", &(render_info.view));
+    shader_set_mat4(particle_shader, "u_proj", &(render_info.proj));
 
     core->particle_sources.emplace_back(props, emit_point);
     core->particle_render.emplace_back(props.count, particle_shader, "assets/Ball.png");
@@ -50,13 +51,12 @@ EntityIndex register_ui_entity(Core *core, char *text, TextTransform transform, 
 
 void reset_game(Core *core, PongEntities *entities, PongWorldConfig *config) {
 
-    core->go_data[entities->entity_world_field] =
-        GoData(vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10));
+    core->go_data[entities->entity_world_field] = GoData(Vec2::zero(), Vec2(((f32)WIDTH / (f32)HEIGHT) * 10, 10));
     core->go_data[entities->entity_world_pad1] =
-        GoData(vec2_new(config->distance_from_center, 0.0f), config->pad_size);
+        GoData(Vec2(config->distance_from_center, 0.0f), config->pad_size);
     core->go_data[entities->entity_world_pad2] =
-        GoData(vec2_new(-(config->distance_from_center), 0.0f), config->pad_size);
-    core->go_data[entities->entity_world_ball] = GoData(vec2_zero(), vec2_one() * 0.2f);
+        GoData(Vec2(-(config->distance_from_center), 0.0f), config->pad_size);
+    core->go_data[entities->entity_world_ball] = GoData(Vec2::zero(), Vec2::one() * 0.2f);
 
     EntityIndex entity_ui_score = entities->entity_ui_score;
     core->ui_widgets[entity_ui_score].set_str(0);
@@ -66,7 +66,7 @@ void reset_game(Core *core, PongEntities *entities, PongWorldConfig *config) {
 
 // This is gonna be a part of the game module
 static void loop(Core *core, PongWorld *world, PongEntities *entities, PongWorldConfig *config, GLFWwindow *window,
-                 Input *input, const Renderer &renderer, ParticlePropRegistry *particle_prop_reg, Sfx *sfx,
+                 Input *input, const RenderInfo &render_info, ParticlePropRegistry *particle_prop_reg, Sfx *sfx,
                  shader_handle_t world_shader) {
 
     EntityIndex entity_ui_score = entities->entity_ui_score;
@@ -98,7 +98,7 @@ static void loop(Core *core, PongWorld *world, PongEntities *entities, PongWorld
             }
         } else if (game_state == GameState::Game) {
             PongWorldUpdateResult result =
-                world_update(dt, world, core, config, entities, input, sfx, particle_prop_reg, renderer);
+                world_update(dt, world, core, config, entities, input, sfx, particle_prop_reg, render_info);
 
             if (result.is_game_over) {
                 sfx_play(sfx, SfxId::SfxGameOver);
@@ -166,7 +166,7 @@ static void main_game() {
 
     // TODO @CLEANUP: Remove the init code for these from default ctors
     // It's weird to have code run on variable declarations
-    FontData font_data;
+    FontData font_data("assets/Consolas.ttf");
     Sfx sfx;
 
     const f32 cam_size = 5.0f;
@@ -179,11 +179,11 @@ static void main_game() {
                                0.5f,  0.5f,  1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 1.0f};
     u32 unit_square_indices[] = {0, 1, 2, 0, 2, 3};
 
-    Renderer renderer = renderer_new(WIDTH, HEIGHT, cam_size);
+    RenderInfo render_info = render_info_new(WIDTH, HEIGHT, cam_size);
 
     PongWorldConfig config;
-    config.area_extents = vec2_new(cam_size * renderer.aspect, cam_size);
-    config.pad_size = vec2_new(0.3f, 2.0f);
+    config.area_extents = Vec2(cam_size * render_info.aspect, cam_size);
+    config.pad_size = Vec2(0.3f, 2.0f);
     config.ball_speed = 4.0f;
     config.distance_from_center = 4.0f;
     config.pad_move_speed = 10.0f;
@@ -197,35 +197,34 @@ static void main_game() {
 
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
 
-    register_ui_entity(&core, "TorrPong!\0",
-                       TextTransform(vec2_new(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f), &font_data,
-                       ui_shader);
-    register_ui_entity(&core, "0\0", TextTransform(vec2_new(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f),
+    register_ui_entity(&core, "TorrPong!\0", TextTransform(Vec2(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f),
+                       &font_data, ui_shader);
+    register_ui_entity(&core, "0\0", TextTransform(Vec2(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f),
                        &font_data, ui_shader);
     register_ui_entity(&core, "Game Over\0",
-                       TextTransform(vec2_new(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f), &font_data,
+                       TextTransform(Vec2(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f), &font_data,
                        ui_shader);
 
-    register_gameobject(&core, vec2_zero(), vec2_new(((f32)WIDTH / (f32)HEIGHT) * 10, 10), "assets/Field.png",
+    register_gameobject(&core, Vec2::zero(), Vec2(((f32)WIDTH / (f32)HEIGHT) * 10, 10), "assets/Field.png",
                         world_shader);
-    register_gameobject(&core, vec2_new(config.distance_from_center, 0.0f), config.pad_size, "assets/PadBlue.png",
+    register_gameobject(&core, Vec2(config.distance_from_center, 0.0f), config.pad_size, "assets/PadBlue.png",
                         world_shader);
-    register_gameobject(&core, vec2_new(-config.distance_from_center, 0.0f), config.pad_size,
-                        "assets/PadGreen.png", world_shader);
+    register_gameobject(&core, Vec2(-config.distance_from_center, 0.0f), config.pad_size, "assets/PadGreen.png",
+                        world_shader);
 
-    register_gameobject(&core, vec2_zero(), vec2_one() * 0.2f, "assets/Ball.png", world_shader);
+    register_gameobject(&core, Vec2::zero(), Vec2::one() * 0.2f, "assets/Ball.png", world_shader);
 
     ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
 
     glUseProgram(world_shader);
-    shader_set_mat4(world_shader, "u_view", &renderer.view);
-    shader_set_mat4(world_shader, "u_proj", &renderer.proj);
+    shader_set_mat4(world_shader, "u_view", &render_info.view);
+    shader_set_mat4(world_shader, "u_proj", &render_info.proj);
 
     PongWorld world;
     Input input;
 
     PongEntities entities;
-    loop(&core, &world, &entities, &config, window, &input, renderer, &particle_prop_reg, &sfx, world_shader);
+    loop(&core, &world, &entities, &config, window, &input, render_info, &particle_prop_reg, &sfx, world_shader);
 
     //
     // Cleanup

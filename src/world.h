@@ -10,8 +10,8 @@ struct Rect {
         f32 y_min = center.y - size.y / 2.0f;
         f32 y_max = center.y + size.y / 2.0f;
 
-        min = vec2_new(x_min, y_min);
-        max = vec2_new(x_max, y_max);
+        min = Vec2(x_min, y_min);
+        max = Vec2(x_max, y_max);
     }
 };
 
@@ -19,10 +19,10 @@ struct GoData {
     Rect rect;
     Mat4 transform;
 
-    explicit GoData(Vec2 pos, Vec2 size) : rect(vec2_zero(), size) {
-        transform = mat4_identity();
-        mat4_translate_xy(&transform, pos);
-        mat4_set_scale_xy(&transform, size);
+    explicit GoData(Vec2 pos, Vec2 size) : rect(Vec2::zero(), size) {
+        transform = Mat4::identity();
+        transform.translate_xy(pos);
+        transform.set_scale_xy(size);
     }
 };
 
@@ -47,7 +47,7 @@ struct PongWorldUpdateResult {
 };
 
 static Rect gameobject_get_world_rect(const GoData &go) {
-    Vec2 go_pos = mat4_get_pos_xy(&(go.transform));
+    Vec2 go_pos = go.transform.get_pos_xy();
     Rect rect_world = go.rect;
     rect_world.min = rect_world.min + go_pos;
     rect_world.max = rect_world.max + go_pos;
@@ -77,9 +77,9 @@ static bool pad_ball_collision_check(const GoData &pad_go, Vec2 ball_displacemen
     Rect rect_world = gameobject_get_world_rect(pad_go);
     Vec2 edges[4] = {
         rect_world.min,
-        vec2_new(rect_world.min.x, rect_world.max.y),
+        Vec2(rect_world.min.x, rect_world.max.y),
         rect_world.max,
-        vec2_new(rect_world.max.x, rect_world.min.y),
+        Vec2(rect_world.max.x, rect_world.min.y),
     };
 
     for (int i = 0; i < 4; i++) {
@@ -96,7 +96,7 @@ static bool pad_ball_collision_check(const GoData &pad_go, Vec2 ball_displacemen
 }
 
 static void world_init(PongWorld *world) {
-    world->ball_move_dir = vec2_new(1.0f, 0.0f);
+    world->ball_move_dir = Vec2(1.0f, 0.0f);
     world->score = 0;
     world->game_speed_coeff = 1.0f;
 }
@@ -104,7 +104,7 @@ static void world_init(PongWorld *world) {
 // TODO @CLEANUP: Signature looks ugly
 static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, PongWorldConfig *config,
                                           PongEntities *entities, Input *input, Sfx *sfx,
-                                          ParticlePropRegistry *particle_prop_reg, const Renderer &renderer) {
+                                          ParticlePropRegistry *particle_prop_reg, const RenderInfo &renderer) {
 
     GoData &pad1_go = core->go_data[entities->entity_world_pad1];
     GoData &pad2_go = core->go_data[entities->entity_world_pad2];
@@ -120,22 +120,22 @@ static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, 
     f32 pad_move_speed = config->pad_move_speed * world->game_speed_coeff * dt;
 
     if (input->is_down(KeyCode::W) && pad2_world_rect.max.y < config->area_extents.y) {
-        mat4_translate_xy(&pad2_go.transform, vec2_new(0.0f, pad_move_speed));
+        pad2_go.transform.translate_xy(Vec2(0.0f, pad_move_speed));
     } else if (input->is_down(KeyCode::S) && pad2_world_rect.min.y > -config->area_extents.y) {
-        mat4_translate_xy(&pad2_go.transform, vec2_new(0.0f, -pad_move_speed));
+        pad2_go.transform.translate_xy(Vec2(0.0f, -pad_move_speed));
     }
 
     if (input->is_down(KeyCode::Up) && pad1_world_rect.max.y < config->area_extents.y) {
-        mat4_translate_xy(&pad1_go.transform, vec2_new(0.0f, pad_move_speed));
+        pad1_go.transform.translate_xy(Vec2(0.0f, pad_move_speed));
     } else if (input->is_down(KeyCode::Down) && pad1_world_rect.min.y > -config->area_extents.y) {
-        mat4_translate_xy(&pad1_go.transform, vec2_new(0.0f, -pad_move_speed));
+        pad1_go.transform.translate_xy(Vec2(0.0f, -pad_move_speed));
     }
 
     //
     // Ball move
     //
 
-    Vec2 ball_pos = mat4_get_pos_xy(&ball_go.transform);
+    Vec2 ball_pos = ball_go.transform.get_pos_xy();
     Vec2 ball_displacement = world->ball_move_dir * (config->ball_speed * world->game_speed_coeff * dt);
     Vec2 ball_next_pos = ball_pos + ball_displacement;
 
@@ -151,7 +151,7 @@ static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, 
 #ifndef WORLD_DISABLE_BALL_RANDOMNESS
         const f32 ball_pad_hit_randomness_coeff = 0.2f;
         world->ball_move_dir.y += rand_range(-1.0f, 1.0f) * ball_pad_hit_randomness_coeff;
-        vec2_normalize(&world->ball_move_dir);
+        world->ball_move_dir.normalize();
 #endif
 
         ball_displacement = world->ball_move_dir * (config->ball_speed * dt);
@@ -181,7 +181,7 @@ static PongWorldUpdateResult world_update(f32 dt, PongWorld *world, Core *core, 
 
     result.is_game_over = ball_next_pos.x > config->area_extents.x || ball_next_pos.x < -config->area_extents.x;
 
-    mat4_set_pos_xy(&ball_go.transform, ball_next_pos);
+    ball_go.transform.set_pos_xy(ball_next_pos);
 
     return result;
 }

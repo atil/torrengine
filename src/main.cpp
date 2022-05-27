@@ -1,6 +1,5 @@
 // tasks:
 // - core vectors should be: gameobjects, particles, ui.
-// - mat4 shenanigans
 
 // NOTE @DOCS: Game origin: up-left
 
@@ -65,7 +64,7 @@ struct PongEntities {
     EntityIndex entity_world_ball = 3;
 };
 
-EntityIndex register_particle(Core *core, const ParticleProps &props, const Renderer &renderer, Vec2 emit_point);
+EntityIndex register_particle(Core *core, const ParticleProps &props, const RenderInfo &renderer, Vec2 emit_point);
 
 #include "world.h"
 #include "game.h"

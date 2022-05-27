@@ -253,18 +253,18 @@ struct UiRenderUnit {
     }
 };
 
-struct Renderer {
+struct RenderInfo {
     Mat4 view;
     Mat4 proj;
     f32 aspect;
 };
 
-static Renderer renderer_new(u32 screen_width, u32 screen_height, f32 cam_size) {
-    Renderer r;
+static RenderInfo render_info_new(u32 screen_width, u32 screen_height, f32 cam_size) {
+    RenderInfo r;
 
     // We translate this matrix by the cam position
-    r.view = mat4_identity();
+    r.view = Mat4::identity();
     r.aspect = (f32)screen_width / (f32)screen_height;
-    r.proj = mat4_ortho(-r.aspect * cam_size, r.aspect * cam_size, -cam_size, cam_size, -0.001f, 100.0f);
+    r.proj = Mat4::ortho(-r.aspect * cam_size, r.aspect * cam_size, -cam_size, cam_size, -0.001f, 100.0f);
     return r;
 }
