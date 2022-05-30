@@ -61,9 +61,12 @@ struct PongGame {
     PongWorldConfig config;
 
     void init(Engine &engine) {
-        register_gameobject(engine, Vec2::zero(), Vec2(((f32)WIDTH / (f32)HEIGHT) * 10, 10),
-                            "assets/Field.png", world_shader);
-        // ... and others
+        engine.core.register_gameobject("field", Vec2::zero(), Vec2(((f32)WIDTH / (f32)HEIGHT) * 10, 10),
+                                        "assets/Field.png", world_shader);
+        // TODO @INCOMPLETE: ... and others
+        // start from here: add ^these and move world_shader and ui_shader to engine
+        // it's gonna end up being a singleton kind of thing, but we're ok with that
+        // let's get things running first and we'll refactor later.
 
         world.ball_move_dir = Vec2(1.0f, 0.0f);
         world.score = 0;
@@ -141,7 +144,7 @@ struct PongGame {
                                                          ? engine.particle_prop_reg.pad_hit_right
                                                          : engine.particle_prop_reg.pad_hit_left;
 
-            register_particle(core, hit_particle_prop, render_info, collision_point);
+            engine.core.register_particle(hit_particle_prop, engine.render_info, collision_point);
         }
 
         if (ball_next_pos.y > config.area_extents.y || ball_next_pos.y < -config.area_extents.y) {
@@ -159,6 +162,6 @@ struct PongGame {
 
         ball_go.transform.set_pos_xy(ball_next_pos);
 
-        return result;
+        // return result; // TODO @INCOMPLETE: Change state on game over
     }
 };
