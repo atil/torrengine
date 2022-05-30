@@ -10,8 +10,8 @@ enum class KeyCode
 };
 
 struct Input {
-    bool curr[KeyCode::MAX];
-    bool prev[KeyCode::MAX];
+    bool curr[(usize)KeyCode::MAX];
+    bool prev[(usize)KeyCode::MAX];
 
     void update(GLFWwindow *window) {
         // NOTE @BUGFIX: There used to write "sizeof(KeyCode)" here, which is the size of an integer (the enum's
@@ -33,4 +33,3 @@ struct Input {
         return curr[(usize)key_code];
     }
 };
-

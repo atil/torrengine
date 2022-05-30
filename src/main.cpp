@@ -26,6 +26,8 @@
 #include <time.h>
 #include <vector>
 #include <string>
+#include <functional>
+#include <algorithm>
 #pragma warning(pop)
 
 #define WIDTH 640
@@ -42,32 +44,17 @@
 #include "tomath.h"
 
 // Engine module
-#include "core.h"
 #include "input.h"
 #include "shader.h"
-#include "ui.h"
 #include "render.h"
 #include "particle.h"
 #include "sfx.h"
 
 // Game module
-
-// TODO @CLEANUP: How to deal with this? Move to its own file?
-struct PongEntities {
-    EntityIndex entity_ui_splash = 0;
-    EntityIndex entity_ui_score = 1;
-    EntityIndex entity_ui_intermission = 2;
-
-    EntityIndex entity_world_field = 0;
-    EntityIndex entity_world_pad1 = 1;
-    EntityIndex entity_world_pad2 = 2;
-    EntityIndex entity_world_ball = 3;
-};
-
-EntityIndex register_particle(Core *core, const ParticleProps &props, const RenderInfo &renderer, Vec2 emit_point);
-
 #include "world.h"
 #include "game.h"
+#include "pong.h"
+
 #pragma warning(pop)
 
 #pragma warning(disable : 5045) // Spectre thing
