@@ -10,7 +10,7 @@ struct GameObject : public Entity {
     GoRenderUnit ru;
 
     explicit GameObject(const std::string &tag, GoData data, GoRenderUnit ru)
-        : Entity(tag), data(data), ru(ru) {
+        : Entity(tag), data(std::move(data)), ru(std::move(ru)) {
     }
 };
 
@@ -19,7 +19,7 @@ struct ParticleSystem : public Entity {
     ParticleRenderUnit ru;
 
     explicit ParticleSystem(const std::string &tag, ParticleSource ps, ParticleRenderUnit ru)
-        : Entity(tag), ps(ps), ru(ru) { // TODO @NOCHECKIN: Ctors etc. of these...
+        : Entity(tag), ps(std::move(ps)), ru(std::move(ru)) {
     }
 };
 
@@ -28,7 +28,7 @@ struct Widget : public Entity {
     WidgetRenderUnit ru;
 
     explicit Widget(const std::string &tag, WidgetData data, WidgetRenderUnit ru)
-        : Entity(tag), data(data), ru(ru) {
+        : Entity(tag), data(std::move(data)), ru(std::move(ru)) {
     }
 };
 
@@ -73,15 +73,32 @@ struct Core {
         shader_set_mat4(particle_shader, "u_view", &(render_info.view));
         shader_set_mat4(particle_shader, "u_proj", &(render_info.proj));
 
-        // start from here:
-        // particles.emplace_back()
-
-        particle_sources.emplace_back(props, emit_point);
-        particle_render.emplace_back(props.count, particle_shader, "assets/Ball.png");
+        particles.emplace_back("particle", ParticleSource(props, emit_point),
+                               ParticleRenderUnit(props.count, particle_shader, "assets/Ball.png"));
     }
 
     void deregister_particle(ParticleSystem &to_delete) {
         particles.erase(std::remove(particles.begin(), particles.end(), to_delete), particles.end());
+    }
+
+    void register_gameobject(const std::string &tag, Vec2 pos, Vec2 size, char *texture_path,
+                             shader_handle_t world_shader) {
+
+        f32 unit_square_verts[] = {-0.5f, -0.5f, 0.0f, 0.0f, 0.5f,  -0.5f, 1.0f, 0.0f,
+                                   0.5f,  0.5f,  1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 1.0f};
+        u32 unit_square_indices[] = {0, 1, 2, 0, 2, 3};
+
+        game_objects.emplace_back(tag, GoData(pos, size),
+                                  GoRenderUnit(unit_square_verts, sizeof(unit_square_verts),
+                                               unit_square_indices, sizeof(unit_square_indices), world_shader,
+                                               texture_path));
+    }
+
+    void register_ui_entity(const std::string &tag, const std::string &text, TextTransform transform,
+                            const FontData &font_data, shader_handle_t ui_shader) {
+        WidgetData widget(text, transform, font_data); // It's fine if this is destroyed at the scope end
+
+        ui.emplace_back(tag, widget, WidgetRenderUnit(ui_shader, widget));
     }
 };
 
@@ -100,25 +117,7 @@ enum class GameState
     GameOver
 };
 
-void register_gameobject(Core *core, Vec2 pos, Vec2 size, char *texture_path, shader_handle_t world_shader) {
-
-    f32 unit_square_verts[] = {-0.5f, -0.5f, 0.0f, 0.0f, 0.5f,  -0.5f, 1.0f, 0.0f,
-                               0.5f,  0.5f,  1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 1.0f};
-    u32 unit_square_indices[] = {0, 1, 2, 0, 2, 3};
-
-    core->go_data.emplace_back(pos, size);
-    core->go_render.emplace_back(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
-                                 sizeof(unit_square_indices), world_shader, texture_path);
-}
-
-void register_ui_entity(Core *core, char *text, TextTransform transform, FontData *font_data,
-                        shader_handle_t ui_shader) {
-    WidgetData widget(text, transform, font_data);
-    core->ui_widgets.push_back(widget);
-    core->ui_render.emplace_back(ui_shader, widget);
-}
-
-void reset_game(Core *core, PongEntities *entities, PongWorldConfig *config) {
+void reset_game(Core *core, PongWorldConfig *config) {
 
     //
     // TODO @NOCHECKIN: Fix this the last. Needs to be part of pong.h
@@ -138,11 +137,9 @@ void reset_game(Core *core, PongEntities *entities, PongWorldConfig *config) {
 }
 
 // This is gonna be a part of the game module
-static void loop(Core *core, PongWorld *world, PongEntities *entities, PongWorldConfig *config,
-                 GLFWwindow *window, Input *input, const RenderInfo &render_info,
-                 ParticlePropRegistry *particle_prop_reg, Sfx *sfx, shader_handle_t world_shader) {
-
-    EntityIndex entity_ui_score = entities->entity_ui_score;
+static void loop(Core *core, PongWorld *world, PongWorldConfig *config, GLFWwindow *window, Input *input,
+                 const RenderInfo &render_info, ParticlePropRegistry *particle_prop_reg, Sfx *sfx,
+                 shader_handle_t world_shader) {
 
     GameState game_state = GameState::Splash;
     f32 game_time = (f32)glfwGetTime();

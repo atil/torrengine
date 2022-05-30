@@ -66,14 +66,14 @@ struct WidgetData {
     std::string text;
     TextTransform transform;
     u8 _padding[4];
-    FontData *font_data;
+    const FontData &font_data;
 
-    explicit WidgetData(const char *chars, TextTransform transform, FontData *font_data)
-        : text(chars), transform(transform), font_data(font_data) {
+    explicit WidgetData(const std::string &text, TextTransform transform, const FontData &font_data)
+        : text(text), transform(transform), font_data(font_data) {
     }
 
     void set_str(u32 integer) {
-        char int_str_buffer[32]; // TODO @ROBUSTNESS: Assert that it's a 32-bit integer
+        char int_str_buffer[32];
         sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", integer);
         text = int_str_buffer;
     }
@@ -92,8 +92,8 @@ struct GoRenderUnit {
     GoRenderUnit &operator=(const GoRenderUnit &) = delete;
     GoRenderUnit &operator=(GoRenderUnit &&) = delete;
 
-    explicit GoRenderUnit(const f32 *vert_data, usize vert_data_len, const u32 *index_data, usize index_data_len,
-                          shader_handle_t shader, const char *texture_file_name)
+    explicit GoRenderUnit(const f32 *vert_data, usize vert_data_len, const u32 *index_data,
+                          usize index_data_len, shader_handle_t shader, const char *texture_file_name)
         : index_count((u32)index_data_len), vert_data_len(vert_data_len), shader(shader) {
 
         glGenVertexArrays(1, &(vao));
@@ -201,8 +201,8 @@ struct WidgetRenderUnit {
 
         // TODO @ROBUSTNESS: This depth component looks weird. Googling haven't
         // showed up such a thing
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE,
-                     widget.font_data->font_bitmap);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, 0, GL_RED,
+                     GL_UNSIGNED_BYTE, widget.font_data->font_bitmap);
 
         // glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // TODO @ROBUSTNESS: We might
         // need to do this if we get segfaults
@@ -316,7 +316,8 @@ struct WidgetRenderUnit {
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)text_data.vb_len, text_data.vb_data, GL_STATIC_DRAW);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)text_data.ib_len, text_data.ib_data, GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)text_data.ib_len, text_data.ib_data,
+                     GL_STATIC_DRAW);
         index_count = (u32)text_data.ib_len;
 
         free(text_data.vb_data);

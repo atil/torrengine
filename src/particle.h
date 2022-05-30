@@ -25,13 +25,15 @@ struct ParticleSource {
     bool is_alive;
     u8 _padding[7];
 
-    explicit ParticleSource(const ParticleProps &props, Vec2 emit_point) : props(props), emit_point(emit_point) {
+    explicit ParticleSource(const ParticleProps &props, Vec2 emit_point)
+        : props(props), emit_point(emit_point) {
         positions = new Vec2[props.count];
         particles = new Particle[props.count];
 
         life = 0;
 
-        // TODO @INCOMPLETE: Probably we'll pool particle sources and keep them "dead" until we instantiate one
+        // TODO @INCOMPLETE: Probably we'll pool particle sources and keep them "dead" until we instantiate
+        // one
         is_alive = true;
 
         for (u32 i = 0; i < props.count; i++) {
@@ -171,6 +173,13 @@ struct ParticleRenderUnit {
 
     ParticleRenderUnit(ParticleRenderUnit &&rhs)
         : vao(rhs.vao), vbo(rhs.vbo), ibo(rhs.ibo), shader(rhs.shader), texture(rhs.texture) {
+
+        rhs.vao = 0;
+        rhs.vbo = 0;
+        rhs.ibo = 0;
+        rhs.shader = 0;
+        rhs.texture = 0;
+
         vert_data = rhs.vert_data;
         rhs.vert_data = nullptr;
     }
