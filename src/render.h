@@ -57,6 +57,12 @@ struct FontData {
         free(font_bytes);
     }
 
+    FontData(FontData &&rhs) : ascent(rhs.ascent), descent(rhs.descent) {
+        font_char_data = rhs.font_char_data;
+        font_bitmap = rhs.font_bitmap;
+        rhs.font_bitmap = nullptr;
+    }
+
     ~FontData() {
         delete font_bitmap;
     }
@@ -202,7 +208,7 @@ struct WidgetRenderUnit {
         // TODO @ROBUSTNESS: This depth component looks weird. Googling haven't
         // showed up such a thing
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, 0, GL_RED,
-                     GL_UNSIGNED_BYTE, widget.font_data->font_bitmap);
+                     GL_UNSIGNED_BYTE, widget.font_data.font_bitmap);
 
         // glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // TODO @ROBUSTNESS: We might
         // need to do this if we get segfaults
@@ -232,7 +238,7 @@ struct WidgetRenderUnit {
         glDeleteTextures(1, &texture);
     }
 
-    void text_buffer_fill(TextBufferData *text_data, FontData *font_data, const char *text,
+    void text_buffer_fill(TextBufferData *text_data, const FontData &font_data, const char *text,
                           TextTransform transform) {
         const usize char_count = strlen(text);
 
@@ -247,7 +253,7 @@ struct WidgetRenderUnit {
             char ch = text[i];
             f32 pixel_pos_x = 0, pixel_pos_y = 0; // Don't exactly know what these are for
             stbtt_aligned_quad quad;
-            stbtt_GetBakedQuad(font_data->font_char_data, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ch - ' ',
+            stbtt_GetBakedQuad(font_data.font_char_data, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ch - ' ',
                                &pixel_pos_x, &pixel_pos_y, &quad, 1);
 
             // This calculation is difficult to wrap the head around. Draw it
@@ -255,8 +261,8 @@ struct WidgetRenderUnit {
             // below the baseline and the origin is the bottom quadY0 is
             // positive: it's above the baseline and the origin is top quadY1
             // positive: below the baseline and the origin is top
-            const f32 glyph_bottom = (-font_data->descent - quad.y1) / FONT_TEXT_HEIGHT; // In screen space
-            const f32 glyph_top = (-quad.y0 + (-font_data->descent)) / FONT_TEXT_HEIGHT; // In screen space
+            const f32 glyph_bottom = (-font_data.descent - quad.y1) / FONT_TEXT_HEIGHT; // In screen space
+            const f32 glyph_top = (-quad.y0 + (-font_data.descent)) / FONT_TEXT_HEIGHT; // In screen space
 
             // Anchor: bottom-left corner's normalized position
             // Our quads have their origin at bottom left. But textures have

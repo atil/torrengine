@@ -15,11 +15,6 @@ struct PongWorldConfig {
     f32 game_speed_increase_coeff;
 };
 
-struct PongWorldUpdateResult {
-    bool is_game_over;
-    bool did_score;
-};
-
 static bool pad_resolve_point(const GoData &pad_go, Vec2 p, int resolve_dir, f32 *out_resolved_x) {
     if (gameobject_is_point_in(pad_go, p)) {
         // 1 is right pad, -1 is left
@@ -62,12 +57,26 @@ struct PongGame {
 
     void init(Engine &engine) {
         engine.core.register_gameobject("field", Vec2::zero(), Vec2(((f32)WIDTH / (f32)HEIGHT) * 10, 10),
-                                        "assets/Field.png", world_shader);
-        // TODO @INCOMPLETE: ... and others
-        // start from here: add ^these and move world_shader and ui_shader to engine
-        // it's gonna end up being a singleton kind of thing, but we're ok with that
-        // let's get things running first and we'll refactor later.
+                                        "assets/Field.png", engine.world_shader);
+        engine.core.register_gameobject("pad1", Vec2(config.distance_from_center, 0.0f), config.pad_size,
+                                        "assets/PadBlue.png", engine.world_shader);
+        engine.core.register_gameobject("pad2", Vec2(-config.distance_from_center, 0.0f), config.pad_size,
+                                        "assets/PadGreen.png", engine.world_shader);
+        engine.core.register_gameobject("ball", Vec2::zero(), Vec2::one() * 0.2f, "assets/Ball.png",
+                                        engine.world_shader);
 
+        engine.core.register_ui_entity("splash", "TorrPong!\0",
+                                       TextTransform(Vec2(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f),
+                                       engine.font_data, engine.ui_shader);
+        engine.core.register_ui_entity(
+            "score", "0\0", TextTransform(Vec2(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f),
+            engine.font_data, engine.ui_shader);
+        engine.core.register_ui_entity(
+            "intermission", "Game Over\0",
+            TextTransform(Vec2(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f), engine.font_data,
+            engine.ui_shader);
+
+        // world_init() content:
         world.ball_move_dir = Vec2(1.0f, 0.0f);
         world.score = 0;
         world.game_speed_coeff = 1.0f;
@@ -81,7 +90,16 @@ struct PongGame {
         config.game_speed_increase_coeff = 0.05f;
     }
 
-    void update(f32 dt, Engine &engine) {
+    void update_splash_state(f32 dt, Engine &engine) {
+    }
+
+    void update_game_state(f32 dt, Engine &engine) {
+
+        update_world(dt, engine);
+        // start from here: move draw etc. code to here
+        // and fill in other states with draw/state change etc. code
+    }
+    void update_world(f32 dt, Engine &engine) {
 
         GoData &pad1_go = engine.core.get_go("pad1").data;
         GoData &pad2_go = engine.core.get_go("pad2").data;
@@ -163,5 +181,8 @@ struct PongGame {
         ball_go.transform.set_pos_xy(ball_next_pos);
 
         // return result; // TODO @INCOMPLETE: Change state on game over
+    }
+
+    void update_intermission_state(f32 dt, Engine &engine) {
     }
 };

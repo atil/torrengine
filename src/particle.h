@@ -237,6 +237,9 @@ struct ParticlePropRegistry {
 };
 
 static ParticlePropRegistry particle_prop_registry_create(void) {
+
+    // TODO @INCOMPLETE: This is to be read from an outside source
+
     ParticlePropRegistry reg;
     reg.pad_hit_right.angle_limits = Vec2(90, 270);
     reg.pad_hit_right.count = 5;

@@ -32,15 +32,6 @@ struct Widget : public Entity {
     }
 };
 
-struct ToState {
-    std::string name;
-    std::function<void(f32)> update;
-
-    explicit ToState(const std::string &name, const std::function<void(f32)> update)
-        : name(name), update(update) {
-    }
-};
-
 struct Core {
     std::vector<GameObject> game_objects;
     std::vector<ParticleSystem> particles;
@@ -81,6 +72,10 @@ struct Core {
         particles.erase(std::remove(particles.begin(), particles.end(), to_delete), particles.end());
     }
 
+    void deregister_particle(usize index) {
+        particles.erase(particles.begin() + index);
+    }
+
     void register_gameobject(const std::string &tag, Vec2 pos, Vec2 size, char *texture_path,
                              shader_handle_t world_shader) {
 
@@ -108,49 +103,69 @@ struct Engine { // This is gonna own everything.
     Sfx sfx;
     ParticlePropRegistry particle_prop_reg;
     RenderInfo render_info;
+    FontData font_data;
+
+    // TODO @CLEANUP: Do these really belong here? Re-evaluate after having a good batching idea
+    shader_handle_t world_shader;
+    shader_handle_t ui_shader;
+
+    explicit Engine(RenderInfo render_info, shader_handle_t world_shader, shader_handle_t ui_shader)
+        : core(), input(), sfx(), particle_prop_reg(particle_prop_registry_create()),
+          font_data("assets/Consolas.ttf"), world_shader(world_shader), ui_shader(ui_shader) {
+    }
 };
 
-enum class GameState
-{
-    Splash,
-    Game,
-    GameOver
+struct TrState {
+    std::string name;
+    std::function<void(f32, Engine &)> update;
+
+    explicit TrState(const std::string &name, std::function<void(f32, Engine &)> update)
+        : name(name), update(update) {
+    }
 };
 
-void reset_game(Core *core, PongWorldConfig *config) {
+void reset_game() {
 
     //
     // TODO @NOCHECKIN: Fix this the last. Needs to be part of pong.h
 
-    // core->go_data[entities->entity_world_field] =
+    // engine.core.go_data[entities->entity_world_field] =
     //     GoData(Vec2::zero(), Vec2(((f32)WIDTH / (f32)HEIGHT) * 10, 10));
-    // core->go_data[entities->entity_world_pad1] =
+    // engine.core.go_data[entities->entity_world_pad1] =
     //     GoData(Vec2(config->distance_from_center, 0.0f), config->pad_size);
-    // core->go_data[entities->entity_world_pad2] =
+    // engine.core.go_data[entities->entity_world_pad2] =
     //     GoData(Vec2(-(config->distance_from_center), 0.0f), config->pad_size);
-    // core->go_data[entities->entity_world_ball] = GoData(Vec2::zero(), Vec2::one() * 0.2f);
+    // engine.core.go_data[entities->entity_world_ball] = GoData(Vec2::zero(), Vec2::one() * 0.2f);
 
     // EntityIndex entity_ui_score = entities->entity_ui_score;
-    // core->ui_widgets[entity_ui_score].set_str(0);
-    // core->ui_render[entity_ui_score].update(core->ui_widgets[entity_ui_score]);
-    // core->ui_render[entity_ui_score].draw();
+    // engine.core.ui_widgets[entity_ui_score].set_str(0);
+    // engine.core.ui_render[entity_ui_score].update(engine.core.ui_widgets[entity_ui_score]);
+    // engine.core.ui_render[entity_ui_score].draw();
 }
 
-// This is gonna be a part of the game module
-static void loop(Core *core, PongWorld *world, PongWorldConfig *config, GLFWwindow *window, Input *input,
-                 const RenderInfo &render_info, ParticlePropRegistry *particle_prop_reg, Sfx *sfx,
-                 shader_handle_t world_shader) {
+static void loop(Engine &engine, GLFWwindow *window) {
 
-    GameState game_state = GameState::Splash;
     f32 game_time = (f32)glfwGetTime();
     f32 dt = 0.0f;
+
+    PongGame pong; // We don't know this type yet. How does this work?
+    pong.init(engine);
+
+    // This is gonna probably change when we move this stuff to lua
+    TrState splash_state("splash", std::bind(&PongGame::update_splash_state, pong, std::placeholders::_1,
+                                             std::placeholders::_2));
+    TrState game_state(
+        "game", std::bind(&PongGame::update_game_state, pong, std::placeholders::_1, std::placeholders::_2));
+    TrState intermission_state("intermission", std::bind(&PongGame::update_intermission_state, pong,
+                                                         std::placeholders::_1, std::placeholders::_2));
+
     while (!glfwWindowShouldClose(window)) {
         dt = (f32)glfwGetTime() - game_time;
         game_time = (f32)glfwGetTime();
 
-        input->update(window);
+        engine.input.update(window);
 
-        if (input->just_pressed(KeyCode::Esc)) {
+        if (engine.input.just_pressed(KeyCode::Esc)) {
             glfwSetWindowShouldClose(window, true);
         }
 
@@ -158,63 +173,68 @@ static void loop(Core *core, PongWorld *world, PongWorldConfig *config, GLFWwind
         glClear(GL_COLOR_BUFFER_BIT);
 
         if (game_state == GameState::Splash) {
-            core->ui_render[entities->entity_ui_splash].draw();
+            engine.core.get_widget("splash").ru.draw();
 
-            if (input->just_pressed(KeyCode::Enter)) {
+            if (engine.input.just_pressed(KeyCode::Enter)) {
+
                 world_init(world);
-                sfx_play(sfx, SfxId::SfxStart);
+
+                sfx_play(&engine.sfx, SfxId::SfxStart);
 
                 game_state = GameState::Game;
             }
         } else if (game_state == GameState::Game) {
-            PongWorldUpdateResult result =
-                world_update(dt, world, core, config, entities, input, sfx, particle_prop_reg, render_info);
 
-            if (result.is_game_over) {
+            world_update(dt, world, core, config, entities, input, sfx, particle_prop_reg, render_info);
+
+            if (TODO.isgameover) {
                 sfx_play(sfx, SfxId::SfxGameOver);
                 game_state = GameState::GameOver;
             }
 
             // Game draw
             glActiveTexture(GL_TEXTURE0);
-            glUseProgram(world_shader);
+            glUseProgram(engine.world_shader);
 
-            for (usize i = 0; i < core->go_render.size(); i++) {
-                core->go_render[i].draw(core->go_data[i].transform);
+            for (GameObject &go : engine.core.game_objects) {
+                go.ru.draw(go.data.transform);
             }
 
             // Particle update/draw
-            std::vector<EntityIndex> dead_particle_indices;
-            for (usize i = 0; i < core->particle_sources.size(); i++) {
-                ParticleSource &ps = core->particle_sources[i];
+            std::vector<usize> dead_particle_indices(engine.core.particles.size());
+            for (usize i = 0; i < engine.core.particles.size(); i++) {
+                ParticleSource &ps = engine.core.particles[i].ps;
                 if (!ps.is_alive) {
                     dead_particle_indices.push_back(i);
                     continue;
                 }
 
                 ps.update(dt);
-                core->particle_render[i].draw(ps);
+                engine.core.particles[i].ru.draw(ps);
             }
-            for (EntityIndex i = 0; i < dead_particle_indices.size(); i++) {
-                deregister_particle(core, i);
+            for (usize i = 0; i < dead_particle_indices.size(); i++) {
+                engine.core.deregister_particle(i);
             }
 
             // UI draw
-            if (result.did_score) {
+            Widget &score_widget = engine.core.get_widget("score");
+            if (TODO.didscore) {
 
                 // Update score view
-                core->ui_widgets[entity_ui_score].set_str(world->score);
-                core->ui_render[entity_ui_score].update(core->ui_widgets[entity_ui_score]);
+                score_widget.data.set_str(0); // TODO @NOCHECKIN
+                score_widget.ru.update(score_widget.data);
             }
+            score_widget.ru.draw();
 
-            core->ui_render[entity_ui_score].draw();
         } else if (game_state == GameState::GameOver) {
-            core->ui_render[entities->entity_ui_intermission].draw();
+            engine.core.get_widget("intermission").ru.draw();
 
-            if (input->just_pressed(KeyCode::Enter)) {
-                reset_game(core, entities, config);
-                world_init(world);
-                sfx_play(sfx, SfxId::SfxStart);
+            if (engine.input.just_pressed(KeyCode::Enter)) {
+                reset_game();
+
+                // world_init()
+
+                sfx_play(&engine.sfx, SfxId::SfxStart);
                 game_state = GameState::Game;
             }
         }
@@ -240,55 +260,24 @@ static void main_game() {
     Sfx sfx;
 
     const f32 cam_size = 5.0f;
-
-    //
-    // Entities
-    //
-
-    f32 unit_square_verts[] = {-0.5f, -0.5f, 0.0f, 0.0f, 0.5f,  -0.5f, 1.0f, 0.0f,
-                               0.5f,  0.5f,  1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 1.0f};
-    u32 unit_square_indices[] = {0, 1, 2, 0, 2, 3};
-
     RenderInfo render_info = render_info_new(WIDTH, HEIGHT, cam_size);
 
     Core core;
 
+    shader_handle_t ui_shader = load_shader("src/ui.glsl");
     shader_handle_t world_shader = load_shader("src/world.glsl");
     glEnable(GL_BLEND); // Enabling transparency for texts
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    shader_handle_t ui_shader = load_shader("src/ui.glsl");
-
-    register_ui_entity(&core, "TorrPong!\0",
-                       TextTransform(Vec2(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f), &font_data,
-                       ui_shader);
-    register_ui_entity(&core, "0\0", TextTransform(Vec2(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f),
-                       &font_data, ui_shader);
-    register_ui_entity(&core, "Game Over\0",
-                       TextTransform(Vec2(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f), &font_data,
-                       ui_shader);
-
-    register_gameobject(&core, Vec2::zero(), Vec2(((f32)WIDTH / (f32)HEIGHT) * 10, 10), "assets/Field.png",
-                        world_shader);
-    register_gameobject(&core, Vec2(config.distance_from_center, 0.0f), config.pad_size, "assets/PadBlue.png",
-                        world_shader);
-    register_gameobject(&core, Vec2(-config.distance_from_center, 0.0f), config.pad_size,
-                        "assets/PadGreen.png", world_shader);
-
-    register_gameobject(&core, Vec2::zero(), Vec2::one() * 0.2f, "assets/Ball.png", world_shader);
-
-    ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
 
     glUseProgram(world_shader);
     shader_set_mat4(world_shader, "u_view", &render_info.view);
     shader_set_mat4(world_shader, "u_proj", &render_info.proj);
 
-    PongWorld world;
-    Input input;
+    ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
 
-    PongEntities entities;
-    loop(&core, &world, &entities, &config, window, &input, render_info, &particle_prop_reg, &sfx,
-         world_shader);
+    Engine engine(render_info, world_shader, ui_shader);
+
+    loop(engine, window);
 
     //
     // Cleanup
