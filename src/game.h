@@ -32,10 +32,45 @@ struct Widget : public Entity {
     }
 };
 
-struct Core {
+struct Engine;
+
+struct TorState {
+    std::string name;
+    std::function<std::optional<std::string>(f32, Engine &)> update_func;
+
+    // TODO @ROBUSNESS: Convert these to weak_ptrs
+    std::vector<GameObject *> gos_of_state;
+    std::vector<Widget *> ui_of_state;
+    std::vector<ParticleSystem *> particles_of_state;
+
+    explicit TorState(const std::string &name,
+                      std::function<std::optional<std::string>(f32, Engine &)> update)
+        : name(name), update_func(update) {
+    }
+};
+
+struct Engine {
     std::vector<GameObject> game_objects;
     std::vector<ParticleSystem> particles;
     std::vector<Widget> ui;
+    std::vector<TorState> all_states;
+
+    Input input;
+    u8 _padding1[4];
+    Sfx sfx;
+    ParticlePropRegistry particle_prop_reg;
+    RenderInfo render_info;
+    u8 _padding2[4];
+    FontData font_data;
+
+    // TODO @CLEANUP: Do these really belong here? Re-evaluate after having a good batching idea
+    shader_handle_t world_shader;
+    shader_handle_t ui_shader;
+
+    explicit Engine(RenderInfo render_info, shader_handle_t world_shader, shader_handle_t ui_shader)
+        : input(), sfx(), particle_prop_reg(particle_prop_registry_create()), render_info(render_info),
+          font_data("assets/Consolas.ttf"), world_shader(world_shader), ui_shader(ui_shader) {
+    }
 
     GameObject &get_go(const std::string &tag) {
         for (GameObject &go : game_objects) {
@@ -43,7 +78,8 @@ struct Core {
                 return go;
             }
         }
-        exit(1); // TODO @ROBUSTNESS: This won't be the case for a while
+        assert(false); // TODO @ROBUSTNESS: This won't be the case for a while
+        exit(1);
     }
 
     Widget &get_widget(const std::string &tag) {
@@ -52,10 +88,22 @@ struct Core {
                 return widget;
             }
         }
+        assert(false);
         exit(1);
     }
 
-    void register_particle(const ParticleProps &props, const RenderInfo &render_info, Vec2 emit_point) {
+    TorState &get_state(const std::string &name) {
+        for (TorState &state : all_states) {
+            if (state.name == name) {
+                return state;
+            }
+        }
+
+        assert(false);
+        exit(1);
+    }
+
+    void register_particle(const std::string &state_name, const ParticleProps &props, Vec2 emit_point) {
         shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
 
         glUseProgram(particle_shader);
@@ -66,18 +114,18 @@ struct Core {
 
         particles.emplace_back("particle", ParticleSource(props, emit_point),
                                ParticleRenderUnit(props.count, particle_shader, "assets/Ball.png"));
+
+        get_state(state_name).particles_of_state.push_back(&particles[particles.size() - 1]);
     }
 
-    void deregister_particle(ParticleSystem &to_delete) {
-        particles.erase(std::remove(particles.begin(), particles.end(), to_delete), particles.end());
-    }
-
+    // We might want to have a deregister_particle(ParticleSystem&) overload here in the future.
+    // That will require the == operator's overload
     void deregister_particle(usize index) {
-        particles.erase(particles.begin() + index);
+        particles.erase(particles.begin() + (i64)index);
     }
 
-    void register_gameobject(const std::string &tag, Vec2 pos, Vec2 size, char *texture_path,
-                             shader_handle_t world_shader) {
+    void register_gameobject(const std::string &tag, const std::string &state_name, Vec2 pos, Vec2 size,
+                             char *texture_path) {
 
         f32 unit_square_verts[] = {-0.5f, -0.5f, 0.0f, 0.0f, 0.5f,  -0.5f, 1.0f, 0.0f,
                                    0.5f,  0.5f,  1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 1.0f};
@@ -87,78 +135,48 @@ struct Core {
                                   GoRenderUnit(unit_square_verts, sizeof(unit_square_verts),
                                                unit_square_indices, sizeof(unit_square_indices), world_shader,
                                                texture_path));
+
+        for (TorState &state : all_states) {
+            if (state.name == state_name) {
+                state.gos_of_state.push_back(&game_objects[game_objects.size() - 1]);
+                break;
+            }
+        }
     }
 
-    void register_ui_entity(const std::string &tag, const std::string &text, TextTransform transform,
-                            const FontData &font_data, shader_handle_t ui_shader) {
+    void register_ui_entity(const std::string &tag, const std::string &state_name, const std::string &text,
+                            TextTransform transform) {
         WidgetData widget(text, transform, font_data); // It's fine if this is destroyed at the scope end
 
         ui.emplace_back(tag, widget, WidgetRenderUnit(ui_shader, widget));
+
+        for (TorState &state : all_states) {
+            if (state.name == state_name) {
+                state.ui_of_state.push_back(&ui[ui.size() - 1]);
+                break;
+            }
+        }
+    }
+
+    void register_state(const std::string &name,
+                        std::function<std::optional<std::string>(f32, Engine &)> update) {
+        all_states.emplace_back(name, update);
     }
 };
 
-struct Engine { // This is gonna own everything.
-    Core core;  // Would it make more sense to replace the vectors with this?
-    Input input;
-    Sfx sfx;
-    ParticlePropRegistry particle_prop_reg;
-    RenderInfo render_info;
-    FontData font_data;
-
-    // TODO @CLEANUP: Do these really belong here? Re-evaluate after having a good batching idea
-    shader_handle_t world_shader;
-    shader_handle_t ui_shader;
-
-    explicit Engine(RenderInfo render_info, shader_handle_t world_shader, shader_handle_t ui_shader)
-        : core(), input(), sfx(), particle_prop_reg(particle_prop_registry_create()),
-          font_data("assets/Consolas.ttf"), world_shader(world_shader), ui_shader(ui_shader) {
-    }
+struct IGame {
+    virtual void init(Engine &) = 0;
+    virtual ~IGame() = default;
 };
 
-struct TrState {
-    std::string name;
-    std::function<void(f32, Engine &)> update;
-
-    explicit TrState(const std::string &name, std::function<void(f32, Engine &)> update)
-        : name(name), update(update) {
-    }
-};
-
-void reset_game() {
-
-    //
-    // TODO @NOCHECKIN: Fix this the last. Needs to be part of pong.h
-
-    // engine.core.go_data[entities->entity_world_field] =
-    //     GoData(Vec2::zero(), Vec2(((f32)WIDTH / (f32)HEIGHT) * 10, 10));
-    // engine.core.go_data[entities->entity_world_pad1] =
-    //     GoData(Vec2(config->distance_from_center, 0.0f), config->pad_size);
-    // engine.core.go_data[entities->entity_world_pad2] =
-    //     GoData(Vec2(-(config->distance_from_center), 0.0f), config->pad_size);
-    // engine.core.go_data[entities->entity_world_ball] = GoData(Vec2::zero(), Vec2::one() * 0.2f);
-
-    // EntityIndex entity_ui_score = entities->entity_ui_score;
-    // engine.core.ui_widgets[entity_ui_score].set_str(0);
-    // engine.core.ui_render[entity_ui_score].update(engine.core.ui_widgets[entity_ui_score]);
-    // engine.core.ui_render[entity_ui_score].draw();
-}
-
-static void loop(Engine &engine, GLFWwindow *window) {
+static void loop(IGame &game, Engine &engine, GLFWwindow *window) {
 
     f32 game_time = (f32)glfwGetTime();
     f32 dt = 0.0f;
 
-    PongGame pong; // We don't know this type yet. How does this work?
-    pong.init(engine);
+    game.init(engine);
 
-    // This is gonna probably change when we move this stuff to lua
-    TrState splash_state("splash", std::bind(&PongGame::update_splash_state, pong, std::placeholders::_1,
-                                             std::placeholders::_2));
-    TrState game_state(
-        "game", std::bind(&PongGame::update_game_state, pong, std::placeholders::_1, std::placeholders::_2));
-    TrState intermission_state("intermission", std::bind(&PongGame::update_intermission_state, pong,
-                                                         std::placeholders::_1, std::placeholders::_2));
-
+    TorState &curr_state = engine.all_states[0];
     while (!glfwWindowShouldClose(window)) {
         dt = (f32)glfwGetTime() - game_time;
         game_time = (f32)glfwGetTime();
@@ -172,71 +190,32 @@ static void loop(Engine &engine, GLFWwindow *window) {
         glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        if (game_state == GameState::Splash) {
-            engine.core.get_widget("splash").ru.draw();
+        std::optional<std::string> next_state = curr_state.update_func(dt, engine);
+        for (GameObject *go : curr_state.gos_of_state) {
+            go->ru.draw(go->data.transform);
+        }
+        for (Widget *w : curr_state.ui_of_state) {
+            w->ru.draw();
+        }
 
-            if (engine.input.just_pressed(KeyCode::Enter)) {
-
-                world_init(world);
-
-                sfx_play(&engine.sfx, SfxId::SfxStart);
-
-                game_state = GameState::Game;
-            }
-        } else if (game_state == GameState::Game) {
-
-            world_update(dt, world, core, config, entities, input, sfx, particle_prop_reg, render_info);
-
-            if (TODO.isgameover) {
-                sfx_play(sfx, SfxId::SfxGameOver);
-                game_state = GameState::GameOver;
+        std::vector<ParticleSystem *> &alive_particles = curr_state.particles_of_state;
+        std::vector<usize> dead_particle_indices(alive_particles.size());
+        for (usize i = 0; i < alive_particles.size(); i++) {
+            ParticleSource &ps = alive_particles[i]->ps;
+            if (!ps.is_alive) {
+                dead_particle_indices.push_back(i);
+                continue;
             }
 
-            // Game draw
-            glActiveTexture(GL_TEXTURE0);
-            glUseProgram(engine.world_shader);
+            ps.update(dt);
+            alive_particles[i]->ru.draw(ps);
+        }
+        for (usize i = 0; i < dead_particle_indices.size(); i++) {
+            engine.deregister_particle(i);
+        }
 
-            for (GameObject &go : engine.core.game_objects) {
-                go.ru.draw(go.data.transform);
-            }
-
-            // Particle update/draw
-            std::vector<usize> dead_particle_indices(engine.core.particles.size());
-            for (usize i = 0; i < engine.core.particles.size(); i++) {
-                ParticleSource &ps = engine.core.particles[i].ps;
-                if (!ps.is_alive) {
-                    dead_particle_indices.push_back(i);
-                    continue;
-                }
-
-                ps.update(dt);
-                engine.core.particles[i].ru.draw(ps);
-            }
-            for (usize i = 0; i < dead_particle_indices.size(); i++) {
-                engine.core.deregister_particle(i);
-            }
-
-            // UI draw
-            Widget &score_widget = engine.core.get_widget("score");
-            if (TODO.didscore) {
-
-                // Update score view
-                score_widget.data.set_str(0); // TODO @NOCHECKIN
-                score_widget.ru.update(score_widget.data);
-            }
-            score_widget.ru.draw();
-
-        } else if (game_state == GameState::GameOver) {
-            engine.core.get_widget("intermission").ru.draw();
-
-            if (engine.input.just_pressed(KeyCode::Enter)) {
-                reset_game();
-
-                // world_init()
-
-                sfx_play(&engine.sfx, SfxId::SfxStart);
-                game_state = GameState::Game;
-            }
+        if (next_state.has_value()) {
+            curr_state = engine.get_state(next_state.value());
         }
 
         glfwSwapBuffers(window);
@@ -244,8 +223,8 @@ static void loop(Engine &engine, GLFWwindow *window) {
     }
 }
 
-static void main_game() {
-    srand((unsigned long)time(NULL));
+static void main_game(IGame &game) {
+    srand((unsigned long)time(0));
 
     glfwInit();
 
@@ -262,8 +241,6 @@ static void main_game() {
     const f32 cam_size = 5.0f;
     RenderInfo render_info = render_info_new(WIDTH, HEIGHT, cam_size);
 
-    Core core;
-
     shader_handle_t ui_shader = load_shader("src/ui.glsl");
     shader_handle_t world_shader = load_shader("src/world.glsl");
     glEnable(GL_BLEND); // Enabling transparency for texts
@@ -277,7 +254,7 @@ static void main_game() {
 
     Engine engine(render_info, world_shader, ui_shader);
 
-    loop(engine, window);
+    loop(game, engine, window);
 
     //
     // Cleanup

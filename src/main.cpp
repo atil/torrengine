@@ -28,6 +28,8 @@
 #include <string>
 #include <functional>
 #include <algorithm>
+#include <optional>
+#include <array>
 #pragma warning(pop)
 
 #define WIDTH 640
@@ -60,6 +62,7 @@
 #pragma warning(disable : 5045) // Spectre thing
 
 int main(void) {
-    main_game();
+    PongGame pong;
+    main_game(pong);
     return 0;
 }

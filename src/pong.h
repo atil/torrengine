@@ -15,6 +15,11 @@ struct PongWorldConfig {
     f32 game_speed_increase_coeff;
 };
 
+struct PongWorldUpdateResult {
+    bool did_score;
+    bool is_gameover;
+};
+
 static bool pad_resolve_point(const GoData &pad_go, Vec2 p, int resolve_dir, f32 *out_resolved_x) {
     if (gameobject_is_point_in(pad_go, p)) {
         // 1 is right pad, -1 is left
@@ -50,36 +55,45 @@ static bool pad_ball_collision_check(const GoData &pad_go, Vec2 ball_displacemen
     return false;
 }
 
-struct PongGame {
+struct PongGame : IGame {
 
     PongWorld world;
     PongWorldConfig config;
 
-    void init(Engine &engine) {
-        engine.core.register_gameobject("field", Vec2::zero(), Vec2(((f32)WIDTH / (f32)HEIGHT) * 10, 10),
-                                        "assets/Field.png", engine.world_shader);
-        engine.core.register_gameobject("pad1", Vec2(config.distance_from_center, 0.0f), config.pad_size,
-                                        "assets/PadBlue.png", engine.world_shader);
-        engine.core.register_gameobject("pad2", Vec2(-config.distance_from_center, 0.0f), config.pad_size,
-                                        "assets/PadGreen.png", engine.world_shader);
-        engine.core.register_gameobject("ball", Vec2::zero(), Vec2::one() * 0.2f, "assets/Ball.png",
-                                        engine.world_shader);
-
-        engine.core.register_ui_entity("splash", "TorrPong!\0",
-                                       TextTransform(Vec2(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f),
-                                       engine.font_data, engine.ui_shader);
-        engine.core.register_ui_entity(
-            "score", "0\0", TextTransform(Vec2(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f),
-            engine.font_data, engine.ui_shader);
-        engine.core.register_ui_entity(
-            "intermission", "Game Over\0",
-            TextTransform(Vec2(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f), engine.font_data,
-            engine.ui_shader);
-
-        // world_init() content:
+    void world_init() {
         world.ball_move_dir = Vec2(1.0f, 0.0f);
         world.score = 0;
         world.game_speed_coeff = 1.0f;
+    }
+
+    virtual ~PongGame() = default;
+
+    virtual void init(Engine &engine) override {
+
+        engine.register_state("splash_state", std::bind(&PongGame::update_splash_state, *this,
+                                                        std::placeholders::_1, std::placeholders::_2));
+
+        engine.register_state("game_state", std::bind(&PongGame::update_game_state, *this,
+                                                      std::placeholders::_1, std::placeholders::_2));
+        engine.register_state("intermission_state", std::bind(&PongGame::update_intermission_state, *this,
+                                                              std::placeholders::_1, std::placeholders::_2));
+
+        engine.register_gameobject("field", "game_state", Vec2::zero(),
+                                   Vec2(((f32)WIDTH / (f32)HEIGHT) * 10, 10), "assets/Field.png");
+        engine.register_gameobject("pad1", "game_state", Vec2(config.distance_from_center, 0.0f),
+                                   config.pad_size, "assets/PadBlue.png");
+        engine.register_gameobject("pad2", "game_state", Vec2(-config.distance_from_center, 0.0f),
+                                   config.pad_size, "assets/PadGreen.png");
+        engine.register_gameobject("ball", "game_state", Vec2::zero(), Vec2::one() * 0.2f, "assets/Ball.png");
+
+        engine.register_ui_entity("splash", "splash_state", "TorrPong!\0",
+                                  TextTransform(Vec2(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f));
+        engine.register_ui_entity("score", "splash_state", "0\0",
+                                  TextTransform(Vec2(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f));
+        engine.register_ui_entity("intermission", "splash_state", "Game Over\0",
+                                  TextTransform(Vec2(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f));
+
+        world_init();
 
         const f32 cam_size = 5.0f; // TODO @CLEANUP: Duplicate
         config.area_extents = Vec2(cam_size * engine.render_info.aspect, cam_size);
@@ -90,24 +104,50 @@ struct PongGame {
         config.game_speed_increase_coeff = 0.05f;
     }
 
-    void update_splash_state(f32 dt, Engine &engine) {
+    std::optional<std::string> update_splash_state(f32 dt, Engine &engine) {
+
+        std::optional<std::string> next_state = std::nullopt;
+        if (engine.input.just_pressed(KeyCode::Enter)) {
+
+            world_init();
+            sfx_play(&engine.sfx, SfxId::SfxStart);
+
+            next_state = "game_state";
+        }
+
+        return next_state;
     }
 
-    void update_game_state(f32 dt, Engine &engine) {
+    std::optional<std::string> update_game_state(f32 dt, Engine &engine) {
 
-        update_world(dt, engine);
-        // start from here: move draw etc. code to here
-        // and fill in other states with draw/state change etc. code
+        PongWorldUpdateResult result = update_world(dt, engine);
+
+        std::optional<std::string> next_state = std::nullopt;
+
+        if (result.is_gameover) {
+            next_state = "intermission_state";
+        }
+
+        // UI draw
+        Widget &swidget = engine.get_widget("score");
+        if (result.did_score) {
+
+            swidget.data.set_str(world.score);
+            swidget.ru.update(swidget.data);
+        }
+
+        return next_state;
     }
-    void update_world(f32 dt, Engine &engine) {
 
-        GoData &pad1_go = engine.core.get_go("pad1").data;
-        GoData &pad2_go = engine.core.get_go("pad2").data;
-        GoData &ball_go = engine.core.get_go("ball").data;
+    PongWorldUpdateResult update_world(f32 dt, Engine &engine) {
 
         PongWorldUpdateResult result;
-        result.is_game_over = false;
         result.did_score = false;
+        result.is_gameover = false;
+
+        GoData &pad1_go = engine.get_go("pad1").data;
+        GoData &pad2_go = engine.get_go("pad2").data;
+        GoData &ball_go = engine.get_go("ball").data;
 
         Rect pad1_world_rect = gameobject_get_world_rect(pad1_go);
         Rect pad2_world_rect = gameobject_get_world_rect(pad2_go);
@@ -162,7 +202,7 @@ struct PongGame {
                                                          ? engine.particle_prop_reg.pad_hit_right
                                                          : engine.particle_prop_reg.pad_hit_left;
 
-            engine.core.register_particle(hit_particle_prop, engine.render_info, collision_point);
+            engine.register_particle("game_state", hit_particle_prop, collision_point);
         }
 
         if (ball_next_pos.y > config.area_extents.y || ball_next_pos.y < -config.area_extents.y) {
@@ -175,14 +215,38 @@ struct PongGame {
             sfx_play(&engine.sfx, SfxId::SfxHitWall);
         }
 
-        result.is_game_over =
+        result.is_gameover =
             ball_next_pos.x > config.area_extents.x || ball_next_pos.x < -config.area_extents.x;
+
+        if (result.is_gameover) {
+            sfx_play(&engine.sfx, SfxId::SfxGameOver);
+        }
 
         ball_go.transform.set_pos_xy(ball_next_pos);
 
-        // return result; // TODO @INCOMPLETE: Change state on game over
+        return result;
     }
 
-    void update_intermission_state(f32 dt, Engine &engine) {
+    std::optional<std::string> update_intermission_state(f32 dt, Engine &engine) {
+
+        std::optional<std::string> next_state = std::nullopt;
+        if (engine.input.just_pressed(KeyCode::Enter)) {
+
+            // Reset world data
+            engine.get_go("pad1").data.transform.set_pos_xy(Vec2(config.distance_from_center, 0));
+            engine.get_go("pad2").data.transform.set_pos_xy(Vec2(-config.distance_from_center, 0));
+            engine.get_go("ball").data.transform.set_pos_xy(Vec2::zero());
+            engine.get_widget("score").data.set_str(0);
+
+            world_init();
+
+            sfx_play(&engine.sfx, SfxId::SfxStart);
+
+            next_state = "game_state";
+        }
+
+        engine.get_widget("intermission").ru.draw();
+
+        return next_state;
     }
 };

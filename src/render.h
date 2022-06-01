@@ -31,18 +31,17 @@ struct TextTransform {
 
 struct FontData {
     u8 *font_bitmap;
-    f32 ascent;                                 // In pixels
-    f32 descent;                                // In pixels
-    stbtt_bakedchar font_char_data[CHAR_COUNT]; // TODO @LEAK: This is not leaked, but research anyway
+    f32 ascent;  // In pixels
+    f32 descent; // In pixels
+    std::array<stbtt_bakedchar, CHAR_COUNT> font_char_data;
 
     explicit FontData(const char *ttf_path) {
-        // TODO @ROBUSTNESS: Assert that it's called once
         u8 *font_bytes = (u8 *)read_file(ttf_path);
         assert(font_bytes != nullptr);
         font_bitmap = new u8[FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT];
 
         stbtt_BakeFontBitmap((u8 *)font_bytes, 0, FONT_TEXT_HEIGHT, font_bitmap, FONT_ATLAS_WIDTH,
-                             FONT_ATLAS_HEIGHT, ' ', CHAR_COUNT, font_char_data);
+                             FONT_ATLAS_HEIGHT, ' ', CHAR_COUNT, font_char_data.data());
 
         stbtt_fontinfo font_info;
         stbtt_InitFont(&font_info, font_bytes, 0);
@@ -58,10 +57,13 @@ struct FontData {
     }
 
     FontData(FontData &&rhs) : ascent(rhs.ascent), descent(rhs.descent) {
-        font_char_data = rhs.font_char_data;
+        font_char_data = std::move(rhs.font_char_data);
         font_bitmap = rhs.font_bitmap;
         rhs.font_bitmap = nullptr;
     }
+
+    FontData(const FontData &) = delete;
+    FontData &operator=(const FontData &) = delete;
 
     ~FontData() {
         delete font_bitmap;
@@ -253,7 +255,7 @@ struct WidgetRenderUnit {
             char ch = text[i];
             f32 pixel_pos_x = 0, pixel_pos_y = 0; // Don't exactly know what these are for
             stbtt_aligned_quad quad;
-            stbtt_GetBakedQuad(font_data.font_char_data, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ch - ' ',
+            stbtt_GetBakedQuad(font_data.font_char_data.data(), FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, ch - ' ',
                                &pixel_pos_x, &pixel_pos_y, &quad, 1);
 
             // This calculation is difficult to wrap the head around. Draw it
