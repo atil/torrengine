@@ -9,8 +9,8 @@ struct GameObject : public Entity {
     GoData data;
     GoRenderUnit ru;
 
-    explicit GameObject(const std::string &tag, GoData data, GoRenderUnit ru)
-        : Entity(tag), data(std::move(data)), ru(std::move(ru)) {
+    explicit GameObject(const std::string &tag, GoData data_, GoRenderUnit ru_)
+        : Entity(tag), data(std::move(data_)), ru(std::move(ru_)) {
     }
 };
 
@@ -18,8 +18,8 @@ struct ParticleSystem : public Entity {
     ParticleSource ps;
     ParticleRenderUnit ru;
 
-    explicit ParticleSystem(const std::string &tag, ParticleSource ps, ParticleRenderUnit ru)
-        : Entity(tag), ps(std::move(ps)), ru(std::move(ru)) {
+    explicit ParticleSystem(const std::string &tag, ParticleSource ps_, ParticleRenderUnit ru_)
+        : Entity(tag), ps(std::move(ps_)), ru(std::move(ru_)) {
     }
 };
 
@@ -27,8 +27,8 @@ struct Widget : public Entity {
     WidgetData data;
     WidgetRenderUnit ru;
 
-    explicit Widget(const std::string &tag, WidgetData data, WidgetRenderUnit ru)
-        : Entity(tag), data(std::move(data)), ru(std::move(ru)) {
+    explicit Widget(const std::string &tag, WidgetData data_, WidgetRenderUnit ru_)
+        : Entity(tag), data(std::move(data_)), ru(std::move(ru_)) {
     }
 };
 
@@ -38,10 +38,9 @@ struct TorState {
     std::string name;
     std::function<std::optional<std::string>(f32, Engine &)> update_func;
 
-    // TODO @ROBUSNESS: Convert these to weak_ptrs
-    std::vector<GameObject *> gos_of_state;
-    std::vector<Widget *> ui_of_state;
-    std::vector<ParticleSystem *> particles_of_state;
+    std::vector<EntityIndex> state_gos;
+    std::vector<EntityIndex> state_ui;
+    std::vector<EntityIndex> state_particles;
 
     explicit TorState(const std::string &name,
                       std::function<std::optional<std::string>(f32, Engine &)> update)
@@ -115,7 +114,7 @@ struct Engine {
         particles.emplace_back("particle", ParticleSource(props, emit_point),
                                ParticleRenderUnit(props.count, particle_shader, "assets/Ball.png"));
 
-        get_state(state_name).particles_of_state.push_back(&particles[particles.size() - 1]);
+        get_state(state_name).state_particles.push_back(particles.size() - 1);
     }
 
     // We might want to have a deregister_particle(ParticleSystem&) overload here in the future.
@@ -138,7 +137,7 @@ struct Engine {
 
         for (TorState &state : all_states) {
             if (state.name == state_name) {
-                state.gos_of_state.push_back(&game_objects[game_objects.size() - 1]);
+                state.state_gos.push_back(game_objects.size() - 1);
                 break;
             }
         }
@@ -152,7 +151,7 @@ struct Engine {
 
         for (TorState &state : all_states) {
             if (state.name == state_name) {
-                state.ui_of_state.push_back(&ui[ui.size() - 1]);
+                state.state_ui.push_back(ui.size() - 1);
                 break;
             }
         }
@@ -191,24 +190,26 @@ static void loop(IGame &game, Engine &engine, GLFWwindow *window) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         std::optional<std::string> next_state = curr_state.update_func(dt, engine);
-        for (GameObject *go : curr_state.gos_of_state) {
-            go->ru.draw(go->data.transform);
+        for (EntityIndex i : curr_state.state_gos) {
+            GameObject &go = engine.game_objects[i];
+            go.ru.draw(go.data.transform);
         }
-        for (Widget *w : curr_state.ui_of_state) {
-            w->ru.draw();
+        for (EntityIndex i : curr_state.state_ui) {
+            Widget &w = engine.ui[i];
+            w.ru.draw();
         }
 
-        std::vector<ParticleSystem *> &alive_particles = curr_state.particles_of_state;
-        std::vector<usize> dead_particle_indices(alive_particles.size());
-        for (usize i = 0; i < alive_particles.size(); i++) {
-            ParticleSource &ps = alive_particles[i]->ps;
+        std::vector<EntityIndex> &alive_particle_indices = curr_state.state_particles;
+        std::vector<usize> dead_particle_indices(alive_particle_indices.size());
+        for (EntityIndex i : alive_particle_indices) {
+            ParticleSource &ps = engine.particles[i].ps;
             if (!ps.is_alive) {
                 dead_particle_indices.push_back(i);
                 continue;
             }
 
             ps.update(dt);
-            alive_particles[i]->ru.draw(ps);
+            engine.particles[i].ru.draw(ps);
         }
         for (usize i = 0; i < dead_particle_indices.size(); i++) {
             engine.deregister_particle(i);

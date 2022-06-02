@@ -80,6 +80,11 @@ struct WidgetData {
         : text(text), transform(transform), font_data(font_data) {
     }
 
+    WidgetData(const WidgetData &) = default;
+    WidgetData(WidgetData &&) = default;
+    WidgetData &operator=(WidgetData &&) = delete;
+    WidgetData &operator=(const WidgetData &) = delete;
+
     void set_str(u32 integer) {
         char int_str_buffer[32];
         sprintf_s(int_str_buffer, sizeof(char) * 32, "%d", integer);
@@ -222,7 +227,8 @@ struct WidgetRenderUnit {
     }
 
     WidgetRenderUnit(WidgetRenderUnit &&rhs)
-        : vao(rhs.vao), vbo(rhs.vbo), ibo(rhs.ibo), shader(rhs.shader), texture(rhs.texture) {
+        : vao(rhs.vao), vbo(rhs.vbo), ibo(rhs.ibo), index_count(rhs.index_count), shader(rhs.shader),
+          texture(rhs.texture) {
         rhs.vao = 0;
         rhs.vbo = 0;
         rhs.ibo = 0;
@@ -334,6 +340,14 @@ struct WidgetRenderUnit {
 
     void draw() {
         glBindVertexArray(vao);
+
+        // TODO @ROBUSTNESS: This shouldn't be needed
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+        // start from here:
+        // - C++'ize "shader_set_blah()" calls
+        // - debug this "no index buffer bound" issue. hint: it goes away when only the splash ui entity is
+        // registered
+
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
         glUseProgram(shader);

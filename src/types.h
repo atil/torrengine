@@ -10,3 +10,5 @@ typedef int64_t i64;
 typedef int32_t i32;
 typedef size_t usize;
 typedef float f32;
+
+typedef size_t EntityIndex;

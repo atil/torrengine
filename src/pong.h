@@ -88,10 +88,11 @@ struct PongGame : IGame {
 
         engine.register_ui_entity("splash", "splash_state", "TorrPong!\0",
                                   TextTransform(Vec2(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f));
-        engine.register_ui_entity("score", "splash_state", "0\0",
+        engine.register_ui_entity("score", "game_state", "0\0",
                                   TextTransform(Vec2(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f));
-        engine.register_ui_entity("intermission", "splash_state", "Game Over\0",
-                                  TextTransform(Vec2(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f));
+        // engine.register_ui_entity("intermission", "intermission_state", "Game Over\0",
+        //                           TextTransform(Vec2(-0.75f, 0.0f), 0.5f,
+        //                           TextWidthType::FixedWidth, 1.5f));
 
         world_init();
 
