@@ -29,6 +29,8 @@ struct TextTransform {
     }
 };
 
+// TODO @ROBUSTNESS: Implement glDebugMessageCallback
+
 struct FontData {
     u8 *font_bitmap;
     f32 ascent;  // In pixels
@@ -144,7 +146,8 @@ struct GoRenderUnit {
     }
 
     GoRenderUnit(GoRenderUnit &&rhs)
-        : vao(rhs.vao), vbo(rhs.vbo), ibo(rhs.ibo), shader(rhs.shader), texture(rhs.texture) {
+        : vao(rhs.vao), vbo(rhs.vbo), ibo(rhs.ibo), index_count(rhs.index_count), shader(rhs.shader),
+          texture(rhs.texture) {
         rhs.vao = 0;
         rhs.vbo = 0;
         rhs.ibo = 0;
@@ -340,14 +343,6 @@ struct WidgetRenderUnit {
 
     void draw() {
         glBindVertexArray(vao);
-
-        // TODO @ROBUSTNESS: This shouldn't be needed
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        // start from here:
-        // - C++'ize "shader_set_blah()" calls
-        // - debug this "no index buffer bound" issue. hint: it goes away when only the splash ui entity is
-        // registered
-
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
         glUseProgram(shader);

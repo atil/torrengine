@@ -69,6 +69,12 @@ struct Engine {
     explicit Engine(RenderInfo render_info, shader_handle_t world_shader, shader_handle_t ui_shader)
         : input(), sfx(), particle_prop_reg(particle_prop_registry_create()), render_info(render_info),
           font_data("assets/Consolas.ttf"), world_shader(world_shader), ui_shader(ui_shader) {
+        game_objects.reserve(10);
+        particles.reserve(10);
+        ui.reserve(10);
+        // TODO @ROBUSTNESS: These reserves are needed since reallocation-on-expand calls the destructor of
+        // these (valid, not-moved-out-of) objects, and render units' destructors must not be called in this
+        // case
     }
 
     GameObject &get_go(const std::string &tag) {
