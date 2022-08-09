@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <optional>
 #include <array>
+#include <memory>
 #pragma warning(pop)
 
 #define WIDTH 640

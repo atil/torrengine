@@ -15,6 +15,12 @@ set OtherFlags=/nologo /Wall /Zi /Qspectre /EHsc /std:c++17
 
 cl %OtherFlags% %Paths% src/main.cpp %Libs%
 
+if %errorlevel% neq 0 (
+    echo.
+    echo ***Build failed***
+    exit /B 1
+)
+
 if not "%1" == "-b" ( REM Build only switch
-    if errorlevel 0 if not errorlevel 1 .\bin\main.exe
+    .\bin\main.exe
 )

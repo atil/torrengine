@@ -172,10 +172,12 @@ struct ParticleRenderUnit {
     }
 
     ParticleRenderUnit(ParticleRenderUnit &&rhs)
-        : vao(rhs.vao), vbo(rhs.vbo), ibo(rhs.ibo), shader(rhs.shader), texture(rhs.texture) {
+        : vao(rhs.vao), vbo(rhs.vbo), uv_bo(rhs.uv_bo), ibo(rhs.ibo), index_count(rhs.index_count),
+          shader(rhs.shader), texture(rhs.texture), vert_data_len(rhs.vert_data_len) {
 
         rhs.vao = 0;
         rhs.vbo = 0;
+        rhs.uv_bo = 0;
         rhs.ibo = 0;
         rhs.shader = 0;
         rhs.texture = 0;
@@ -185,7 +187,22 @@ struct ParticleRenderUnit {
     }
 
     ParticleRenderUnit &operator=(ParticleRenderUnit &&rhs) {
+        vao = rhs.vao;
+        vbo = rhs.vbo;
+        uv_bo = rhs.uv_bo;
+        ibo = rhs.ibo;
+        index_count = rhs.index_count;
+        shader = rhs.shader;
+        texture = rhs.texture;
+        vert_data_len = rhs.vert_data_len;
         vert_data = rhs.vert_data;
+
+        rhs.vao = 0;
+        rhs.vbo = 0;
+        rhs.uv_bo = 0;
+        rhs.ibo = 0;
+        rhs.shader = 0;
+        rhs.texture = 0;
         rhs.vert_data = nullptr;
         return *this;
     }
@@ -226,7 +243,7 @@ struct ParticleRenderUnit {
         glBufferSubData(GL_ARRAY_BUFFER, 0, vert_data_len, vert_data);
 
         glBindTexture(GL_TEXTURE_2D, texture);
-        shader_set_f32(shader, "u_alpha", ps.transparency);
+        Shader::set_f32(shader, "u_alpha", ps.transparency);
         glDrawElements(GL_TRIANGLES, (GLsizeiptr)index_count, GL_UNSIGNED_INT, 0);
     }
 };

@@ -12,8 +12,7 @@ struct TextBufferData {
     usize ib_len;
 };
 
-enum class TextWidthType
-{
+enum class TextWidthType {
     FixedWidth,
     FreeWidth,
 };
@@ -30,6 +29,13 @@ struct TextTransform {
 };
 
 // TODO @ROBUSTNESS: Implement glDebugMessageCallback
+
+void glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei length,
+                   const char *message, const void *userParam) {
+    if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
+        return;
+    printf("%s\n", message);
+}
 
 struct FontData {
     u8 *font_bitmap;
@@ -146,8 +152,8 @@ struct GoRenderUnit {
     }
 
     GoRenderUnit(GoRenderUnit &&rhs)
-        : vao(rhs.vao), vbo(rhs.vbo), ibo(rhs.ibo), index_count(rhs.index_count), shader(rhs.shader),
-          texture(rhs.texture) {
+        : vao(rhs.vao), vbo(rhs.vbo), ibo(rhs.ibo), index_count(rhs.index_count),
+          vert_data_len(rhs.vert_data_len), shader(rhs.shader), texture(rhs.texture) {
         rhs.vao = 0;
         rhs.vbo = 0;
         rhs.ibo = 0;
@@ -170,7 +176,8 @@ struct GoRenderUnit {
     void draw(const Mat4 &model) {
         glBindVertexArray(vao);
         glBindTexture(GL_TEXTURE_2D, texture);
-        shader_set_mat4(shader, "u_model", &model);
+        glUseProgram(shader);
+        Shader::set_mat4(shader, "u_model", &model);
         // TODO @DOCS: How can that last parameter be zero?
         glDrawElements(GL_TRIANGLES, (GLsizei)index_count, GL_UNSIGNED_INT, 0);
     }
@@ -224,7 +231,7 @@ struct WidgetRenderUnit {
         // need to do this if we get segfaults
 
         glUseProgram(shader);
-        shader_set_int(shader, "u_texture_ui", 0);
+        Shader::set_int(shader, "u_texture_ui", 0);
 
         update(widget);
     }

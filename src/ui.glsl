@@ -6,8 +6,8 @@ out vec2 v2f_texcoord;
 
 void main()
 {
-    gl_Position = vec4(u_pos, 0.0, 1.0);
     v2f_texcoord = vec2(u_texcoord.x, u_texcoord.y);
+    gl_Position = vec4(u_pos, 0.0, 1.0);
 }
 #endif
 

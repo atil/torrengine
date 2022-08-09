@@ -8,8 +8,7 @@
 typedef ALuint sfx_source_handle_t;
 typedef ALuint sfx_buffer_handle_t;
 
-enum class SfxId
-{
+enum class SfxId {
     SfxStart,
     SfxHitPad,
     SfxHitWall,
@@ -85,7 +84,7 @@ struct Sfx {
     static void check_al_error(const char *msg) {
         ALCenum error = alGetError();
         if (error != AL_NO_ERROR) {
-            printf("AL error: %s\n", msg);
+            printf("AL error [%d]: %s\n", error, msg);
         }
     }
 
@@ -108,6 +107,8 @@ struct Sfx {
         free(wav_buffer);
         fclose(wav_file);
 
+        check_al_error("buffer created with file");
+
         return buffer_handle;
     }
 
@@ -123,47 +124,53 @@ struct Sfx {
 
         return source_handle;
     }
-};
 
-static void sfx_play(Sfx *sfx, SfxId id) {
+    void play(SfxId id) {
 #ifndef SFX_DISABLED
-    sfx_buffer_handle_t buffer = 0;
-    sfx_source_handle_t source = 0;
-    switch (id) {
-    case SfxId::SfxStart:
-        buffer = sfx->buffer_startgame;
-        source = sfx->source_startgame;
-        break;
-    case SfxId::SfxGameOver:
-        buffer = sfx->buffer_gameover;
-        source = sfx->source_gameover;
-        break;
-    case SfxId::SfxHitPad:
-        buffer = sfx->buffer_hitpad;
-        source = sfx->source_objects;
-        break;
-    case SfxId::SfxHitWall:
-        buffer = sfx->buffer_hitwall;
-        source = sfx->source_objects;
-        break;
-    default:
-        printf("Unable to play sfx. Unrecognized id: %d\n", id);
-        return;
-    }
+        sfx_buffer_handle_t buffer = 0;
+        sfx_source_handle_t source = 0;
+        switch (id) {
+        case SfxId::SfxStart:
+            buffer = buffer_startgame;
+            source = source_startgame;
+            break;
+        case SfxId::SfxGameOver:
+            buffer = buffer_gameover;
+            source = source_gameover;
+            break;
+        case SfxId::SfxHitPad:
+            buffer = buffer_hitpad;
+            source = source_objects;
+            break;
+        case SfxId::SfxHitWall:
+            buffer = buffer_hitwall;
+            source = source_objects;
+            break;
+        default:
+            printf("Unable to play sfx. Unrecognized id: %d\n", id);
+            return;
+        }
 
-    alSourcei(source, AL_BUFFER, (ALint)buffer);
-    alSourcePlay(source);
+        if (id == SfxId::SfxStart) {
+            printf("start\n");
+        }
+
+        alSourcei(source, AL_BUFFER, (ALint)buffer);
+        Sfx::check_al_error("source");
+        alSourcePlay(source);
+        Sfx::check_al_error("source play");
 #endif
 
-    // Checking if the source is still playing:
-    // ALint source_state;
-    // alGetSourcei(sfx->source, AL_SOURCE_STATE, &source_state);
-    // while (source_state == AL_PLAYING)
-    // {
-    //     alGetSourcei(al_source, AL_SOURCE_STATE, &source_state);
-    //     check_al_error("source get 2");
-    // }
-}
+        // Checking if the source is still playing:
+        // ALint source_state;
+        // alGetSourcei(sfx->source, AL_SOURCE_STATE, &source_state);
+        // while (source_state == AL_PLAYING)
+        // {
+        //     alGetSourcei(al_source, AL_SOURCE_STATE, &source_state);
+        //     check_al_error("source get 2");
+        // }
+    }
+};
 
 #ifdef SFX_DISABLED
 #pragma warning(pop)

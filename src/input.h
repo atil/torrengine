@@ -1,11 +1,12 @@
-enum class KeyCode
-{
+enum class KeyCode {
     W = 0x0,
     S,
     Up,
     Down,
     Esc,
     Enter,
+    Debug1,
+    Debug2,
     MAX
 };
 
@@ -14,8 +15,8 @@ struct Input {
     bool prev[(usize)KeyCode::MAX];
 
     void update(GLFWwindow *window) {
-        // NOTE @BUGFIX: There used to write "sizeof(KeyCode)" here, which is the size of an integer (the enum's
-        // underlying type. But our array is 6 bools
+        // NOTE @BUGFIX: There used to write "sizeof(KeyCode)" here, which is the size of an integer (the
+        // enum's underlying type. But our array is 6 bools
         memcpy(prev, curr, (usize)KeyCode::MAX * sizeof(bool));
         curr[(usize)KeyCode::W] = (bool)glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
         curr[(usize)KeyCode::S] = (bool)glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
@@ -23,6 +24,8 @@ struct Input {
         curr[(usize)KeyCode::Up] = (bool)glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS;
         curr[(usize)KeyCode::Esc] = (bool)glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
         curr[(usize)KeyCode::Enter] = (bool)glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
+        curr[(usize)KeyCode::Debug1] = (bool)glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS;
+        curr[(usize)KeyCode::Debug2] = (bool)glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS;
     }
 
     bool just_pressed(KeyCode key_code) {

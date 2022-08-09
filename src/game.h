@@ -12,6 +12,12 @@ struct GameObject : public Entity {
     explicit GameObject(const std::string &tag, GoData data_, GoRenderUnit ru_)
         : Entity(tag), data(std::move(data_)), ru(std::move(ru_)) {
     }
+
+    // TODO @CLEANUP: Convert this to a macro
+    GameObject(const GameObject &) = delete;
+    GameObject(GameObject &&) = delete;
+    GameObject &operator=(const GameObject &) = delete;
+    GameObject &operator=(GameObject &&) = delete;
 };
 
 struct ParticleSystem : public Entity {
@@ -21,6 +27,11 @@ struct ParticleSystem : public Entity {
     explicit ParticleSystem(const std::string &tag, ParticleSource ps_, ParticleRenderUnit ru_)
         : Entity(tag), ps(std::move(ps_)), ru(std::move(ru_)) {
     }
+
+    ParticleSystem(const ParticleSystem &) = delete;
+    ParticleSystem(ParticleSystem &&) = delete;
+    ParticleSystem &operator=(const ParticleSystem &) = delete;
+    ParticleSystem &operator=(ParticleSystem &&) = delete;
 };
 
 struct Widget : public Entity {
@@ -30,6 +41,11 @@ struct Widget : public Entity {
     explicit Widget(const std::string &tag, WidgetData data_, WidgetRenderUnit ru_)
         : Entity(tag), data(std::move(data_)), ru(std::move(ru_)) {
     }
+
+    Widget(const Widget &) = delete;
+    Widget(Widget &&) = delete;
+    Widget &operator=(const Widget &) = delete;
+    Widget &operator=(Widget &&) = delete;
 };
 
 struct Engine;
@@ -38,9 +54,9 @@ struct TorState {
     std::string name;
     std::function<std::optional<std::string>(f32, Engine &)> update_func;
 
-    std::vector<EntityIndex> state_gos;
-    std::vector<EntityIndex> state_ui;
-    std::vector<EntityIndex> state_particles;
+    std::vector<std::weak_ptr<GameObject>> state_gos;
+    std::vector<std::weak_ptr<Widget>> state_ui;
+    std::vector<std::weak_ptr<ParticleSystem>> state_particles;
 
     explicit TorState(const std::string &name,
                       std::function<std::optional<std::string>(f32, Engine &)> update)
@@ -49,13 +65,13 @@ struct TorState {
 };
 
 struct Engine {
-    std::vector<GameObject> game_objects;
-    std::vector<ParticleSystem> particles;
-    std::vector<Widget> ui;
+    std::vector<std::shared_ptr<GameObject>> game_objects;
+    std::vector<std::shared_ptr<ParticleSystem>> particles;
+    std::vector<std::shared_ptr<Widget>> ui;
     std::vector<TorState> all_states;
 
     Input input;
-    u8 _padding1[4];
+    u8 _padding1[8];
     Sfx sfx;
     ParticlePropRegistry particle_prop_reg;
     RenderInfo render_info;
@@ -66,9 +82,9 @@ struct Engine {
     shader_handle_t world_shader;
     shader_handle_t ui_shader;
 
-    explicit Engine(RenderInfo render_info, shader_handle_t world_shader, shader_handle_t ui_shader)
+    explicit Engine(RenderInfo render_info, shader_handle_t world_shader_, shader_handle_t ui_shader_)
         : input(), sfx(), particle_prop_reg(particle_prop_registry_create()), render_info(render_info),
-          font_data("assets/Consolas.ttf"), world_shader(world_shader), ui_shader(ui_shader) {
+          font_data("assets/Consolas.ttf"), world_shader(world_shader_), ui_shader(ui_shader_) {
         game_objects.reserve(10);
         particles.reserve(10);
         ui.reserve(10);
@@ -77,10 +93,14 @@ struct Engine {
         // case
     }
 
+    Engine(const Engine &) = delete;
+    Engine &operator=(const Engine &) = delete;
+    Engine &operator=(Engine &&) = delete;
+
     GameObject &get_go(const std::string &tag) {
-        for (GameObject &go : game_objects) {
-            if (go.tag == tag) {
-                return go;
+        for (auto go : game_objects) {
+            if (go->tag == tag) {
+                return *go;
             }
         }
         assert(false); // TODO @ROBUSTNESS: This won't be the case for a while
@@ -88,9 +108,9 @@ struct Engine {
     }
 
     Widget &get_widget(const std::string &tag) {
-        for (Widget &widget : ui) {
-            if (widget.tag == tag) {
-                return widget;
+        for (auto widget : ui) {
+            if (widget->tag == tag) {
+                return *widget;
             }
         }
         assert(false);
@@ -109,18 +129,20 @@ struct Engine {
     }
 
     void register_particle(const std::string &state_name, const ParticleProps &props, Vec2 emit_point) {
-        shader_handle_t particle_shader = load_shader("src/world.glsl"); // Using world shader for now
+        shader_handle_t particle_shader = Shader::load("src/world.glsl"); // Using world shader for now
 
         glUseProgram(particle_shader);
         Mat4 mat_identity = Mat4::identity();
-        shader_set_mat4(particle_shader, "u_model", &mat_identity);
-        shader_set_mat4(particle_shader, "u_view", &(render_info.view));
-        shader_set_mat4(particle_shader, "u_proj", &(render_info.proj));
+        Shader::set_mat4(particle_shader, "u_model", &mat_identity);
+        Shader::set_mat4(particle_shader, "u_view", &(render_info.view));
+        Shader::set_mat4(particle_shader, "u_proj", &(render_info.proj));
 
-        particles.emplace_back("particle", ParticleSource(props, emit_point),
-                               ParticleRenderUnit(props.count, particle_shader, "assets/Ball.png"));
+        std::shared_ptr<ParticleSystem> ps = std::make_shared<ParticleSystem>(
+            "particle", ParticleSource(props, emit_point),
+            ParticleRenderUnit(props.count, particle_shader, "assets/Ball.png"));
 
-        get_state(state_name).state_particles.push_back(particles.size() - 1);
+        particles.push_back(ps);
+        get_state(state_name).state_particles.push_back(ps);
     }
 
     // We might want to have a deregister_particle(ParticleSystem&) overload here in the future.
@@ -136,14 +158,15 @@ struct Engine {
                                    0.5f,  0.5f,  1.0f, 1.0f, -0.5f, 0.5f,  0.0f, 1.0f};
         u32 unit_square_indices[] = {0, 1, 2, 0, 2, 3};
 
-        game_objects.emplace_back(tag, GoData(pos, size),
-                                  GoRenderUnit(unit_square_verts, sizeof(unit_square_verts),
-                                               unit_square_indices, sizeof(unit_square_indices), world_shader,
-                                               texture_path));
+        std::shared_ptr<GameObject> go_ptr = std::make_shared<GameObject>(
+            tag, GoData(pos, size),
+            GoRenderUnit(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
+                         sizeof(unit_square_indices), world_shader, texture_path));
+        game_objects.push_back(go_ptr);
 
         for (TorState &state : all_states) {
             if (state.name == state_name) {
-                state.state_gos.push_back(game_objects.size() - 1);
+                state.state_gos.push_back(go_ptr);
                 break;
             }
         }
@@ -153,11 +176,14 @@ struct Engine {
                             TextTransform transform) {
         WidgetData widget(text, transform, font_data); // It's fine if this is destroyed at the scope end
 
-        ui.emplace_back(tag, widget, WidgetRenderUnit(ui_shader, widget));
+        std::shared_ptr<Widget> widget_ptr =
+            std::make_shared<Widget>(tag, widget, WidgetRenderUnit(ui_shader, widget));
+
+        ui.push_back(widget_ptr);
 
         for (TorState &state : all_states) {
             if (state.name == state_name) {
-                state.state_ui.push_back(ui.size() - 1);
+                state.state_ui.push_back(widget_ptr);
                 break;
             }
         }
@@ -166,6 +192,10 @@ struct Engine {
     void register_state(const std::string &name,
                         std::function<std::optional<std::string>(f32, Engine &)> update) {
         all_states.emplace_back(name, update);
+    }
+
+    void sfx_play(SfxId id) {
+        sfx.play(id);
     }
 };
 
@@ -196,29 +226,29 @@ static void loop(IGame &game, Engine &engine, GLFWwindow *window) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         std::optional<std::string> next_state = curr_state.update_func(dt, engine);
-        for (EntityIndex i : curr_state.state_gos) {
-            GameObject &go = engine.game_objects[i];
-            go.ru.draw(go.data.transform);
+        for (auto go_weak : curr_state.state_gos) {
+            std::shared_ptr<GameObject> go_shared = go_weak.lock();
+            go_shared->ru.draw(go_shared->data.transform);
         }
-        for (EntityIndex i : curr_state.state_ui) {
-            Widget &w = engine.ui[i];
-            w.ru.draw();
+        for (auto widget_weak : curr_state.state_ui) {
+            std::shared_ptr<Widget> widget_shared = widget_weak.lock();
+            widget_shared->ru.draw();
         }
 
-        std::vector<EntityIndex> &alive_particle_indices = curr_state.state_particles;
-        std::vector<usize> dead_particle_indices(alive_particle_indices.size());
-        for (EntityIndex i : alive_particle_indices) {
-            ParticleSource &ps = engine.particles[i].ps;
-            if (!ps.is_alive) {
+        std::vector<usize> dead_particle_indices;
+        dead_particle_indices.reserve(curr_state.state_particles.size());
+        for (usize i = 0; i < curr_state.state_particles.size(); i++) {
+            std::shared_ptr<ParticleSystem> particle_shared = curr_state.state_particles[i].lock();
+            if (!particle_shared->ps.is_alive) {
                 dead_particle_indices.push_back(i);
                 continue;
             }
-
-            ps.update(dt);
-            engine.particles[i].ru.draw(ps);
+            particle_shared->ps.update(dt);
+            particle_shared->ru.draw(particle_shared->ps);
         }
         for (usize i = 0; i < dead_particle_indices.size(); i++) {
             engine.deregister_particle(i);
+            curr_state.state_particles.erase(curr_state.state_particles.begin() + (i64)i);
         }
 
         if (next_state.has_value()) {
@@ -235,6 +265,8 @@ static void main_game(IGame &game) {
 
     glfwInit();
 
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true); // To enable debug output
+
     GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "torrengine.", NULL, NULL);
     glfwMakeContextCurrent(window);
 
@@ -243,19 +275,25 @@ static void main_game(IGame &game) {
     // TODO @CLEANUP: Remove the init code for these from default ctors
     // It's weird to have code run on variable declarations
     FontData font_data("assets/Consolas.ttf");
-    Sfx sfx;
 
     const f32 cam_size = 5.0f;
     RenderInfo render_info = render_info_new(WIDTH, HEIGHT, cam_size);
 
-    shader_handle_t ui_shader = load_shader("src/ui.glsl");
-    shader_handle_t world_shader = load_shader("src/world.glsl");
+    shader_handle_t ui_shader = Shader::load("src/ui.glsl");
+    shader_handle_t world_shader = Shader::load("src/world.glsl");
     glEnable(GL_BLEND); // Enabling transparency for texts
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    // OpenGL debug output
+    // TODO @CLEANUP: Bind this to a switch or something
+    // glEnable(GL_DEBUG_OUTPUT);
+    // glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    // glDebugMessageCallback(glDebugOutput, nullptr);
+    // glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+
     glUseProgram(world_shader);
-    shader_set_mat4(world_shader, "u_view", &render_info.view);
-    shader_set_mat4(world_shader, "u_proj", &render_info.proj);
+    Shader::set_mat4(world_shader, "u_view", &render_info.view);
+    Shader::set_mat4(world_shader, "u_proj", &render_info.proj);
 
     ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
 

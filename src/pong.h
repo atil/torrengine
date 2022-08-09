@@ -70,6 +70,17 @@ struct PongGame : IGame {
 
     virtual void init(Engine &engine) override {
 
+        const f32 cam_size = 5.0f; // TODO @CLEANUP: Duplicate
+        config.area_extents = Vec2(cam_size * engine.render_info.aspect, cam_size);
+        config.pad_size = Vec2(0.3f, 2.0f);
+        config.ball_speed = 4.0f;
+        config.distance_from_center = 4.0f;
+        config.pad_move_speed = 10.0f;
+        config.game_speed_increase_coeff = 0.05f;
+
+        world_init();
+
+        // These binds need to be after init'ing this Pong object. It captures its state or something
         engine.register_state("splash_state", std::bind(&PongGame::update_splash_state, *this,
                                                         std::placeholders::_1, std::placeholders::_2));
 
@@ -78,6 +89,13 @@ struct PongGame : IGame {
         engine.register_state("intermission_state", std::bind(&PongGame::update_intermission_state, *this,
                                                               std::placeholders::_1, std::placeholders::_2));
 
+        engine.register_ui_entity("splash", "splash_state", "TorrPong!\0",
+                                  TextTransform(Vec2(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f));
+        engine.register_ui_entity("score", "game_state", "0\0",
+                                  TextTransform(Vec2(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f));
+        engine.register_ui_entity("intermission", "intermission_state", "Game Over\0",
+                                  TextTransform(Vec2(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f));
+
         engine.register_gameobject("field", "game_state", Vec2::zero(),
                                    Vec2(((f32)WIDTH / (f32)HEIGHT) * 10, 10), "assets/Field.png");
         engine.register_gameobject("pad1", "game_state", Vec2(config.distance_from_center, 0.0f),
@@ -85,24 +103,6 @@ struct PongGame : IGame {
         engine.register_gameobject("pad2", "game_state", Vec2(-config.distance_from_center, 0.0f),
                                    config.pad_size, "assets/PadGreen.png");
         engine.register_gameobject("ball", "game_state", Vec2::zero(), Vec2::one() * 0.2f, "assets/Ball.png");
-
-        engine.register_ui_entity("splash", "splash_state", "TorrPong!\0",
-                                  TextTransform(Vec2(-0.8f, 0), 0.5f, TextWidthType::FixedWidth, 1.6f));
-        engine.register_ui_entity("score", "game_state", "0\0",
-                                  TextTransform(Vec2(-0.9f, -0.9f), 0.3f, TextWidthType::FreeWidth, 0.1f));
-        // engine.register_ui_entity("intermission", "intermission_state", "Game Over\0",
-        //                           TextTransform(Vec2(-0.75f, 0.0f), 0.5f,
-        //                           TextWidthType::FixedWidth, 1.5f));
-
-        world_init();
-
-        const f32 cam_size = 5.0f; // TODO @CLEANUP: Duplicate
-        config.area_extents = Vec2(cam_size * engine.render_info.aspect, cam_size);
-        config.pad_size = Vec2(0.3f, 2.0f);
-        config.ball_speed = 4.0f;
-        config.distance_from_center = 4.0f;
-        config.pad_move_speed = 10.0f;
-        config.game_speed_increase_coeff = 0.05f;
     }
 
     std::optional<std::string> update_splash_state(f32 dt, Engine &engine) {
@@ -111,7 +111,7 @@ struct PongGame : IGame {
         if (engine.input.just_pressed(KeyCode::Enter)) {
 
             world_init();
-            sfx_play(&engine.sfx, SfxId::SfxStart);
+            engine.sfx_play(SfxId::SfxStart);
 
             next_state = "game_state";
         }
@@ -132,7 +132,6 @@ struct PongGame : IGame {
         // UI draw
         Widget &swidget = engine.get_widget("score");
         if (result.did_score) {
-
             swidget.data.set_str(world.score);
             swidget.ru.update(swidget.data);
         }
@@ -197,7 +196,7 @@ struct PongGame : IGame {
             result.did_score = true;
             world.game_speed_coeff += config.game_speed_increase_coeff;
 
-            sfx_play(&engine.sfx, SfxId::SfxHitPad);
+            engine.sfx_play(SfxId::SfxHitPad);
 
             const ParticleProps &hit_particle_prop = collision_point.x > 0
                                                          ? engine.particle_prop_reg.pad_hit_right
@@ -213,14 +212,14 @@ struct PongGame : IGame {
             ball_displacement = world.ball_move_dir * (config.ball_speed * dt);
             ball_next_pos = ball_pos + ball_displacement;
 
-            sfx_play(&engine.sfx, SfxId::SfxHitWall);
+            engine.sfx_play(SfxId::SfxHitWall);
         }
 
         result.is_gameover =
             ball_next_pos.x > config.area_extents.x || ball_next_pos.x < -config.area_extents.x;
 
         if (result.is_gameover) {
-            sfx_play(&engine.sfx, SfxId::SfxGameOver);
+            engine.sfx_play(SfxId::SfxGameOver);
         }
 
         ball_go.transform.set_pos_xy(ball_next_pos);
@@ -241,7 +240,7 @@ struct PongGame : IGame {
 
             world_init();
 
-            sfx_play(&engine.sfx, SfxId::SfxStart);
+            engine.sfx_play(SfxId::SfxStart);
 
             next_state = "game_state";
         }
