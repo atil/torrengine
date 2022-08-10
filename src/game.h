@@ -64,9 +64,6 @@ struct TorState {
     }
 };
 
-// start from here: folder structure needs to look better.
-// - move this to its own header
-// - think about moving the implementation to .cpp files
 struct Engine {
     std::vector<std::shared_ptr<GameObject>> game_objects;
     std::vector<std::shared_ptr<ParticleSystem>> particles;
@@ -85,9 +82,11 @@ struct Engine {
     shader_handle_t world_shader;
     shader_handle_t ui_shader;
 
-    explicit Engine(RenderInfo render_info, shader_handle_t world_shader_, shader_handle_t ui_shader_)
-        : input(), sfx(), particle_prop_reg(particle_prop_registry_create()), render_info(render_info),
-          font_data("assets/Consolas.ttf"), world_shader(world_shader_), ui_shader(ui_shader_) {
+    explicit Engine(RenderInfo render_info, std::vector<SfxAsset> sfx_assets, shader_handle_t world_shader_,
+                    shader_handle_t ui_shader_)
+        : input(), sfx(sfx_assets), particle_prop_reg(particle_prop_registry_create()),
+          render_info(render_info), font_data("assets/Consolas.ttf"), world_shader(world_shader_),
+          ui_shader(ui_shader_) {
         game_objects.reserve(10);
         particles.reserve(10);
         ui.reserve(10);
@@ -296,7 +295,13 @@ static void main_game(IGame &game) {
 
     ParticlePropRegistry particle_prop_reg = particle_prop_registry_create();
 
-    Engine engine(render_info, world_shader, ui_shader);
+    std::vector<SfxAsset> sfx_assets;
+    sfx_assets.emplace_back(SfxId::SfxStart, "assets/Start.Wav");
+    sfx_assets.emplace_back(SfxId::SfxHitPad, "assets/HitPad.Wav");
+    sfx_assets.emplace_back(SfxId::SfxHitWall, "assets/HitWall.Wav");
+    sfx_assets.emplace_back(SfxId::SfxGameOver, "assets/GameOver.Wav");
+
+    Engine engine(render_info, sfx_assets, world_shader, ui_shader);
 
     loop(game, engine, window);
 

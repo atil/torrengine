@@ -12,8 +12,6 @@
 #pragma warning(disable : 5045) // Spectre thing
 #pragma warning(disable : ALL_CODE_ANALYSIS_WARNINGS)
 #include <GL/glew.h>
-#include <AL/al.h>
-#include <AL/alc.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
 #include <stb_truetype.h>

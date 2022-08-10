@@ -114,7 +114,7 @@ struct GoRenderUnit {
     GoRenderUnit &operator=(GoRenderUnit &&) = delete;
 
     explicit GoRenderUnit(const f32 *vert_data, usize vert_data_len, const u32 *index_data,
-                          usize index_data_len, shader_handle_t shader, const char *texture_file_name)
+                          usize index_data_len, shader_handle_t shader, const std::string &texture_file_name)
         : index_count((u32)index_data_len), vert_data_len(vert_data_len), shader(shader) {
 
         glGenVertexArrays(1, &(vao));
@@ -144,8 +144,8 @@ struct GoRenderUnit {
 
         int width, height, channel_count;
         stbi_set_flip_vertically_on_load(true);
-        uint8_t *data = stbi_load(texture_file_name, &width, &height, &channel_count, 0);
-        assert(data != NULL);
+        uint8_t *data = stbi_load(texture_file_name.c_str(), &width, &height, &channel_count, 0);
+        assert(data != nullptr);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         stbi_image_free(data);

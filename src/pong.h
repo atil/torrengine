@@ -33,7 +33,7 @@ static bool pad_resolve_point(const GoData &pad_go, Vec2 p, int resolve_dir, f32
 }
 
 static bool pad_ball_collision_check(const GoData &pad_go, Vec2 ball_displacement_from,
-                                     Vec2 ball_displacement_to, Vec2 *out_collision_point) {
+                                     Vec2 ball_displacement_to, Vec2 &out_collision_point) {
     Rect rect_world = gameobject_get_world_rect(pad_go);
     Vec2 edges[4] = {
         rect_world.min,
@@ -45,9 +45,9 @@ static bool pad_ball_collision_check(const GoData &pad_go, Vec2 ball_displacemen
     for (int i = 0; i < 4; i++) {
         Vec2 intersection;
         bool has_intersection = check_line_segment_intersection(ball_displacement_from, ball_displacement_to,
-                                                                edges[i], edges[(i + 1) % 4], &intersection);
+                                                                edges[i], edges[(i + 1) % 4], intersection);
         if (has_intersection) {
-            *out_collision_point = intersection;
+            out_collision_point = intersection;
             return true;
         }
     }
@@ -175,8 +175,9 @@ struct PongGame : IGame {
         Vec2 ball_next_pos = ball_pos + ball_displacement;
 
         Vec2 collision_point;
-        if (pad_ball_collision_check(pad1_go, ball_pos, ball_next_pos, &collision_point) ||
-            pad_ball_collision_check(pad2_go, ball_pos, ball_next_pos, &collision_point)) {
+        if (pad_ball_collision_check(pad1_go, ball_pos, ball_next_pos, collision_point) ||
+            pad_ball_collision_check(pad2_go, ball_pos, ball_next_pos, collision_point)) {
+
             // Hit paddles
 
             ball_pos = collision_point; // Snap to hit position
@@ -192,7 +193,7 @@ struct PongGame : IGame {
             ball_displacement = world.ball_move_dir * (config.ball_speed * dt);
             ball_next_pos = ball_pos + ball_displacement;
 
-            (world.score)++;
+            world.score++;
             result.did_score = true;
             world.game_speed_coeff += config.game_speed_increase_coeff;
 

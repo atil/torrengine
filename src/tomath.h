@@ -90,7 +90,7 @@ struct Mat4 {
     }
 };
 
-static bool check_line_segment_intersection(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4, Vec2 *intersection) {
+static bool check_line_segment_intersection(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4, Vec2 &intersection) {
     f32 x1 = p1.x;
     f32 x2 = p2.x;
     f32 x3 = p3.x;
@@ -116,7 +116,7 @@ static bool check_line_segment_intersection(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4, 
     }
 
     f32 t = t_nom / t_den;
-    *intersection = Vec2(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
+    intersection = Vec2(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
 
     return true;
 }
