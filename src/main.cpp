@@ -1,6 +1,3 @@
-// tasks:
-// - core vectors should be: gameobjects, particles, ui.
-
 // NOTE @DOCS: Game origin: up-left
 
 #define GLEW_STATIC                 // Statically linking glew

@@ -64,6 +64,9 @@ struct TorState {
     }
 };
 
+// start from here: folder structure needs to look better.
+// - move this to its own header
+// - think about moving the implementation to .cpp files
 struct Engine {
     std::vector<std::shared_ptr<GameObject>> game_objects;
     std::vector<std::shared_ptr<ParticleSystem>> particles;
@@ -129,7 +132,7 @@ struct Engine {
     }
 
     void register_particle(const std::string &state_name, const ParticleProps &props, Vec2 emit_point) {
-        shader_handle_t particle_shader = Shader::load("src/world.glsl"); // Using world shader for now
+        shader_handle_t particle_shader = Shader::load("src/shader/world.glsl"); // Using world shader for now
 
         glUseProgram(particle_shader);
         Mat4 mat_identity = Mat4::identity();
@@ -272,15 +275,11 @@ static void main_game(IGame &game) {
 
     glewInit(); // Needs to be after context creation
 
-    // TODO @CLEANUP: Remove the init code for these from default ctors
-    // It's weird to have code run on variable declarations
-    FontData font_data("assets/Consolas.ttf");
-
     const f32 cam_size = 5.0f;
     RenderInfo render_info = render_info_new(WIDTH, HEIGHT, cam_size);
 
-    shader_handle_t ui_shader = Shader::load("src/ui.glsl");
-    shader_handle_t world_shader = Shader::load("src/world.glsl");
+    shader_handle_t ui_shader = Shader::load("src/shader/ui.glsl");
+    shader_handle_t world_shader = Shader::load("src/shader/world.glsl");
     glEnable(GL_BLEND); // Enabling transparency for texts
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
