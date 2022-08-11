@@ -33,12 +33,6 @@ struct SfxPlayer {
     sfx_source_handle_t source_gameover;
     u32 _unused_padding; // TODO @CLEANUP: Research why we need this
 
-    // TODO @REFACTOR: These are gonna be an array
-    sfx_buffer_handle_t buffer_hitpad;
-    sfx_buffer_handle_t buffer_hitwall;
-    sfx_buffer_handle_t buffer_startgame;
-    sfx_buffer_handle_t buffer_gameover;
-
     std::unordered_map<SfxId, sfx_buffer_handle_t> buffers;
 
     SfxPlayer(std::vector<SfxAsset> assets);

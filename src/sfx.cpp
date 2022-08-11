@@ -47,11 +47,6 @@ SfxPlayer::SfxPlayer(std::vector<SfxAsset> assets) {
     // - use "buffers" instead of these below
     // - noncopyable macro
     // - particles to its own module
-
-    buffer_hitpad = create_buffer_with_file("assets/HitPad.wav");
-    buffer_hitwall = create_buffer_with_file("assets/HitWall.wav");
-    buffer_gameover = create_buffer_with_file("assets/GameOver.wav");
-    buffer_startgame = create_buffer_with_file("assets/Start.wav");
 #endif
 }
 
@@ -60,10 +55,10 @@ SfxPlayer::~SfxPlayer() {
     alDeleteSources(1, &(source_startgame));
     alDeleteSources(1, &(source_gameover));
     alDeleteSources(1, &(source_objects));
-    alDeleteBuffers(1, &(buffer_startgame));
-    alDeleteBuffers(1, &(buffer_gameover));
-    alDeleteBuffers(1, &(buffer_hitpad));
-    alDeleteBuffers(1, &(buffer_hitwall));
+
+    for (const auto &pair : buffers) {
+        alDeleteBuffers(1, &pair.second);
+    }
 
     device = alcGetContextsDevice(context);
     alcMakeContextCurrent(NULL);
@@ -110,24 +105,25 @@ sfx_source_handle_t SfxPlayer::create_source() {
 }
 
 void SfxPlayer::play(SfxId id) {
+
 #ifndef SFX_DISABLED
-    sfx_buffer_handle_t buffer = 0;
+    if (buffers.find(id) == buffers.end()) {
+        printf("Can't play sound. Unrecognized id: %d\n", id);
+        return;
+    }
+
+    sfx_buffer_handle_t buffer = buffers[id];
+
     sfx_source_handle_t source = 0;
     switch (id) {
     case SfxId::SfxStart:
-        buffer = buffer_startgame;
         source = source_startgame;
         break;
     case SfxId::SfxGameOver:
-        buffer = buffer_gameover;
         source = source_gameover;
         break;
     case SfxId::SfxHitPad:
-        buffer = buffer_hitpad;
-        source = source_objects;
-        break;
     case SfxId::SfxHitWall:
-        buffer = buffer_hitwall;
         source = source_objects;
         break;
     default:
