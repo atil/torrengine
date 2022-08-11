@@ -109,7 +109,7 @@ struct GoRenderUnit {
     shader_handle_t shader;
     texture_handle_t texture;
 
-    GoRenderUnit(const GoRenderUnit &) = default;
+    GoRenderUnit(const GoRenderUnit &) = delete;
     GoRenderUnit &operator=(const GoRenderUnit &) = delete;
     GoRenderUnit &operator=(GoRenderUnit &&) = delete;
 

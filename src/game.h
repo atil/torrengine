@@ -9,43 +9,30 @@ struct GameObject : public Entity {
     GoData data;
     GoRenderUnit ru;
 
+    PREVENT_COPY_MOVE(GameObject);
     explicit GameObject(const std::string &tag, GoData data_, GoRenderUnit ru_)
         : Entity(tag), data(std::move(data_)), ru(std::move(ru_)) {
     }
-
-    // TODO @CLEANUP: Convert this to a macro
-    GameObject(const GameObject &) = delete;
-    GameObject(GameObject &&) = delete;
-    GameObject &operator=(const GameObject &) = delete;
-    GameObject &operator=(GameObject &&) = delete;
 };
 
 struct ParticleSystem : public Entity {
     ParticleSource ps;
     ParticleRenderUnit ru;
 
+    PREVENT_COPY_MOVE(ParticleSystem);
     explicit ParticleSystem(const std::string &tag, ParticleSource ps_, ParticleRenderUnit ru_)
         : Entity(tag), ps(std::move(ps_)), ru(std::move(ru_)) {
     }
-
-    ParticleSystem(const ParticleSystem &) = delete;
-    ParticleSystem(ParticleSystem &&) = delete;
-    ParticleSystem &operator=(const ParticleSystem &) = delete;
-    ParticleSystem &operator=(ParticleSystem &&) = delete;
 };
 
 struct Widget : public Entity {
     WidgetData data;
     WidgetRenderUnit ru;
 
+    PREVENT_COPY_MOVE(Widget);
     explicit Widget(const std::string &tag, WidgetData data_, WidgetRenderUnit ru_)
         : Entity(tag), data(std::move(data_)), ru(std::move(ru_)) {
     }
-
-    Widget(const Widget &) = delete;
-    Widget(Widget &&) = delete;
-    Widget &operator=(const Widget &) = delete;
-    Widget &operator=(Widget &&) = delete;
 };
 
 struct Engine;
@@ -82,6 +69,7 @@ struct Engine {
     shader_handle_t world_shader;
     shader_handle_t ui_shader;
 
+    PREVENT_COPY_MOVE(Engine);
     explicit Engine(RenderInfo render_info, std::vector<SfxAsset> sfx_assets, shader_handle_t world_shader_,
                     shader_handle_t ui_shader_)
         : input(), sfx(sfx_assets), particle_prop_reg(particle_prop_registry_create()),
@@ -94,10 +82,6 @@ struct Engine {
         // these (valid, not-moved-out-of) objects, and render units' destructors must not be called in this
         // case
     }
-
-    Engine(const Engine &) = delete;
-    Engine &operator=(const Engine &) = delete;
-    Engine &operator=(Engine &&) = delete;
 
     GameObject &get_go(const std::string &tag) {
         for (auto go : game_objects) {

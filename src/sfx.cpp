@@ -44,7 +44,6 @@ SfxPlayer::SfxPlayer(std::vector<SfxAsset> assets) {
     }
 
     // start from here:
-    // - use "buffers" instead of these below
     // - noncopyable macro
     // - particles to its own module
 #endif

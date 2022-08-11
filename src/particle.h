@@ -57,14 +57,7 @@ struct ParticleSource {
         rhs.particles = nullptr;
     }
 
-    ParticleSource &operator=(ParticleSource &&rhs) {
-        positions = rhs.positions;
-        particles = rhs.particles;
-        rhs.positions = nullptr;
-        rhs.particles = nullptr;
-        return *this;
-    }
-
+    ParticleSource &operator=(ParticleSource &&rhs) = delete;
     ParticleSource(const ParticleSource &rhs) = delete;
     ParticleSource &operator=(const ParticleSource &rhs) = delete;
 
@@ -186,27 +179,7 @@ struct ParticleRenderUnit {
         rhs.vert_data = nullptr;
     }
 
-    ParticleRenderUnit &operator=(ParticleRenderUnit &&rhs) {
-        vao = rhs.vao;
-        vbo = rhs.vbo;
-        uv_bo = rhs.uv_bo;
-        ibo = rhs.ibo;
-        index_count = rhs.index_count;
-        shader = rhs.shader;
-        texture = rhs.texture;
-        vert_data_len = rhs.vert_data_len;
-        vert_data = rhs.vert_data;
-
-        rhs.vao = 0;
-        rhs.vbo = 0;
-        rhs.uv_bo = 0;
-        rhs.ibo = 0;
-        rhs.shader = 0;
-        rhs.texture = 0;
-        rhs.vert_data = nullptr;
-        return *this;
-    }
-
+    ParticleRenderUnit &operator=(ParticleRenderUnit &&rhs) = delete;
     ParticleRenderUnit(const ParticleRenderUnit &rhs) = delete;
     ParticleRenderUnit &operator=(const ParticleRenderUnit &rhs) = delete;
 
