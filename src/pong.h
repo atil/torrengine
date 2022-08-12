@@ -21,10 +21,10 @@ struct PongWorldUpdateResult {
 };
 
 static bool pad_resolve_point(const GoData &pad_go, Vec2 p, int resolve_dir, f32 *out_resolved_x) {
-    if (gameobject_is_point_in(pad_go, p)) {
+    if (pad_go.is_point_in(p)) {
         // 1 is right pad, -1 is left
         // TODO @ROBUSNESS: Assert here that resolve_dir is either -1 or 1
-        Rect rect_world = gameobject_get_world_rect(pad_go);
+        Rect rect_world = pad_go.get_world_rect();
         *out_resolved_x = resolve_dir == 1 ? rect_world.min.x : rect_world.max.x;
         return true;
     }
@@ -34,7 +34,7 @@ static bool pad_resolve_point(const GoData &pad_go, Vec2 p, int resolve_dir, f32
 
 static bool pad_ball_collision_check(const GoData &pad_go, Vec2 ball_displacement_from,
                                      Vec2 ball_displacement_to, Vec2 &out_collision_point) {
-    Rect rect_world = gameobject_get_world_rect(pad_go);
+    Rect rect_world = pad_go.get_world_rect();
     Vec2 edges[4] = {
         rect_world.min,
         Vec2(rect_world.min.x, rect_world.max.y),
@@ -71,7 +71,7 @@ struct PongGame : IGame {
     virtual void init(Engine &engine) override {
 
         const f32 cam_size = 5.0f; // TODO @CLEANUP: Duplicate
-        config.area_extents = Vec2(cam_size * engine.render_info.aspect, cam_size);
+        config.area_extents = Vec2(cam_size * engine.renderer.render_info.aspect, cam_size);
         config.pad_size = Vec2(0.3f, 2.0f);
         config.ball_speed = 4.0f;
         config.distance_from_center = 4.0f;
@@ -103,6 +103,26 @@ struct PongGame : IGame {
         engine.register_gameobject("pad2", "game_state", Vec2(-config.distance_from_center, 0.0f),
                                    config.pad_size, "assets/PadGreen.png");
         engine.register_gameobject("ball", "game_state", Vec2::zero(), Vec2::one() * 0.2f, "assets/Ball.png");
+
+        ParticleProps particle_props_left;
+        particle_props_left.angle_limits = Vec2(-90, 90);
+        particle_props_left.count = 5;
+        particle_props_left.lifetime = 1;
+        particle_props_left.speed = 1;
+        particle_props_left.angle_offset = 10;
+        particle_props_left.speed_offset = 0.1f;
+        particle_props_left.size = 0.3f;
+        engine.register_particle_prop(ParticleSystemType::PadLeft, particle_props_left);
+
+        ParticleProps particle_props_right;
+        particle_props_right.angle_limits = Vec2(90, 270);
+        particle_props_right.count = 5;
+        particle_props_right.lifetime = 1;
+        particle_props_right.speed = 1;
+        particle_props_right.angle_offset = 10;
+        particle_props_right.speed_offset = 0.1f;
+        particle_props_right.size = 0.3f;
+        engine.register_particle_prop(ParticleSystemType::PadRight, particle_props_right);
     }
 
     std::optional<std::string> update_splash_state(f32 dt, Engine &engine) {
@@ -149,8 +169,8 @@ struct PongGame : IGame {
         GoData &pad2_go = engine.get_go("pad2").data;
         GoData &ball_go = engine.get_go("ball").data;
 
-        Rect pad1_world_rect = gameobject_get_world_rect(pad1_go);
-        Rect pad2_world_rect = gameobject_get_world_rect(pad2_go);
+        Rect pad1_world_rect = pad1_go.get_world_rect();
+        Rect pad2_world_rect = pad2_go.get_world_rect();
 
         f32 pad_move_speed = config.pad_move_speed * world.game_speed_coeff * dt;
 
@@ -199,11 +219,10 @@ struct PongGame : IGame {
 
             engine.sfx_play(SfxId::SfxHitPad);
 
-            const ParticleProps &hit_particle_prop = collision_point.x > 0
-                                                         ? engine.particle_prop_reg.pad_hit_right
-                                                         : engine.particle_prop_reg.pad_hit_left;
+            ParticleSystemType hit_particle_type =
+                collision_point.x > 0 ? ParticleSystemType::PadRight : ParticleSystemType::PadLeft;
 
-            engine.register_particle("game_state", hit_particle_prop, collision_point);
+            engine.register_particle("game_state", hit_particle_type, collision_point);
         }
 
         if (ball_next_pos.y > config.area_extents.y || ball_next_pos.y < -config.area_extents.y) {

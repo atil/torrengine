@@ -43,9 +43,6 @@ SfxPlayer::SfxPlayer(std::vector<SfxAsset> assets) {
         buffers.insert(pair);
     }
 
-    // start from here:
-    // - noncopyable macro
-    // - particles to its own module
 #endif
 }
 

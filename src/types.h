@@ -1,3 +1,5 @@
+#include <cstdint> // TODO @CLEANUP: Why do we need this? Shouldn't C++ complier sort it out?
+
 typedef uint32_t buffer_handle_t; // TODO @CLEANUP: Get rid of _t's
 typedef uint32_t texture_handle_t;
 typedef uint32_t shader_handle_t;
