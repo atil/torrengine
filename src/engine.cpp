@@ -20,8 +20,8 @@ Scene::Scene(const std::string &name, std::function<std::optional<std::string>(f
     : name(name), update_func(update) {
 }
 
-Engine::Engine(Renderer renderer, std::vector<SfxAsset> sfx_assets)
-    : input(), sfx(sfx_assets), renderer(renderer), font_data("assets/Consolas.ttf") {
+Engine::Engine(u32 screen_width, u32 screen_height, std::vector<SfxAsset> sfx_assets)
+    : input(), sfx(sfx_assets), renderer(screen_width, screen_height), font_data("assets/Consolas.ttf") {
     game_objects.reserve(10);
     particles.reserve(10);
     ui.reserve(10);

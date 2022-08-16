@@ -69,7 +69,7 @@ struct Engine {
     FontData font_data;
 
     PREVENT_COPY_MOVE(Engine);
-    explicit Engine(Renderer render_info, std::vector<SfxAsset> sfx_assets);
+    explicit Engine(u32 screen_width, u32 screen_height, std::vector<SfxAsset> sfx_assets);
 
     GameObject &Engine::get_go(const std::string &tag);
     Widget &Engine::get_widget(const std::string &tag);

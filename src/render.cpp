@@ -38,8 +38,8 @@ Renderer::Renderer(u32 screen_width, u32 screen_height) {
 
     glewInit(); // Needs to be after GLFW init
 
-    shader_handle_t ui_shader = Shader::load("src/shader/ui.glsl");
-    shader_handle_t world_shader = Shader::load("src/shader/world.glsl");
+    ui_shader = Shader::load("src/shader/ui.glsl");
+    world_shader = Shader::load("src/shader/world.glsl");
     glEnable(GL_BLEND); // Enabling transparency for texts
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 

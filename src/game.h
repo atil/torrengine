@@ -29,10 +29,12 @@ static void loop(IGame &game, Engine &engine, GLFWwindow *window) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         std::optional<std::string> next_state = curr_state.update_func(dt, engine);
+
         for (auto go_weak : curr_state.state_gos) {
             std::shared_ptr<GameObject> go_shared = go_weak.lock();
             go_shared->ru.draw(go_shared->data.transform);
         }
+
         for (auto widget_weak : curr_state.state_ui) {
             std::shared_ptr<Widget> widget_shared = widget_weak.lock();
             widget_shared->ru.draw();
@@ -73,15 +75,13 @@ static void main_game(IGame &game) {
     GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "torrengine.", NULL, NULL);
     glfwMakeContextCurrent(window);
 
-    Renderer renderer(WIDTH, HEIGHT);
-
     std::vector<SfxAsset> sfx_assets;
     sfx_assets.emplace_back(SfxId::SfxStart, "assets/Start.Wav");
     sfx_assets.emplace_back(SfxId::SfxHitPad, "assets/HitPad.Wav");
     sfx_assets.emplace_back(SfxId::SfxHitWall, "assets/HitWall.Wav");
     sfx_assets.emplace_back(SfxId::SfxGameOver, "assets/GameOver.Wav");
 
-    Engine engine(renderer, sfx_assets);
+    Engine engine(WIDTH, HEIGHT, sfx_assets);
 
     loop(game, engine, window);
 
