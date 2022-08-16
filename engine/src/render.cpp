@@ -38,8 +38,8 @@ Renderer::Renderer(u32 screen_width, u32 screen_height) {
 
     glewInit(); // Needs to be after GLFW init
 
-    ui_shader = Shader::load("src/shader/ui.glsl");
-    world_shader = Shader::load("src/shader/world.glsl");
+    ui_shader = Shader::load("engine/src/shader/ui.glsl");
+    world_shader = Shader::load("engine/src/shader/world.glsl");
     glEnable(GL_BLEND); // Enabling transparency for texts
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -346,7 +346,7 @@ void WidgetRenderUnit::draw() {
 ParticleRenderUnit::ParticleRenderUnit(usize particle_count, RenderInfo render_info,
                                        const std::string &texture_file_name) {
 
-    shader = Shader::load("src/shader/world.glsl"); // Using world shader for now
+    shader = Shader::load("engine/src/shader/world.glsl"); // Using world shader for now
 
     glUseProgram(shader);
     Mat4 mat_identity = Mat4::identity();
