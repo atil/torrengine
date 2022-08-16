@@ -1,6 +1,6 @@
 #include <cstdlib>
 #include <cstring>
-#include "types.h"
+#include "common.h"
 #include "tomath.h"
 #include "particle.h"
 

@@ -2,18 +2,18 @@
 #define STB_TRUETYPE_IMPLEMENTATION // stb requires these
 #define STB_IMAGE_IMPLEMENTATION
 
-#pragma warning(disable : 5045) // Spectre thing
-#pragma warning(push, 0)
+#include "common.h"
+
+DISABLE_WARNINGS
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
 #include <cassert>
 #include <string>
 #include <GL/glew.h>
-#pragma warning(pop)
+ENABLE_WARNINGS
 
 #include "util.h"
-#include "types.h"
 #include "tomath.h"
 #include "render.h"
 #include "shader.h"
@@ -34,7 +34,7 @@ Renderer::Renderer(u32 screen_width, u32 screen_height) {
     Mat4 view = Mat4::identity();
     f32 aspect = (f32)screen_width / (f32)screen_height;
     Mat4 proj = Mat4::ortho(-aspect * cam_size, aspect * cam_size, -cam_size, cam_size, -0.001f, 100.0f);
-    render_info = RenderInfo(view, proj, aspect);
+    render_info = RenderInfo(view, proj, screen_width, screen_height);
 
     glewInit(); // Needs to be after GLFW init
 
@@ -66,7 +66,7 @@ Renderer::~Renderer() {
 // Font data
 //
 FontData::FontData(const std::string &ttf_path) {
-    u8 *font_bytes = (u8 *)read_file(ttf_path.c_str());
+    u8 *font_bytes = (u8 *)Util::read_file(ttf_path.c_str());
     assert(font_bytes != nullptr);
     font_bitmap = new u8[FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT];
 

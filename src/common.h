@@ -18,3 +18,11 @@ typedef float f32;
     class_name(class_name &&) = delete;                                                                      \
     class_name &operator=(const class_name &) = delete;                                                      \
     class_name &operator=(class_name &&) = delete
+
+#define DISABLE_WARNINGS                                                                                     \
+    _Pragma("warning(disable : 5045)")     /* Spectre thing */                                               \
+        _Pragma("warning(disable : 4820)") /* Padding in struct */                                           \
+        _Pragma("warning(disable : 4996)") /* Unsafe fopen() etc */                                          \
+        _Pragma("warning(push, 0)")
+
+#define ENABLE_WARNINGS _Pragma("warning(pop)")

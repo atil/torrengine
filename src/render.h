@@ -1,12 +1,11 @@
 #pragma once
 
-#pragma warning(disable : 5045) // Spectre thing
-#pragma warning(push, 0)
+DISABLE_WARNINGS
 #include <string>
 #include <array>
 #include <stb_truetype.h>
 #include <stb_image.h>
-#pragma warning(pop)
+ENABLE_WARNINGS
 
 #include "util.h"
 #include "tomath.h"
@@ -19,9 +18,13 @@
 struct RenderInfo {
     Mat4 view;
     Mat4 proj;
+    u32 width;
+    u32 height;
     f32 aspect;
 
-    RenderInfo(Mat4 view, Mat4 proj, f32 aspect) : view(view), proj(proj), aspect(aspect) {
+    RenderInfo(Mat4 view, Mat4 proj, u32 screen_width, u32 screen_height)
+        : view(view), proj(proj), width(screen_width), height(screen_height),
+          aspect((f32)screen_width / (f32)screen_height) {
     }
     RenderInfo() {
     }
@@ -29,6 +32,7 @@ struct RenderInfo {
 
 struct Renderer {
     RenderInfo render_info;
+    // TODO @ROBUSTNESS: Have a Shader struct and make these unique_ptr's
     shader_handle_t world_shader;
     shader_handle_t ui_shader;
 

@@ -1,7 +1,7 @@
 struct Shader {
     static shader_handle_t load(const std::string &file_path) {
         char info_log[512]; // TODO @CLEANUP: Better logging
-        char *shader_string = read_file(file_path.c_str());
+        const char *shader_string = (const char *)Util::read_file(file_path.c_str());
 
         std::string vert_string = "#version 420\n#define VERTEX\n" + std::string(shader_string);
         std::string frag_string = "#version 420\n#define FRAGMENT\n" + std::string(shader_string);

@@ -5,13 +5,15 @@
 #pragma warning(disable : 5045) // Spectre thing
 #pragma warning(disable : 4505) // Unreferenced functions
 
-#include "game.h"
+#include "application.h"
 #include "pong.h"
+#include <memory>
 
 #pragma warning(pop)
 
 int main(void) {
-    PongGame pong;
-    main_game(pong);
+    std::unique_ptr<IGame> pong = std::make_unique<PongGame>();
+    Application app(std::move(pong));
+    app.loop();
     return 0;
 }

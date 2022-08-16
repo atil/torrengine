@@ -2,15 +2,13 @@
 
 // #define SFX_DISABLED // TODO @CLEANUP: Convert this to a cmdline argument
 
-#ifdef SFX_DISABLED
-#pragma warning(push)
-#pragma warning(disable : 4100)
-#endif
+#include "common.h"
 
-#include "types.h"
+DISABLE_WARNINGS
 #include <memory>
 #include <string>
 #include <vector>
+ENABLE_WARNINGS
 
 enum class SfxId {
     SfxStart,
@@ -36,7 +34,3 @@ class Sfx {
     ~Sfx();
     void play(SfxId id);
 };
-
-#ifdef SFX_DISABLED
-#pragma warning(pop)
-#endif

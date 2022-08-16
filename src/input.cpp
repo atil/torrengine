@@ -1,9 +1,13 @@
 #define GLFW_DLL          // Dynamically linking glfw
 #define GLFW_INCLUDE_NONE // Disable including dev environment header
 
+#include "common.h"
+
+DISABLE_WARNINGS
 #include <cstring>
 #include <GLFW/glfw3.h>
-#include "types.h"
+ENABLE_WARNINGS
+
 #include "input.h"
 
 void Input::update(GLFWwindow *window) {

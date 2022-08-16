@@ -1,4 +1,5 @@
 // #define WORLD_DISABLE_BALL_RANDOMNESS
+#include "engine.h"
 
 struct PongWorld {
     Vec2 ball_move_dir;
@@ -80,6 +81,9 @@ struct PongGame : IGame {
 
         world_init();
 
+        f32 screen_width = static_cast<f32>(engine.renderer.render_info.width);
+        f32 screen_height = static_cast<f32>(engine.renderer.render_info.height);
+
         // These binds need to be after init'ing this Pong object. It captures its state or something
         engine.register_state("splash_state", std::bind(&PongGame::update_splash_state, *this,
                                                         std::placeholders::_1, std::placeholders::_2));
@@ -97,7 +101,7 @@ struct PongGame : IGame {
                                   TextTransform(Vec2(-0.75f, 0.0f), 0.5f, TextWidthType::FixedWidth, 1.5f));
 
         engine.register_gameobject("field", "game_state", Vec2::zero(),
-                                   Vec2(((f32)WIDTH / (f32)HEIGHT) * 10, 10), "assets/Field.png");
+                                   Vec2((screen_width / screen_height) * 10, 10), "assets/Field.png");
         engine.register_gameobject("pad1", "game_state", Vec2(config.distance_from_center, 0.0f),
                                    config.pad_size, "assets/PadBlue.png");
         engine.register_gameobject("pad2", "game_state", Vec2(-config.distance_from_center, 0.0f),
@@ -222,7 +226,7 @@ struct PongGame : IGame {
             ParticleSystemType hit_particle_type =
                 collision_point.x > 0 ? ParticleSystemType::PadRight : ParticleSystemType::PadLeft;
 
-            engine.register_particle("game_state", hit_particle_type, collision_point);
+            engine.particle_play("game_state", hit_particle_type, collision_point);
         }
 
         if (ball_next_pos.y > config.area_extents.y || ball_next_pos.y < -config.area_extents.y) {

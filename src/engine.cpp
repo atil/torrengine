@@ -1,5 +1,5 @@
 #include <cassert>
-#include "game.h"
+#include "engine.h"
 
 Entity::Entity(const std::string &tag) : tag(tag) {
 }
@@ -134,6 +134,6 @@ void Engine::sfx_play(SfxId id) {
     sfx.play(id);
 }
 
-void Engine::particle_play(ParticleSystemType type) {
-    // ,,
+void Engine::particle_play(const std::string &state_name, ParticleSystemType type, Vec2 collision_point) {
+    register_particle(state_name, type, collision_point);
 }

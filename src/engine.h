@@ -59,13 +59,13 @@ struct Engine {
     std::vector<std::shared_ptr<Widget>> ui;
     std::vector<Scene> all_scenes;
 
+    // TODO @REFACTOR: Consider making these unique_ptr's, to make sure they're constructed once and isn't
+    // passed around. But evaluate this after having proper encapsulation
     Input input;
-    u8 _padding1[8];
     Sfx sfx;
     std::unordered_map<ParticleSystemType, ParticleProps> particle_props;
 
     Renderer renderer;
-    u8 _padding2[4];
     FontData font_data;
 
     PREVENT_COPY_MOVE(Engine);
@@ -89,10 +89,5 @@ struct Engine {
                         std::function<std::optional<std::string>(f32, Engine &)> update);
 
     void sfx_play(SfxId id);
-    void particle_play(ParticleSystemType type);
-};
-
-struct IGame {
-    virtual void init(Engine &) = 0;
-    virtual ~IGame() = default;
+    void particle_play(const std::string &state_name, ParticleSystemType type, Vec2 collision_point);
 };

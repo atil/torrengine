@@ -1,5 +1,5 @@
 #pragma once
-#include "types.h"
+#include "common.h"
 
 #define DEG2RAD 0.0174533
 
