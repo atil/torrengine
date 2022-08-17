@@ -1,15 +1,17 @@
 // NOTE @DOCS: Game origin: up-left
 
-#pragma warning(push)
-#pragma warning(disable : 4996) // TODO @ROBUSTNESS: Address these deprecated CRT functions
-#pragma warning(disable : 5045) // Spectre thing
-#pragma warning(disable : 4505) // Unreferenced functions
+// start from here
+// - check todos
+// - implement lua hello world
+
+#include "common.h"
+
+DISABLE_WARNINGS
+#include <memory>
+ENABLE_WARNINGS
 
 #include "application.h"
 #include "pong.h"
-#include <memory>
-
-#pragma warning(pop)
 
 int main(void) {
     std::unique_ptr<IGame> pong = std::make_unique<PongGame>();
