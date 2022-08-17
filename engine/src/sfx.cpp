@@ -38,7 +38,7 @@ SfxPlayer::SfxPlayer(std::vector<SfxAsset> assets) {
 
     buffers.reserve(assets.size());
     for (const SfxAsset &asset : assets) {
-        sfx_buffer_handle_t handle = create_buffer_with_file(asset.file_name);
+        sfx_buffer_handle handle = create_buffer_with_file(asset.file_name);
         auto pair = std::make_pair(asset.id, handle);
         buffers.insert(pair);
     }
@@ -63,7 +63,7 @@ SfxPlayer::~SfxPlayer() {
 #endif
 }
 
-sfx_buffer_handle_t SfxPlayer::create_buffer_with_file(const std::string &file_name) {
+sfx_buffer_handle SfxPlayer::create_buffer_with_file(const std::string &file_name) {
     WavHeader wav_header;
     usize wav_header_size = sizeof(WavHeader);
     FILE *wav_file = fopen(file_name.c_str(), "r");
@@ -74,7 +74,7 @@ sfx_buffer_handle_t SfxPlayer::create_buffer_with_file(const std::string &file_n
     fseek(wav_file, 44, SEEK_SET);
     fread(wav_buffer, wav_header.sample_data_len, 1, wav_file);
 
-    sfx_buffer_handle_t buffer_handle;
+    sfx_buffer_handle buffer_handle;
     alGenBuffers(1, &buffer_handle);
     alBufferData(buffer_handle, AL_FORMAT_MONO16, wav_buffer, (ALsizei)wav_header.sample_data_len,
                  (ALsizei)wav_header.sample_freq);
@@ -87,8 +87,8 @@ sfx_buffer_handle_t SfxPlayer::create_buffer_with_file(const std::string &file_n
     return buffer_handle;
 }
 
-sfx_source_handle_t SfxPlayer::create_source() {
-    sfx_source_handle_t source_handle;
+sfx_source_handle SfxPlayer::create_source() {
+    sfx_source_handle source_handle;
     alGenSources((ALuint)1, &source_handle);
     alSourcef(source_handle, AL_PITCH, 1);
     alSourcef(source_handle, AL_GAIN, 0.2f);
@@ -108,9 +108,9 @@ void SfxPlayer::play(SfxId id) {
         return;
     }
 
-    sfx_buffer_handle_t buffer = buffers[id];
+    sfx_buffer_handle buffer = buffers[id];
 
-    sfx_source_handle_t source = 0;
+    sfx_source_handle source = 0;
     switch (id) {
     case SfxId::SfxStart:
         source = source_startgame;

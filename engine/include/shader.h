@@ -1,5 +1,5 @@
 struct Shader {
-    static shader_handle_t load(const std::string &file_path) {
+    static shader_handle load(const std::string &file_path) {
         char info_log[512]; // TODO @CLEANUP: Better logging
         const char *shader_string = (const char *)Util::read_file(file_path.c_str());
 
@@ -28,7 +28,7 @@ struct Shader {
             printf("frag shader fail %s\n", info_log);
         }
 
-        shader_handle_t shader_program = glCreateProgram();
+        shader_handle shader_program = glCreateProgram();
         glAttachShader(shader_program, vertex_shader_handle);
         glAttachShader(shader_program, frag_shader_handle);
         glLinkProgram(shader_program);
@@ -43,7 +43,7 @@ struct Shader {
         return shader_program;
     }
 
-    static void set_mat4(shader_handle_t shader, const std::string &uniform_name, const Mat4 *mat) {
+    static void set_mat4(shader_handle shader, const std::string &uniform_name, const Mat4 *mat) {
         i32 loc = glGetUniformLocation(shader, uniform_name.c_str());
         if (loc == -1) {
             printf("error setting uniform matrix: %s\n", uniform_name.c_str());
@@ -53,7 +53,7 @@ struct Shader {
         glUniformMatrix4fv(loc, 1, GL_FALSE, mat->data);
     }
 
-    static void set_float(shader_handle_t shader, const std::string &uniform_name, f32 f0, f32 f1, f32 f2) {
+    static void set_float(shader_handle shader, const std::string &uniform_name, f32 f0, f32 f1, f32 f2) {
         i32 loc = glGetUniformLocation(shader, uniform_name.c_str());
         if (loc == -1) {
             printf("error setting uniform f323: %s\n", uniform_name.c_str());
@@ -62,7 +62,7 @@ struct Shader {
         glUniform3f(loc, f0, f1, f2);
     }
 
-    static void set_int(shader_handle_t shader, const std::string &uniform_name, i32 i) {
+    static void set_int(shader_handle shader, const std::string &uniform_name, i32 i) {
         i32 loc = glGetUniformLocation(shader, uniform_name.c_str());
         if (loc == -1) {
             printf("error setting uniform int: %s\n", uniform_name.c_str());
@@ -71,7 +71,7 @@ struct Shader {
         glUniform1i(loc, i);
     }
 
-    static void set_f32(shader_handle_t shader, const std::string &uniform_name, f32 f) {
+    static void set_f32(shader_handle shader, const std::string &uniform_name, f32 f) {
         i32 loc = glGetUniformLocation(shader, uniform_name.c_str());
         if (loc == -1) {
             printf("error setting uniform int: %s\n", uniform_name.c_str());

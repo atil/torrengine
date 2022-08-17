@@ -21,10 +21,11 @@ struct RenderInfo {
     u32 width;
     u32 height;
     f32 aspect;
+    f32 cam_size;
 
-    RenderInfo(Mat4 view, Mat4 proj, u32 screen_width, u32 screen_height)
+    RenderInfo(Mat4 view, Mat4 proj, u32 screen_width, u32 screen_height, f32 cam_size)
         : view(view), proj(proj), width(screen_width), height(screen_height),
-          aspect((f32)screen_width / (f32)screen_height) {
+          aspect((f32)screen_width / (f32)screen_height), cam_size(cam_size) {
     }
     RenderInfo() {
     }
@@ -33,10 +34,10 @@ struct RenderInfo {
 struct Renderer {
     RenderInfo render_info;
     // TODO @ROBUSTNESS: Have a Shader struct and make these unique_ptr's
-    shader_handle_t world_shader;
-    shader_handle_t ui_shader;
+    shader_handle world_shader;
+    shader_handle ui_shader;
 
-    Renderer(u32 screen_width, u32 screen_height);
+    Renderer(u32 screen_width, u32 screen_height, f32 cam_size);
 
     ~Renderer();
 };
@@ -98,20 +99,20 @@ struct WidgetData {
 };
 
 struct GoRenderUnit {
-    buffer_handle_t vao;
-    buffer_handle_t vbo;
-    buffer_handle_t ibo;
+    buffer_handle vao;
+    buffer_handle vbo;
+    buffer_handle ibo;
     u32 index_count;
     usize vert_data_len;
-    shader_handle_t shader;
-    texture_handle_t texture;
+    shader_handle shader;
+    texture_handle texture;
 
     GoRenderUnit(const GoRenderUnit &) = delete;
     GoRenderUnit &operator=(const GoRenderUnit &) = delete;
     GoRenderUnit &operator=(GoRenderUnit &&) = delete;
 
     explicit GoRenderUnit(const f32 *vert_data, usize vert_data_len, const u32 *index_data,
-                          usize index_data_len, shader_handle_t shader, const std::string &texture_file_name);
+                          usize index_data_len, shader_handle shader, const std::string &texture_file_name);
 
     GoRenderUnit(GoRenderUnit &&rhs);
     ~GoRenderUnit();
@@ -120,18 +121,18 @@ struct GoRenderUnit {
 };
 
 struct WidgetRenderUnit {
-    buffer_handle_t vao;
-    buffer_handle_t vbo;
-    buffer_handle_t ibo;
+    buffer_handle vao;
+    buffer_handle vbo;
+    buffer_handle ibo;
     u32 index_count;
-    shader_handle_t shader;
-    texture_handle_t texture;
+    shader_handle shader;
+    texture_handle texture;
 
     WidgetRenderUnit(const WidgetRenderUnit &rhs) = default;
     WidgetRenderUnit &operator=(const WidgetRenderUnit &rhs) = default;
     WidgetRenderUnit &operator=(WidgetRenderUnit &&rhs) = default;
 
-    explicit WidgetRenderUnit(shader_handle_t shader, const WidgetData &widget);
+    explicit WidgetRenderUnit(shader_handle shader, const WidgetData &widget);
     WidgetRenderUnit(WidgetRenderUnit &&rhs);
     ~WidgetRenderUnit();
 
@@ -144,13 +145,13 @@ struct WidgetRenderUnit {
 };
 
 struct ParticleRenderUnit {
-    buffer_handle_t vao;
-    buffer_handle_t vbo;
-    buffer_handle_t uv_bo;
-    buffer_handle_t ibo;
+    buffer_handle vao;
+    buffer_handle vbo;
+    buffer_handle uv_bo;
+    buffer_handle ibo;
     u32 index_count;
-    shader_handle_t shader;
-    texture_handle_t texture;
+    shader_handle shader;
+    texture_handle texture;
     u32 vert_data_len; // TODO @CLEANUP: Why is this u32?
     f32 *vert_data;
 

@@ -1,4 +1,4 @@
-// #define WORLD_DISABLE_BALL_RANDOMNESS
+#define WORLD_DISABLE_BALL_RANDOMNESS
 #include "engine.h"
 
 struct PongWorld {
@@ -20,18 +20,6 @@ struct PongWorldUpdateResult {
     bool did_score;
     bool is_gameover;
 };
-
-static bool pad_resolve_point(const GoData &pad_go, Vec2 p, int resolve_dir, f32 *out_resolved_x) {
-    if (pad_go.is_point_in(p)) {
-        // 1 is right pad, -1 is left
-        // TODO @ROBUSNESS: Assert here that resolve_dir is either -1 or 1
-        Rect rect_world = pad_go.get_world_rect();
-        *out_resolved_x = resolve_dir == 1 ? rect_world.min.x : rect_world.max.x;
-        return true;
-    }
-
-    return false;
-}
 
 static bool pad_ball_collision_check(const GoData &pad_go, Vec2 ball_displacement_from,
                                      Vec2 ball_displacement_to, Vec2 &out_collision_point) {
@@ -71,10 +59,10 @@ struct PongGame : IGame {
 
     virtual void init(Engine &engine) override {
 
-        const f32 cam_size = 5.0f; // TODO @CLEANUP: Duplicate
+        f32 cam_size = engine.renderer.render_info.cam_size;
         config.area_extents = Vec2(cam_size * engine.renderer.render_info.aspect, cam_size);
         config.pad_size = Vec2(0.3f, 2.0f);
-        config.ball_speed = 4.0f;
+        config.ball_speed = 40.0f;
         config.distance_from_center = 4.0f;
         config.pad_move_speed = 10.0f;
         config.game_speed_increase_coeff = 0.05f;

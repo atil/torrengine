@@ -12,8 +12,12 @@ ENABLE_WARNINGS
 
 #include "application.h"
 #include "pong.h"
+#include <cassert>
 
 int main(void) {
+
+    UNREACHABLE("LOL");
+
     std::unique_ptr<IGame> pong = std::make_unique<PongGame>();
     Application app(std::move(pong));
     app.loop();

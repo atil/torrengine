@@ -20,14 +20,9 @@ Scene::Scene(const std::string &name, std::function<std::optional<std::string>(f
     : name(name), update_func(update) {
 }
 
-Engine::Engine(u32 screen_width, u32 screen_height, std::vector<SfxAsset> sfx_assets)
-    : input(), sfx(sfx_assets), renderer(screen_width, screen_height), font_data("assets/Consolas.ttf") {
-    game_objects.reserve(10);
-    particles.reserve(10);
-    ui.reserve(10);
-    // TODO @ROBUSTNESS: These reserves are needed since reallocation-on-expand calls the destructor of
-    // these (valid, not-moved-out-of) objects, and render units' destructors must not be called in this
-    // case
+Engine::Engine(u32 screen_width, u32 screen_height, f32 cam_size, std::vector<SfxAsset> sfx_assets)
+    : input(), sfx(sfx_assets), renderer(screen_width, screen_height, cam_size),
+      font_data("assets/Consolas.ttf") {
 }
 
 GameObject &Engine::get_go(const std::string &tag) {
@@ -36,8 +31,7 @@ GameObject &Engine::get_go(const std::string &tag) {
             return *go;
         }
     }
-    assert(false); // TODO @ROBUSTNESS: This won't be the case for a while
-    exit(1);
+    UNREACHABLE("Gameobject not found");
 }
 
 Widget &Engine::get_widget(const std::string &tag) {
@@ -46,8 +40,7 @@ Widget &Engine::get_widget(const std::string &tag) {
             return *widget;
         }
     }
-    assert(false);
-    exit(1);
+    UNREACHABLE("Widget not found");
 }
 
 Scene &Engine::get_scene(const std::string &name) {
@@ -57,8 +50,7 @@ Scene &Engine::get_scene(const std::string &name) {
         }
     }
 
-    assert(false);
-    exit(1);
+    UNREACHABLE("Scene not found");
 }
 
 void Engine::register_particle_prop(ParticleSystemType type, const ParticleProps &props) {

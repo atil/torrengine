@@ -1,8 +1,8 @@
-#include <cstdint> // TODO @CLEANUP: Why do we need this? Shouldn't C++ complier sort it out?
+#include <cstdint> // C++ doesn't automatically define these. We need the include
 
-typedef uint32_t buffer_handle_t; // TODO @CLEANUP: Get rid of _t's
-typedef uint32_t texture_handle_t;
-typedef uint32_t shader_handle_t;
+typedef uint32_t buffer_handle;
+typedef uint32_t texture_handle;
+typedef uint32_t shader_handle;
 
 typedef uint64_t u64;
 typedef uint32_t u32;
@@ -26,3 +26,7 @@ typedef float f32;
         _Pragma("warning(push, 0)")
 
 #define ENABLE_WARNINGS _Pragma("warning(pop)")
+
+#define UNREACHABLE(msg)                                                                                     \
+    assert((msg, false));                                                                                    \
+    exit(1)

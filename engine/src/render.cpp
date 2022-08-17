@@ -28,13 +28,12 @@ void glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity,
     printf("%s\n", message);
 }
 
-Renderer::Renderer(u32 screen_width, u32 screen_height) {
+Renderer::Renderer(u32 screen_width, u32 screen_height, f32 cam_size) {
 
-    const f32 cam_size = 5.0f; // TODO @CLEANUP: Magic number looks bad
     Mat4 view = Mat4::identity();
     f32 aspect = (f32)screen_width / (f32)screen_height;
     Mat4 proj = Mat4::ortho(-aspect * cam_size, aspect * cam_size, -cam_size, cam_size, -0.001f, 100.0f);
-    render_info = RenderInfo(view, proj, screen_width, screen_height);
+    render_info = RenderInfo(view, proj, screen_width, screen_height, cam_size);
 
     glewInit(); // Needs to be after GLFW init
 
@@ -106,7 +105,7 @@ void WidgetData::set_str(u32 integer) {
 // GoRenderUnit
 //
 GoRenderUnit::GoRenderUnit(const f32 *vert_data, usize vert_data_len, const u32 *index_data,
-                           usize index_data_len, shader_handle_t shader, const std::string &texture_file_name)
+                           usize index_data_len, shader_handle shader, const std::string &texture_file_name)
     : index_count((u32)index_data_len), vert_data_len(vert_data_len), shader(shader) {
 
     glGenVertexArrays(1, &(vao));
@@ -179,7 +178,7 @@ void GoRenderUnit::draw(const Mat4 &model) {
 // WidgetRenderUnit
 //
 
-WidgetRenderUnit::WidgetRenderUnit(shader_handle_t shader, const WidgetData &widget) : shader(shader) {
+WidgetRenderUnit::WidgetRenderUnit(shader_handle shader, const WidgetData &widget) : shader(shader) {
     glGenVertexArrays(1, &(vao));
     glGenBuffers(1, &(vbo));
     glGenBuffers(1, &(ibo));

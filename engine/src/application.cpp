@@ -17,6 +17,7 @@ Application::Application(std::unique_ptr<IGame> game) : game(std::move(game)) {
 
     constexpr u32 screen_width = 640;
     constexpr u32 screen_height = 480;
+    constexpr f32 cam_size = 5.0f;
 
     GLFWwindow *window_ptr = glfwCreateWindow(screen_width, screen_height, "torrengine.", NULL, NULL);
     window = std::unique_ptr<GLFWwindow, GLFWwindowDestroyer>(window_ptr);
@@ -28,7 +29,7 @@ Application::Application(std::unique_ptr<IGame> game) : game(std::move(game)) {
     sfx_assets.emplace_back(SfxId::SfxHitWall, "assets/HitWall.Wav");
     sfx_assets.emplace_back(SfxId::SfxGameOver, "assets/GameOver.Wav");
 
-    engine = std::make_unique<Engine>(screen_width, screen_height, sfx_assets);
+    engine = std::make_unique<Engine>(screen_width, screen_height, cam_size, sfx_assets);
 }
 
 void Application::loop() {

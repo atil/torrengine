@@ -1,9 +1,10 @@
-#pragma warning(push, 0) // TODO @CLEANUP: Introduce a macro for these pragmas
+#include "common.h"
+
+DISABLE_WARNINGS
 #include <cmath>
 #include <cstring>
 #include "tomath.h"
-#pragma warning(pop)
-#pragma warning(disable : 5045) // Spectre thing
+ENABLE_WARNINGS
 
 float lerp(float a, float b, float t) {
     return a + (b - a) * t;
@@ -68,7 +69,7 @@ Mat4 Mat4::identity() {
     Mat4 identity;
     float identity_data[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 
-    // TODO @LEAK: Check if this is leaked
+    // NOTE: This isn't leaked, since it's a static array
     memcpy(&identity.data, identity_data, sizeof(identity_data));
     return identity;
 }

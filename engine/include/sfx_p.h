@@ -4,8 +4,8 @@
 #include "sfx.h"
 #include <unordered_map>
 
-typedef ALuint sfx_source_handle_t;
-typedef ALuint sfx_buffer_handle_t;
+typedef ALuint sfx_source_handle;
+typedef ALuint sfx_buffer_handle;
 
 struct WavHeader {
     u8 _RIFF[4];         // RIFF Header Magic header
@@ -28,18 +28,17 @@ struct SfxPlayer {
     ALCdevice *device;
     ALCcontext *context;
 
-    sfx_source_handle_t source_objects;
-    sfx_source_handle_t source_startgame;
-    sfx_source_handle_t source_gameover;
-    u32 _unused_padding; // TODO @CLEANUP: Research why we need this
+    sfx_source_handle source_objects;
+    sfx_source_handle source_startgame;
+    sfx_source_handle source_gameover;
 
-    std::unordered_map<SfxId, sfx_buffer_handle_t> buffers;
+    std::unordered_map<SfxId, sfx_buffer_handle> buffers;
 
     SfxPlayer(std::vector<SfxAsset> assets);
     ~SfxPlayer();
 
     void play(SfxId id);
-    static sfx_buffer_handle_t create_buffer_with_file(const std::string &file_name);
-    static sfx_source_handle_t create_source(void);
+    static sfx_buffer_handle create_buffer_with_file(const std::string &file_name);
+    static sfx_source_handle create_source(void);
     static void check_al_error(const std::string &msg);
 };
