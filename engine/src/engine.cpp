@@ -25,7 +25,7 @@ Engine::Engine(u32 screen_width, u32 screen_height, f32 cam_size, std::vector<Sf
       font_data("assets/Consolas.ttf") {
 }
 
-GameObject &Engine::get_go(const std::string &tag) {
+GameObject &Engine::get_go(const std::string &tag) const {
     for (auto go : game_objects) {
         if (go->tag == tag) {
             return *go;
@@ -34,7 +34,7 @@ GameObject &Engine::get_go(const std::string &tag) {
     UNREACHABLE("Gameobject not found");
 }
 
-Widget &Engine::get_widget(const std::string &tag) {
+Widget &Engine::get_widget(const std::string &tag) const {
     for (auto widget : ui) {
         if (widget->tag == tag) {
             return *widget;
@@ -44,6 +44,8 @@ Widget &Engine::get_widget(const std::string &tag) {
 }
 
 Scene &Engine::get_scene(const std::string &name) {
+    // NOTE: This is a getter but not const, because the reference we return is mutable
+    // However, I don't know why this isn't the case for the functions above
     for (Scene &state : all_scenes) {
         if (state.name == name) {
             return state;
@@ -51,6 +53,9 @@ Scene &Engine::get_scene(const std::string &name) {
     }
 
     UNREACHABLE("Scene not found");
+}
+const RenderInfo &Engine::get_render_info() const {
+    return renderer.render_info;
 }
 
 void Engine::register_particle_prop(ParticleSystemType type, const ParticleProps &props) {
@@ -129,4 +134,12 @@ void Engine::sfx_play(SfxId id) {
 
 void Engine::particle_play(const std::string &state_name, ParticleSystemType type, Vec2 collision_point) {
     register_particle(state_name, type, collision_point);
+}
+
+bool Engine::input_just_pressed(KeyCode key_code) const {
+    return input.just_pressed(key_code);
+}
+
+bool Engine::input_is_down(KeyCode key_code) const {
+    return input.is_down(key_code);
 }

@@ -12,11 +12,12 @@ enum class KeyCode {
     MAX
 };
 
-struct Input {
+class Input {
     bool curr[(usize)KeyCode::MAX];
     bool prev[(usize)KeyCode::MAX];
 
+  public:
     void update(struct GLFWwindow *window);
-    bool just_pressed(KeyCode key_code);
-    bool is_down(KeyCode key_code);
+    bool just_pressed(KeyCode key_code) const;
+    bool is_down(KeyCode key_code) const;
 };

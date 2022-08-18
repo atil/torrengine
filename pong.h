@@ -59,8 +59,8 @@ struct PongGame : IGame {
 
     virtual void init(Engine &engine) override {
 
-        f32 cam_size = engine.renderer.render_info.cam_size;
-        config.area_extents = Vec2(cam_size * engine.renderer.render_info.aspect, cam_size);
+        f32 cam_size = engine.get_render_info().cam_size;
+        config.area_extents = Vec2(cam_size * engine.get_render_info().aspect, cam_size);
         config.pad_size = Vec2(0.3f, 2.0f);
         config.ball_speed = 4.0f;
         config.distance_from_center = 4.0f;
@@ -69,8 +69,8 @@ struct PongGame : IGame {
 
         world_init();
 
-        f32 screen_width = static_cast<f32>(engine.renderer.render_info.width);
-        f32 screen_height = static_cast<f32>(engine.renderer.render_info.height);
+        f32 screen_width = static_cast<f32>(engine.get_render_info().width);
+        f32 screen_height = static_cast<f32>(engine.get_render_info().height);
 
         // These binds need to be after init'ing this Pong object. It captures its state or something
         engine.register_state("splash_state", std::bind(&PongGame::update_splash_state, *this,
@@ -120,7 +120,7 @@ struct PongGame : IGame {
     std::optional<std::string> update_splash_state(f32 dt, Engine &engine) {
 
         std::optional<std::string> next_state = std::nullopt;
-        if (engine.input.just_pressed(KeyCode::Enter)) {
+        if (engine.input_just_pressed(KeyCode::Enter)) {
 
             world_init();
             engine.sfx_play(SfxId::SfxStart);
@@ -166,15 +166,15 @@ struct PongGame : IGame {
 
         f32 pad_move_speed = config.pad_move_speed * world.game_speed_coeff * dt;
 
-        if (engine.input.is_down(KeyCode::W) && pad2_world_rect.max.y < config.area_extents.y) {
+        if (engine.input_is_down(KeyCode::W) && pad2_world_rect.max.y < config.area_extents.y) {
             pad2_go.transform.translate_xy(Vec2(0.0f, pad_move_speed));
-        } else if (engine.input.is_down(KeyCode::S) && pad2_world_rect.min.y > -config.area_extents.y) {
+        } else if (engine.input_is_down(KeyCode::S) && pad2_world_rect.min.y > -config.area_extents.y) {
             pad2_go.transform.translate_xy(Vec2(0.0f, -pad_move_speed));
         }
 
-        if (engine.input.is_down(KeyCode::Up) && pad1_world_rect.max.y < config.area_extents.y) {
+        if (engine.input_is_down(KeyCode::Up) && pad1_world_rect.max.y < config.area_extents.y) {
             pad1_go.transform.translate_xy(Vec2(0.0f, pad_move_speed));
-        } else if (engine.input.is_down(KeyCode::Down) && pad1_world_rect.min.y > -config.area_extents.y) {
+        } else if (engine.input_is_down(KeyCode::Down) && pad1_world_rect.min.y > -config.area_extents.y) {
             pad1_go.transform.translate_xy(Vec2(0.0f, -pad_move_speed));
         }
 
@@ -242,7 +242,7 @@ struct PongGame : IGame {
     std::optional<std::string> update_intermission_state(f32 dt, Engine &engine) {
 
         std::optional<std::string> next_state = std::nullopt;
-        if (engine.input.just_pressed(KeyCode::Enter)) {
+        if (engine.input_just_pressed(KeyCode::Enter)) {
 
             // Reset world data
             engine.get_go("pad1").data.transform.set_pos_xy(Vec2(config.distance_from_center, 0));

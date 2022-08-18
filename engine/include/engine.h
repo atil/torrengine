@@ -21,7 +21,7 @@ struct GameObject : public Entity {
     GoRenderUnit ru;
 
     PREVENT_COPY_MOVE(GameObject);
-    explicit GameObject(const std::string &tag, GoData data_, GoRenderUnit ru_);
+    explicit GameObject(const std::string &tag, GoData data, GoRenderUnit ru);
 };
 
 struct ParticleSystem : public Entity {
@@ -29,7 +29,7 @@ struct ParticleSystem : public Entity {
     ParticleRenderUnit ru;
 
     PREVENT_COPY_MOVE(ParticleSystem);
-    explicit ParticleSystem(const std::string &tag, ParticleSource ps_, ParticleRenderUnit ru_);
+    explicit ParticleSystem(const std::string &tag, ParticleSource ps, ParticleRenderUnit ru);
 };
 
 struct Widget : public Entity {
@@ -37,10 +37,10 @@ struct Widget : public Entity {
     WidgetRenderUnit ru;
 
     PREVENT_COPY_MOVE(Widget);
-    explicit Widget(const std::string &tag, WidgetData data_, WidgetRenderUnit ru_);
+    explicit Widget(const std::string &tag, WidgetData data, WidgetRenderUnit ru);
 };
 
-struct Engine;
+class Engine;
 
 struct Scene {
     std::string name;
@@ -53,14 +53,14 @@ struct Scene {
     explicit Scene(const std::string &name, std::function<std::optional<std::string>(f32, Engine &)> update);
 };
 
-struct Engine {
+class Engine {
+    friend struct Application;
+
     std::vector<std::shared_ptr<GameObject>> game_objects;
     std::vector<std::shared_ptr<ParticleSystem>> particles;
     std::vector<std::shared_ptr<Widget>> ui;
     std::vector<Scene> all_scenes;
 
-    // TODO @REFACTOR: Consider making these unique_ptr's, to make sure they're constructed once and isn't
-    // passed around. But evaluate this after having proper encapsulation
     Input input;
     Sfx sfx;
     std::unordered_map<ParticleSystemType, ParticleProps> particle_props;
@@ -68,12 +68,14 @@ struct Engine {
     Renderer renderer;
     FontData font_data;
 
+  public:
     PREVENT_COPY_MOVE(Engine);
     explicit Engine(u32 screen_width, u32 screen_height, f32 cam_size, std::vector<SfxAsset> sfx_assets);
 
-    GameObject &Engine::get_go(const std::string &tag);
-    Widget &Engine::get_widget(const std::string &tag);
-    Scene &Engine::get_scene(const std::string &name);
+    GameObject &get_go(const std::string &tag) const;
+    Widget &get_widget(const std::string &tag) const;
+    Scene &get_scene(const std::string &name);
+    const RenderInfo &get_render_info() const;
 
     void register_particle_prop(ParticleSystemType type, const ParticleProps &props);
     void register_particle(const std::string &state_name, ParticleSystemType type, Vec2 emit_point);
@@ -90,4 +92,6 @@ struct Engine {
 
     void sfx_play(SfxId id);
     void particle_play(const std::string &state_name, ParticleSystemType type, Vec2 collision_point);
+    bool input_just_pressed(KeyCode key_code) const;
+    bool input_is_down(KeyCode key_code) const;
 };

@@ -34,6 +34,7 @@ struct SfxPlayer {
 
     std::unordered_map<SfxId, sfx_buffer_handle> buffers;
 
+  public:
     SfxPlayer(std::vector<SfxAsset> assets);
     ~SfxPlayer();
 

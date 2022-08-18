@@ -50,8 +50,7 @@ void Application::loop() {
             glfwSetWindowShouldClose(window.get(), true);
         }
 
-        glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        engine->renderer.begin_frame();
 
         std::optional<std::string> next_state = curr_state.update_func(dt, *engine.get());
 

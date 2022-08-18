@@ -1,8 +1,9 @@
 #pragma once
 
-struct Shader {
+class Shader {
     shader_handle handle;
 
+  public:
     explicit Shader(const std::string &file_path);
     ~Shader();
 

@@ -40,6 +40,8 @@ struct Renderer {
 
     Renderer(u32 screen_width, u32 screen_height, f32 cam_size);
     ~Renderer() = default;
+
+    void begin_frame();
 };
 
 struct TextBufferData {
@@ -83,7 +85,6 @@ struct FontData {
 struct WidgetData {
     std::string text;
     TextTransform transform;
-    u8 _padding[4];
     const FontData &font_data;
 
     explicit WidgetData(const std::string &text, TextTransform transform, const FontData &font_data)
@@ -98,7 +99,7 @@ struct WidgetData {
     void set_str(u32 integer);
 };
 
-struct GoRenderUnit {
+class GoRenderUnit {
     buffer_handle vao;
     buffer_handle vbo;
     buffer_handle ibo;
@@ -107,6 +108,7 @@ struct GoRenderUnit {
     std::weak_ptr<Shader> shader;
     texture_handle texture;
 
+  public:
     GoRenderUnit(const GoRenderUnit &) = delete;
     GoRenderUnit &operator=(const GoRenderUnit &) = delete;
     GoRenderUnit &operator=(GoRenderUnit &&) = delete;
@@ -121,7 +123,7 @@ struct GoRenderUnit {
     void draw(const Mat4 &model);
 };
 
-struct WidgetRenderUnit {
+class WidgetRenderUnit {
     buffer_handle vao;
     buffer_handle vbo;
     buffer_handle ibo;
@@ -129,6 +131,7 @@ struct WidgetRenderUnit {
     std::weak_ptr<Shader> shader;
     texture_handle texture;
 
+  public:
     WidgetRenderUnit(const WidgetRenderUnit &rhs) = default;
     WidgetRenderUnit &operator=(const WidgetRenderUnit &rhs) = default;
     WidgetRenderUnit &operator=(WidgetRenderUnit &&rhs) = default;
@@ -145,7 +148,7 @@ struct WidgetRenderUnit {
     void draw();
 };
 
-struct ParticleRenderUnit {
+class ParticleRenderUnit {
     buffer_handle vao;
     buffer_handle vbo;
     buffer_handle uv_bo;
@@ -153,9 +156,10 @@ struct ParticleRenderUnit {
     u32 index_count;
     std::unique_ptr<Shader> shader;
     texture_handle texture;
-    u32 vert_data_len; // TODO @CLEANUP: Why is this u32?
+    u32 vert_data_len;
     f32 *vert_data;
 
+  public:
     explicit ParticleRenderUnit(usize particle_count, RenderInfo render_info,
                                 const std::string &texture_file_name);
 

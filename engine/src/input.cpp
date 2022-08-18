@@ -24,10 +24,10 @@ void Input::update(GLFWwindow *window) {
     curr[(usize)KeyCode::Debug2] = (bool)glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS;
 }
 
-bool Input::just_pressed(KeyCode key_code) {
+bool Input::just_pressed(KeyCode key_code) const {
     return curr[(usize)key_code] && !prev[(usize)key_code];
 }
 
-bool Input::is_down(KeyCode key_code) {
+bool Input::is_down(KeyCode key_code) const {
     return curr[(usize)key_code];
 }

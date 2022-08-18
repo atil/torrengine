@@ -1,6 +1,6 @@
 #pragma once
 
-// #define SFX_DISABLED // TODO @CLEANUP: Convert this to a cmdline argument
+// #define SFX_DISABLED
 
 #include "common.h"
 
@@ -19,7 +19,6 @@ enum class SfxId {
 
 struct SfxAsset {
     SfxId id;
-    u8 _padding[4];
     std::string file_name;
     SfxAsset(SfxId id, const std::string &file_name) : id(id), file_name(file_name) {
     }

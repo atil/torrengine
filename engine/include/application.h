@@ -6,7 +6,7 @@ DISABLE_WARNINGS
 ENABLE_WARNINGS
 
 struct IGame {
-    virtual void init(struct Engine &) = 0;
+    virtual void init(class Engine &) = 0;
     virtual ~IGame() = default;
 };
 
@@ -15,7 +15,7 @@ struct Application {
         void operator()(struct GLFWwindow *window);
     };
 
-    std::unique_ptr<struct Engine> engine;
+    std::unique_ptr<class Engine> engine;
     std::unique_ptr<struct GLFWwindow, GLFWwindowDestroyer> window;
     std::unique_ptr<struct IGame> game;
 

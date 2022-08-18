@@ -19,7 +19,6 @@ struct ParticleProps {
     f32 angle_offset;
     f32 speed_offset;
     f32 size;
-    u8 _padding[4];
 };
 
 struct ParticleSource {
@@ -30,7 +29,6 @@ struct ParticleSource {
     Vec2 emit_point;
     f32 transparency;
     bool is_alive;
-    u8 _padding[7];
 
     explicit ParticleSource(const ParticleProps &props, Vec2 emit_point);
 

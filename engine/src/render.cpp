@@ -51,6 +51,12 @@ Renderer::Renderer(u32 screen_width, u32 screen_height, f32 cam_size) {
     world_shader->set_mat4("u_proj", proj);
 }
 
+void Renderer::begin_frame() {
+
+    glClearColor(0.075f, 0.1f, 0.15f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
 //
 // Font data
 //
@@ -158,7 +164,6 @@ void GoRenderUnit::draw(const Mat4 &model) {
     std::shared_ptr<Shader> shader_pin = shader.lock();
     shader_pin->set_mat4("u_model", model);
 
-    // TODO @DOCS: How can that last parameter be zero?
     glDrawElements(GL_TRIANGLES, (GLsizei)index_count, GL_UNSIGNED_INT, 0);
 }
 
@@ -293,13 +298,12 @@ void WidgetRenderUnit::update(const WidgetData &widget) {
     usize char_count = widget.text.length();
 
     TextBufferData text_data;
-    text_data.vb_len = char_count * 16 * sizeof(f32); // TODO @DOCS: Explain the data layout
+    text_data.vb_len = char_count * 16 * sizeof(f32);
     text_data.ib_len = char_count * 6 * sizeof(u32);
     text_data.vb_data = (f32 *)malloc(text_data.vb_len);
     text_data.ib_data = (u32 *)malloc(text_data.ib_len);
 
-    text_buffer_fill(&text_data, widget.font_data, widget.text.c_str(),
-                     widget.transform); // TODO @CLEANUP: Send the string itself
+    text_buffer_fill(&text_data, widget.font_data, widget.text.c_str(), widget.transform);
 
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
