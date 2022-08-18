@@ -1,4 +1,4 @@
-#define WORLD_DISABLE_BALL_RANDOMNESS
+// #define WORLD_DISABLE_BALL_RANDOMNESS
 #include "engine.h"
 
 struct PongWorld {
@@ -62,7 +62,7 @@ struct PongGame : IGame {
         f32 cam_size = engine.renderer.render_info.cam_size;
         config.area_extents = Vec2(cam_size * engine.renderer.render_info.aspect, cam_size);
         config.pad_size = Vec2(0.3f, 2.0f);
-        config.ball_speed = 40.0f;
+        config.ball_speed = 4.0f;
         config.distance_from_center = 4.0f;
         config.pad_move_speed = 10.0f;
         config.game_speed_increase_coeff = 0.05f;
