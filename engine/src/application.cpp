@@ -37,7 +37,7 @@ void Application::loop() {
     f32 game_time = (f32)glfwGetTime();
     f32 dt = 0.0f;
 
-    game->init(*engine.get()); // TODO @CLEANUP: Convert function signatures to take unique_ptr<Engine>
+    game->init(*engine.get());
 
     Scene &curr_state = engine->all_scenes[0];
     while (!glfwWindowShouldClose(window.get())) {

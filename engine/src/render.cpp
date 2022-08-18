@@ -19,8 +19,6 @@ ENABLE_WARNINGS
 #include "shader.h"
 #include "particle.h"
 
-// TODO @ROBUSTNESS: Implement glDebugMessageCallback
-
 void glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei length,
                    const char *message, const void *userParam) {
     if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
@@ -44,7 +42,6 @@ Renderer::Renderer(u32 screen_width, u32 screen_height, f32 cam_size) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // OpenGL debug output
-    // TODO @CLEANUP: Bind this to a switch or something
     // glEnable(GL_DEBUG_OUTPUT);
     // glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     // glDebugMessageCallback(glDebugOutput, nullptr);
@@ -196,8 +193,6 @@ WidgetRenderUnit::WidgetRenderUnit(std::weak_ptr<Shader> shader, const WidgetDat
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    // TODO @ROBUSTNESS: This depth component looks weird. Googling haven't
-    // showed up such a thing
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE,
                  widget.font_data.font_bitmap);
 
@@ -321,7 +316,6 @@ void WidgetRenderUnit::draw() {
     glBindVertexArray(vao);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
-    // glUseProgram(shader); // TODO @ROBUSTNESS: Do we need this?
     glDrawElements(GL_TRIANGLES, (GLsizei)index_count, GL_UNSIGNED_INT, 0);
 }
 
@@ -339,7 +333,6 @@ ParticleRenderUnit::ParticleRenderUnit(usize particle_count, RenderInfo render_i
     shader->set_mat4("u_view", render_info.view);
     shader->set_mat4("u_proj", render_info.proj);
 
-    // TODO @CLEANUP: VLAs would simplify this allocation
     f32 single_particle_vert[8] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
     vert_data_len = (u32)particle_count * sizeof(single_particle_vert);
     vert_data = (f32 *)malloc(vert_data_len);
@@ -354,7 +347,7 @@ ParticleRenderUnit::ParticleRenderUnit(usize particle_count, RenderInfo render_i
 
     for (u32 i = 0; i < (u32)particle_count; i++) {
         // Learning: '+' operator for pointers doesn't increment by bytes.
-        // The increment amount is of the pointer's type. So for this one above, it increments 8 f32s.
+        // The increment amount is of the pointer's type. So for this one below, it increments 8 f32s.
 
         memcpy(vert_data + i * 8, single_particle_vert, sizeof(single_particle_vert));
 

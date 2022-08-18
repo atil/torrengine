@@ -11,8 +11,6 @@ ParticleSource::ParticleSource(const ParticleProps &props, Vec2 emit_point)
 
     life = 0;
 
-    // TODO @INCOMPLETE: Probably we'll pool particle sources and keep them "dead" until we instantiate
-    // one
     is_alive = true;
 
     for (u32 i = 0; i < props.count; i++) {
