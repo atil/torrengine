@@ -90,6 +90,7 @@ void Engine::register_gameobject(const std::string &tag, const std::string &stat
         tag, GoData(pos, size),
         GoRenderUnit(unit_square_verts, sizeof(unit_square_verts), unit_square_indices,
                      sizeof(unit_square_indices), renderer.world_shader, texture_path));
+
     game_objects.push_back(go_ptr);
 
     for (Scene &state : all_scenes) {

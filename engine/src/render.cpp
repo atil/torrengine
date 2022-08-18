@@ -37,8 +37,9 @@ Renderer::Renderer(u32 screen_width, u32 screen_height, f32 cam_size) {
 
     glewInit(); // Needs to be after GLFW init
 
-    ui_shader = Shader::load("engine/src/shader/ui.glsl");
-    world_shader = Shader::load("engine/src/shader/world.glsl");
+    ui_shader = std::make_unique<Shader>("engine/src/shader/ui.glsl");
+    world_shader = std::make_unique<Shader>("engine/src/shader/world.glsl");
+
     glEnable(GL_BLEND); // Enabling transparency for texts
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -49,16 +50,8 @@ Renderer::Renderer(u32 screen_width, u32 screen_height, f32 cam_size) {
     // glDebugMessageCallback(glDebugOutput, nullptr);
     // glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 
-    glUseProgram(world_shader);
-    Shader::set_mat4(world_shader, "u_view", &view);
-    Shader::set_mat4(world_shader, "u_proj", &proj);
-}
-
-Renderer::~Renderer() {
-
-    // TODO @CLEANUP: We'll have some sort of batching for these two
-    glDeleteProgram(world_shader);
-    glDeleteProgram(ui_shader);
+    world_shader->set_mat4("u_view", view);
+    world_shader->set_mat4("u_proj", proj);
 }
 
 //
@@ -105,7 +98,8 @@ void WidgetData::set_str(u32 integer) {
 // GoRenderUnit
 //
 GoRenderUnit::GoRenderUnit(const f32 *vert_data, usize vert_data_len, const u32 *index_data,
-                           usize index_data_len, shader_handle shader, const std::string &texture_file_name)
+                           usize index_data_len, std::weak_ptr<Shader> shader,
+                           const std::string &texture_file_name)
     : index_count((u32)index_data_len), vert_data_len(vert_data_len), shader(shader) {
 
     glGenVertexArrays(1, &(vao));
@@ -148,7 +142,7 @@ GoRenderUnit::GoRenderUnit(GoRenderUnit &&rhs)
     rhs.vao = 0;
     rhs.vbo = 0;
     rhs.ibo = 0;
-    rhs.shader = 0;
+    rhs.shader.reset();
     rhs.texture = 0;
 }
 
@@ -157,19 +151,16 @@ GoRenderUnit::~GoRenderUnit() {
     glDeleteBuffers(1, &(vbo));
     glDeleteBuffers(1, &(ibo));
     glDeleteTextures(1, &texture);
-
-    /* glDeleteProgram(shader); */
-    // Not deleting the shader here, since we only have one instance for
-    // the world. NOTE @FUTURE: Probably gonna have a batch sort of thing,
-    // the guys who share the same shader
 }
 
 void GoRenderUnit::draw(const Mat4 &model) {
 
     glBindVertexArray(vao);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glUseProgram(shader);
-    Shader::set_mat4(shader, "u_model", &model);
+
+    std::shared_ptr<Shader> shader_pin = shader.lock();
+    shader_pin->set_mat4("u_model", model);
+
     // TODO @DOCS: How can that last parameter be zero?
     glDrawElements(GL_TRIANGLES, (GLsizei)index_count, GL_UNSIGNED_INT, 0);
 }
@@ -178,7 +169,7 @@ void GoRenderUnit::draw(const Mat4 &model) {
 // WidgetRenderUnit
 //
 
-WidgetRenderUnit::WidgetRenderUnit(shader_handle shader, const WidgetData &widget) : shader(shader) {
+WidgetRenderUnit::WidgetRenderUnit(std::weak_ptr<Shader> shader, const WidgetData &widget) : shader(shader) {
     glGenVertexArrays(1, &(vao));
     glGenBuffers(1, &(vbo));
     glGenBuffers(1, &(ibo));
@@ -210,11 +201,10 @@ WidgetRenderUnit::WidgetRenderUnit(shader_handle shader, const WidgetData &widge
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE,
                  widget.font_data.font_bitmap);
 
-    // glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // TODO @ROBUSTNESS: We might
-    // need to do this if we get segfaults
+    // glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // We might need to do this if we get segfaults
 
-    glUseProgram(shader);
-    Shader::set_int(shader, "u_texture_ui", 0);
+    std::shared_ptr<Shader> shader_pin = shader.lock();
+    shader_pin->set_int("u_texture_ui", 0);
 
     update(widget);
 }
@@ -225,7 +215,7 @@ WidgetRenderUnit::WidgetRenderUnit(WidgetRenderUnit &&rhs)
     rhs.vao = 0;
     rhs.vbo = 0;
     rhs.ibo = 0;
-    rhs.shader = 0;
+    rhs.shader.reset();
     rhs.texture = 0;
 }
 
@@ -233,9 +223,6 @@ WidgetRenderUnit::~WidgetRenderUnit() {
     glDeleteVertexArrays(1, &(vao));
     glDeleteBuffers(1, &(vbo));
     glDeleteBuffers(1, &(ibo));
-
-    // TODO @CLEANUP: A better way to manage these shaders
-    // glDeleteProgram(shader);
     glDeleteTextures(1, &texture);
 }
 
@@ -334,7 +321,7 @@ void WidgetRenderUnit::draw() {
     glBindVertexArray(vao);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glUseProgram(shader);
+    // glUseProgram(shader); // TODO @ROBUSTNESS: Do we need this?
     glDrawElements(GL_TRIANGLES, (GLsizei)index_count, GL_UNSIGNED_INT, 0);
 }
 
@@ -345,13 +332,12 @@ void WidgetRenderUnit::draw() {
 ParticleRenderUnit::ParticleRenderUnit(usize particle_count, RenderInfo render_info,
                                        const std::string &texture_file_name) {
 
-    shader = Shader::load("engine/src/shader/world.glsl"); // Using world shader for now
+    shader = std::make_unique<Shader>("engine/src/shader/world.glsl"); // Using world shader for now
 
-    glUseProgram(shader);
     Mat4 mat_identity = Mat4::identity();
-    Shader::set_mat4(shader, "u_model", &mat_identity);
-    Shader::set_mat4(shader, "u_view", &(render_info.view));
-    Shader::set_mat4(shader, "u_proj", &(render_info.proj));
+    shader->set_mat4("u_model", mat_identity);
+    shader->set_mat4("u_view", render_info.view);
+    shader->set_mat4("u_proj", render_info.proj);
 
     // TODO @CLEANUP: VLAs would simplify this allocation
     f32 single_particle_vert[8] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f};
@@ -426,13 +412,12 @@ ParticleRenderUnit::ParticleRenderUnit(usize particle_count, RenderInfo render_i
 
 ParticleRenderUnit::ParticleRenderUnit(ParticleRenderUnit &&rhs)
     : vao(rhs.vao), vbo(rhs.vbo), uv_bo(rhs.uv_bo), ibo(rhs.ibo), index_count(rhs.index_count),
-      shader(rhs.shader), texture(rhs.texture), vert_data_len(rhs.vert_data_len) {
+      shader(std::move(rhs.shader)), texture(rhs.texture), vert_data_len(rhs.vert_data_len) {
 
     rhs.vao = 0;
     rhs.vbo = 0;
     rhs.uv_bo = 0;
     rhs.ibo = 0;
-    rhs.shader = 0;
     rhs.texture = 0;
 
     vert_data = rhs.vert_data;
@@ -445,7 +430,6 @@ ParticleRenderUnit::~ParticleRenderUnit() {
     glDeleteBuffers(1, &(uv_bo));
     glDeleteBuffers(1, &(ibo));
 
-    glDeleteProgram(shader); // This shader is created for this renderUnit specifically
     glDeleteTextures(1, &texture);
 
     free(vert_data);
@@ -453,7 +437,7 @@ ParticleRenderUnit::~ParticleRenderUnit() {
 
 void ParticleRenderUnit::draw(const ParticleSource &ps) {
 
-    glUseProgram(shader);
+    // glUseProgram(shader);
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
@@ -473,6 +457,6 @@ void ParticleRenderUnit::draw(const ParticleSource &ps) {
     glBufferSubData(GL_ARRAY_BUFFER, 0, vert_data_len, vert_data);
 
     glBindTexture(GL_TEXTURE_2D, texture);
-    Shader::set_f32(shader, "u_alpha", ps.transparency);
+    shader->set_f32("u_alpha", ps.transparency);
     glDrawElements(GL_TRIANGLES, (GLsizeiptr)index_count, GL_UNSIGNED_INT, 0);
 }

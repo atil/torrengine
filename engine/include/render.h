@@ -3,12 +3,14 @@
 DISABLE_WARNINGS
 #include <string>
 #include <array>
+#include <memory>
 #include <stb_truetype.h>
 #include <stb_image.h>
 ENABLE_WARNINGS
 
 #include "util.h"
 #include "tomath.h"
+#include "shader.h"
 
 #define CHAR_COUNT 96
 #define FONT_ATLAS_WIDTH 512
@@ -33,13 +35,11 @@ struct RenderInfo {
 
 struct Renderer {
     RenderInfo render_info;
-    // TODO @ROBUSTNESS: Have a Shader struct and make these unique_ptr's
-    shader_handle world_shader;
-    shader_handle ui_shader;
+    std::shared_ptr<Shader> world_shader;
+    std::shared_ptr<Shader> ui_shader;
 
     Renderer(u32 screen_width, u32 screen_height, f32 cam_size);
-
-    ~Renderer();
+    ~Renderer() = default;
 };
 
 struct TextBufferData {
@@ -104,7 +104,7 @@ struct GoRenderUnit {
     buffer_handle ibo;
     u32 index_count;
     usize vert_data_len;
-    shader_handle shader;
+    std::weak_ptr<Shader> shader;
     texture_handle texture;
 
     GoRenderUnit(const GoRenderUnit &) = delete;
@@ -112,7 +112,8 @@ struct GoRenderUnit {
     GoRenderUnit &operator=(GoRenderUnit &&) = delete;
 
     explicit GoRenderUnit(const f32 *vert_data, usize vert_data_len, const u32 *index_data,
-                          usize index_data_len, shader_handle shader, const std::string &texture_file_name);
+                          usize index_data_len, std::weak_ptr<Shader> shader,
+                          const std::string &texture_file_name);
 
     GoRenderUnit(GoRenderUnit &&rhs);
     ~GoRenderUnit();
@@ -125,14 +126,14 @@ struct WidgetRenderUnit {
     buffer_handle vbo;
     buffer_handle ibo;
     u32 index_count;
-    shader_handle shader;
+    std::weak_ptr<Shader> shader;
     texture_handle texture;
 
     WidgetRenderUnit(const WidgetRenderUnit &rhs) = default;
     WidgetRenderUnit &operator=(const WidgetRenderUnit &rhs) = default;
     WidgetRenderUnit &operator=(WidgetRenderUnit &&rhs) = default;
 
-    explicit WidgetRenderUnit(shader_handle shader, const WidgetData &widget);
+    explicit WidgetRenderUnit(std::weak_ptr<Shader> shader, const WidgetData &widget);
     WidgetRenderUnit(WidgetRenderUnit &&rhs);
     ~WidgetRenderUnit();
 
@@ -150,7 +151,7 @@ struct ParticleRenderUnit {
     buffer_handle uv_bo;
     buffer_handle ibo;
     u32 index_count;
-    shader_handle shader;
+    std::unique_ptr<Shader> shader;
     texture_handle texture;
     u32 vert_data_len; // TODO @CLEANUP: Why is this u32?
     f32 *vert_data;
