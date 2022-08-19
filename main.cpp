@@ -7,7 +7,7 @@ DISABLE_WARNINGS
 ENABLE_WARNINGS
 
 #include "application.h"
-#include "pong.h"
+#include "pong.cpp"
 
 int main() {
     std::unique_ptr<IGame> pong = std::make_unique<PongGame>();
