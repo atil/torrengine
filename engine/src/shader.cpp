@@ -58,8 +58,12 @@ Shader::~Shader() {
     glDeleteProgram(handle);
 }
 
-void Shader::set_mat4(const std::string &uniform_name, const Mat4 &mat) {
+void Shader::use() {
     glUseProgram(handle);
+}
+
+void Shader::set_mat4(const std::string &uniform_name, const Mat4 &mat) {
+    use();
     i32 loc = glGetUniformLocation(handle, uniform_name.c_str());
     if (loc == -1) {
         printf("error setting uniform matrix: %s\n", uniform_name.c_str());
@@ -70,7 +74,7 @@ void Shader::set_mat4(const std::string &uniform_name, const Mat4 &mat) {
 }
 
 void Shader::set_float(const std::string &uniform_name, f32 f0, f32 f1, f32 f2) {
-    glUseProgram(handle);
+    use();
     i32 loc = glGetUniformLocation(handle, uniform_name.c_str());
     if (loc == -1) {
         printf("error setting uniform f323: %s\n", uniform_name.c_str());
@@ -80,7 +84,7 @@ void Shader::set_float(const std::string &uniform_name, f32 f0, f32 f1, f32 f2) 
 }
 
 void Shader::set_int(const std::string &uniform_name, i32 i) {
-    glUseProgram(handle);
+    use();
     i32 loc = glGetUniformLocation(handle, uniform_name.c_str());
     if (loc == -1) {
         printf("error setting uniform int: %s\n", uniform_name.c_str());
@@ -90,7 +94,7 @@ void Shader::set_int(const std::string &uniform_name, i32 i) {
 }
 
 void Shader::set_f32(const std::string &uniform_name, f32 f) {
-    glUseProgram(handle);
+    use();
     i32 loc = glGetUniformLocation(handle, uniform_name.c_str());
     if (loc == -1) {
         printf("error setting uniform int: %s\n", uniform_name.c_str());

@@ -224,6 +224,7 @@ WidgetRenderUnit::~WidgetRenderUnit() {
     glDeleteBuffers(1, &(vbo));
     glDeleteBuffers(1, &(ibo));
     glDeleteTextures(1, &texture);
+    // No deleting the shader. We don't own it
 }
 
 void WidgetRenderUnit::text_buffer_fill(TextBufferData *text_data, const FontData &font_data,
@@ -317,6 +318,8 @@ void WidgetRenderUnit::update(const WidgetData &widget) {
 }
 
 void WidgetRenderUnit::draw() {
+    std::shared_ptr<Shader> shader_pinned = shader.lock();
+    shader_pinned->use();
     glBindVertexArray(vao);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
